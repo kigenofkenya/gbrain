@@ -1,14 +1,4 @@
 "use strict";
-import {GBrain} from "./gbrain";
-import {GBrainRL} from "./gbrain-rl";
-import {Graph} from "./Graph.class";
-import {GraphUtils} from "./graphUtil";
-import {KERNEL_ADJMATRIX_UPDATE} from "./KERNEL_ADJMATRIX_UPDATE.class";
-import {KERNEL_DIR} from "./KERNEL_DIR.class";
-import {ProccessImg} from "./ProccessImg.class";
-import {VFP_NODE} from "./VFP_NODE.class";
-import {VFP_NODEPICKDRAG} from "./VFP_NODEPICKDRAG.class";
-
 Object.defineProperty(exports, "__esModule", { value: true });
 
 var exp = { "GBrain": "./gbrain",
