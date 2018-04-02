@@ -44,36 +44,42 @@ glob("src/**/*.js", {}, function (er, files) {
     // BUILD & WATCH
     if(hasArg("-b", args) !== false) {
         for(var n=0; n < arrSrcScripts.length; n++) {
-            var b = null;
-            if(hasArg("-s", args) === true) {
-                b = browserify(arrSrcScripts[n], {"debug": hasArg("-s", args), cache: {}, packageCache: {}, plugin: [watchify]});
+            if(arrSrcScripts[n].match(/index.js/gi) === null) {
+                var b = browserify(arrSrcScripts[n], {"debug": hasArg("-s", args), cache: {}, packageCache: {}, plugin: [watchify]});
                 b.on('update', bundle.bind(this, b, n));
-            } else {
-                b = browserify(arrSrcScripts[n], {"debug": hasArg("-s", args)});
-            }
-            bundle(b, n);
+                bundle(b, n);
 
-            function bundle(b, n) {
-                b.transform("babelify", bT).bundle().pipe(fs.createWriteStream(arrDistScripts[n]));
-                console.log("- UPDATED: "+arrDistScripts[n]);
+                function bundle(b, n) {
+                    b.transform("babelify", bT).bundle().pipe(fs.createWriteStream(arrDistScripts[n]));
+                    console.log("- UPDATED: "+arrDistScripts[n]);
+                }
             }
         }
     }
 
     // DEPLOY
+    if(hasArg("-db", args) !== false) {
+        for(var n=0; n < arrSrcScripts.length; n++) {
+            if(arrSrcScripts[n].match(/index.js/gi) !== null) {
+                b = browserify(arrSrcScripts[n], {"debug": false});
+                b.transform("babelify", bT).bundle().pipe(fs.createWriteStream(arrDistScripts[n]));
+            }
+
+        }
+    }
     if(hasArg("-d", args) !== false) {
         var deployFile = hasArg("-d", args);
-
-        var files = {};
-        for(var n=0; n < arrDistScripts.length; n++)
-            files[arrDistScripts[n]] = fs.readFileSync(arrDistScripts[n], "utf8");
-
-        var options = {
-            mangle: {
-                //toplevel: true,
+        for(var n=0; n < arrDistScripts.length; n++) {
+            if(arrDistScripts[n].match(/index.js/gi) !== null) {
+                var f = fs.readFileSync(arrDistScripts[n], "utf8");
+                var options = {
+                    mangle: {
+                        toplevel: true,
+                    }
+                };
+                console.log(f);
+                fs.writeFileSync(deployFile, uglifyjs.minify(f, options).code, "utf8");
             }
-        };
-        console.log(files);
-        fs.writeFileSync(deployFile, uglifyjs.minify(files, options).code, "utf8");
+        }
     }
 });

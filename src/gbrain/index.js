@@ -1,16 +1,18 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-
-var exp = { "GBrain": "./gbrain",
-    "GBrainRL": "./gbrain-rl",
-    "Graph": "./Graph.class",
-    "GraphUtils": "./graphUtil",
-    "KERNEL_ADJMATRIX_UPDATE": "./KERNEL_ADJMATRIX_UPDATE.class.js",
-    "KERNEL_DIR": "./KERNEL_DIR.class.js",
-    "ProccessImg": "./ProccessImg.class.js",
-    "VFP_NODE": "./VFP_NODE.class.js",
-    "VFP_NODEPICKDRAG": "./VFP_NODEPICKDRAG.class.js"
-};
-
-for(var key in exp)
-    exports[key] = require(exp[key]);
+import "./gbrain";
+module.exports.GBrain = global.GBrain = GBrain;
+import "./gbrain-rl";
+module.exports.GBrainRL = global.GBrainRL = GBrainRL;
+import "./Graph.class";
+module.exports.Graph = global.Graph = Graph;
+import "./graphUtil";
+module.exports.GraphUtils = global.GraphUtils = GraphUtils;
+import "./KERNEL_ADJMATRIX_UPDATE.class";
+module.exports.KERNEL_ADJMATRIX_UPDATE = global.KERNEL_ADJMATRIX_UPDATE = KERNEL_ADJMATRIX_UPDATE;
+import "./KERNEL_DIR.class";
+module.exports.KERNEL_DIR = global.KERNEL_DIR = KERNEL_DIR;
+import "./ProccessImg.class";
+module.exports.ProccessImg = global.ProccessImg = ProccessImg;
+import "./VFP_NODE.class";
+module.exports.VFP_NODE = global.VFP_NODE = VFP_NODE;
+import "./VFP_NODEPICKDRAG.class";
+module.exports.VFP_NODEPICKDRAG = global.VFP_NODEPICKDRAG = VFP_NODEPICKDRAG;
