@@ -18,7 +18,7 @@
     "watchify": "~3.9.0",
     "browserify": "~16.1.1"
   },
-  "main": "dist/gbrain/gbrain.min.js",
+  "main": "src/gbrain/index.js",
   "scripts": {
     "build_&_watch": "node build.js -b -s",
     "build_&_deploy": "node build.js -b && node build.js -d=dist/gbrain/gbrain.min.js"
