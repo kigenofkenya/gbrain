@@ -1,0 +1,149 @@
+<html>
+	<head>
+		<title>GBrain basic</title>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+        <!--<script src="../../dist/scejs/SCEJS.min.js"></script>-->
+        <script src="../../dist/scejs/ArrayGenerator.class.js"></script>
+        <script src="../../dist/scejs/Component.class.js"></script>
+        <script src="../../dist/scejs/Component_GPU.class.js"></script>
+        <script src="../../dist/scejs/ComponentControllerTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/ComponentKeyboardEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentMouseEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentProjection.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransform.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/Constants.js"></script>
+        <script src="../../dist/scejs/Mesh.class.js"></script>
+        <script src="../../dist/scejs/Node.class.js"></script>
+        <script src="../../dist/scejs/Project.class.js"></script>
+        <script src="../../dist/scejs/SCE.class.js"></script>
+        <script src="../../dist/scejs/Stage.class.js"></script>
+        <script src="../../dist/scejs/StormMath.class.js"></script>
+        <script src="../../dist/scejs/SystemEvents.class.js"></script>
+        <script src="../../dist/scejs/Utils.class.js"></script>
+        <script src="../../dist/scejs/VFP_RGB.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleCamera/SimpleCamera.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleNode/SimpleNode.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Grid/Grid.class.js"></script>
+
+        <script src="../../dist/scejs/Prefabs/Graph/Graph.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_DIR.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/graphUtil.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_ADJMATRIX_UPDATE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODEPICKDRAG.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/ProccessImg.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain-rl.js"></script>
+	</head>
+
+	<body>
+		<br />
+        <div style="width:20%;display:inline-block">
+            <div id='elem_bgColor' style='width:200px;height:150px;border:2px solid #333;text-align: center;'>
+                <div id='elem_fgColor' style='margin-top:60px;'>Click to get new color</div>
+            </div>
+
+            <button id="BTNID_WHITE" style="display:inline-block;width:100px;height:100px;background:white;color:#AAA;">train white</button>
+            <button id="BTNID_BLACK" style="display:inline-block;width:100px;height:100px;background:black;color:#666;">train black</button>
+            <div>
+                View weight*output<input title="weight*output" type="checkbox" id="elem_enableOutputWeighted" />
+            </div>
+        </div>
+        <div style="width:79%;display:inline-block">
+            <div id="el_gbrain"></div>
+        </div>
+
+		<script>
+		    var network_size = 3;
+
+            var layer_defs = [];
+            layer_defs.push({"type": "input", "depth": network_size});
+            layer_defs.push({"type": "fc", "num_neurons": 12, "activation": "sigm"});
+            layer_defs.push({"type": "fc", "num_neurons": 12, "activation": "sigm"});
+            layer_defs.push({"type": "regression", "num_neurons": 2});
+
+
+            var gbrain = new GBrain({   "target": document.getElementById("el_gbrain"),
+                                        "dimensions": {"width": window.innerWidth*0.7, "height": window.innerHeight-100}});
+            gbrain.makeLayers(layer_defs);
+
+            var render = function() {
+                gbrain.tick();
+                requestAnimFrame(render);
+            };
+            render();
+		</script>
+
+		<script>
+		    var elem_bgColor = document.getElementById("elem_bgColor");
+            var elem_fgColor = document.getElementById("elem_fgColor");
+            var showOutputWeighted = false;
+
+            var r = Math.random();
+            var g = Math.random();
+            var b = Math.random();
+            var inc = 0;
+            var newColor = function() {
+                /*r = Math.random();
+                g = Math.random();
+                b = Math.random();*/
+                var arrC = [[1,0,0],[0,1,0],[0,0,1]];
+                inc = (inc === arrC.length-1) ? 0 : inc+=1;
+                var arrS = arrC[inc];
+                r = arrS[0];
+                g = arrS[1];
+                b = arrS[2];
+
+                elem_bgColor.style.backgroundColor = "rgb("+Math.round(r*255)+", "+Math.round(g*255)+", "+Math.round(b*255)+")";
+                console.log("input: "+r+", "+g+", "+b);
+
+                gbrain.forward([r,g,b], function(data) {
+                    console.log("W output: "+data[0].output+" B output: "+data[1].output);
+                    if(data[1].output > data[0].output)
+                        elem_fgColor.style.color = "rgb(0, 0, 0)";
+                    else
+                        elem_fgColor.style.color = "rgb(255, 255, 255)";
+                });
+            };
+            newColor();
+
+            var lastTotalError = 0;
+            var calculate = function(data) {
+                //var cTotError = (data[0].error+data[1].error)-lastTotalError;
+                //console.log(cTotError+" W output: "+ data[0].output+"    W error: "+ data[0].error+"   B output: "+ data[1].output+"    B error: "+ data[1].error);
+                //console.log("W output: "+data[0].output+" B output: "+data[1].output);
+                //lastTotalError = data[0].error+data[1].error;
+                //newColor();
+            };
+
+            document.getElementById("BTNID_WHITE").addEventListener("click", function() { // train white
+                let r = (elem_fgColor.style.color === "rgb(255, 255, 255)") ? {dim: 0, val: 1.0} : {dim: 1, val: -1.0};
+
+                gbrain.train(r, function(data) {
+                    calculate(data);
+                });
+                //elem_fgColor.style.color = "rgb(255, 255, 255)";
+            });
+
+            document.getElementById("BTNID_BLACK").addEventListener("click", function() { // train black
+                let r = (elem_fgColor.style.color === "rgb(0, 0, 0)") ? {dim: 1, val: 1.0} : {dim: 0, val: -1.0};
+
+                gbrain.train(r, function(data) {
+                    calculate(data);
+                });
+                //elem_fgColor.style.color = "rgb(0, 0, 0)";
+            });
+
+            document.getElementById("elem_bgColor").addEventListener("click", function() {
+                newColor();
+            });
+
+            document.getElementById("elem_enableOutputWeighted").addEventListener("click", function() {
+                (showOutputWeighted === false) ? gbrain.enableShowOutputWeighted() : gbrain.disableShowOutputWeighted();
+                showOutputWeighted = !showOutputWeighted;
+            });
+		</script>
+	</body>
+</html>

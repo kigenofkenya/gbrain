@@ -1,0 +1,382 @@
+<html>
+	<head>
+		<title>SCEJS Graph</title>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+        <!--<script src="../../dist/scejs/SCEJS.min.js"></script>-->
+        <script src="../../dist/scejs/ArrayGenerator.class.js"></script>
+        <script src="../../dist/scejs/Component.class.js"></script>
+        <script src="../../dist/scejs/Component_GPU.class.js"></script>
+        <script src="../../dist/scejs/ComponentControllerTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/ComponentKeyboardEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentMouseEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentProjection.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransform.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/Constants.js"></script>
+        <script src="../../dist/scejs/Mesh.class.js"></script>
+        <script src="../../dist/scejs/Node.class.js"></script>
+        <script src="../../dist/scejs/Project.class.js"></script>
+        <script src="../../dist/scejs/SCE.class.js"></script>
+        <script src="../../dist/scejs/Stage.class.js"></script>
+        <script src="../../dist/scejs/StormMath.class.js"></script>
+        <script src="../../dist/scejs/SystemEvents.class.js"></script>
+        <script src="../../dist/scejs/Utils.class.js"></script>
+        <script src="../../dist/scejs/VFP_RGB.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleCamera/SimpleCamera.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleNode/SimpleNode.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Grid/Grid.class.js"></script>
+
+        <script src="../../dist/scejs/Prefabs/Graph/Graph.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_DIR.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/graphUtil.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_ADJMATRIX_UPDATE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODEPICKDRAG.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/ProccessImg.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain-rl.js"></script>
+	</head>
+
+	<body>
+        <div style="width:20%;display:inline-block">
+            T for top view<br />
+            Alt+LeftMouse for Orbit<br />
+            Alt+MiddleMouse for Pan<br />
+            P for perspective view<br />
+            WASD for to move<br />
+            <button id="BTNID_FORCELAYOUT_ON">ForceLayout On</button><br />
+            <button id="BTNID_FORCELAYOUT_OFF">ForceLayout Off</button><br />
+            <br />
+            <button id="BTNID_RD">random destination</button><br />
+            <button id="BTNID_WH">widthheight destination</button><br />
+            <button id="BTNID_SPHERICAL">spherical destination</button><br />
+            <button id="BTNID_HEM">hemispherical destination</button><br />
+            <button id="BTNID_DESTINATION_OFF">Destination Off</button><br />
+            <br />
+            <button id="BTNID_DIR">random direction</button><br />
+            <button id="BTNID_DIRECTION_OFF">Direction Off</button><br />
+            <br />
+            <button id="BTNID_IMG">node per pixel color</button><br />
+            <img id="IMGID_lena" src="../_RESOURCES/lena_128x128.jpg" /><br />
+        </div>
+        <div style="width:79%;display:inline-block">
+            <div id="SCEJS"></div>
+        </div>
+
+
+
+
+		<script>
+			var sce = new SCE();
+			sce.initialize({"target": document.getElementById("SCEJS"),
+							"dimensions": {"width": window.innerWidth*0.7, "height": window.innerHeight-100}});
+
+
+			var project = new Project();
+			sce.loadProject(project);
+
+			var stage = new Stage();
+			project.addStage(stage);
+			project.setActiveStage(stage);
+
+			// CAMERA
+			var simpleCamera = new SimpleCamera(sce);
+			simpleCamera.setView(Constants.VIEW_TYPES.TOP);
+			simpleCamera.setVelocity(1.0);
+			sce.setDimensions(window.innerWidth*0.7, window.innerHeight-100);
+			
+			// GRID
+			var grid = new Grid(sce);
+			//grid.generate(100.0, 1.0);
+
+
+			// GRAPH
+			var OFFSET = 1000.0;
+			var offs = OFFSET/10;
+
+			var graph = new Graph(sce);
+
+			graph.setFontsImage("../../SCEJS/Prefabs/Graph/fonts.png");
+
+
+			// APPLY THIS LAYOUT
+			var arrPP = [];
+			/*arrPP.push({"x": -(offs/2)+(Math.random()*offs), "y": -(offs/2)+(Math.random()*offs), "z": -(offs/2)+(Math.random()*offs),
+						"polarity": 1.0,
+						"orbit": 0.0,
+						"force": 0.5});*/
+
+			var lines_argumentsPoles = (function(arrPP) {
+				var str = '';
+				for(var n = 0, f = arrPP.length; n < f; n++) {
+					str += 'float pole'+n+'X,'+
+							'float pole'+n+'Y,'+
+							'float pole'+n+'Z,'+
+							'float pole'+n+'Polarity,'+
+							'float pole'+n+'Orbit,'+
+							'float pole'+n+'Force,';
+				}
+				return str;
+			}).bind(this);
+			var lines_poles = (function(arrPP) {
+				var str = 'float offset;vec3 polePos;vec3 vecN; float toDir; vec3 cc;float distanceToPole;\n';
+				for(var n = 0, f = arrPP.length; n < f; n++) {
+					str += 'polePos = vec3(pole'+n+'X,pole'+n+'Y,pole'+n+'Z);\n'+
+							'toDir = -1.0;\n'+
+							'if(sign(particlePolarity[x]) == 0.0 && sign(pole'+n+'Polarity) == 1.0) toDir = 1.0;\n'+
+							'if(sign(particlePolarity[x]) == 1.0 && sign(pole'+n+'Polarity) == 0.0) toDir = 1.0;\n'+
+							'offset = '+OFFSET.toFixed(20)+';'+
+
+							'distanceToPole = 1.0-sqrt(length(vec3(polePos-currentPos)/offset));'+
+
+							'vecN = ((vec3(polePos-currentPos)-(-1.0))/(1.0-(-1.0)) - 0.5 ) *2.0 * pole'+n+'Force * toDir;'+
+							'cc = vecN*distanceToPole ;\n'+
+
+							'currentDir = clamp(currentDir+(cc*0.01),-1.0,1.0);\n'+
+
+							//'if(pole'+n+'Orbit == 1.0) cc =
+							'';
+				}
+				return str;
+			}).bind(this);
+			graph.applyLayout({	// DIRECTION
+								// [x], [xx_opposite]
+								// vec3 currentDir, vec3 currentDir_opposite, vec3 currentPos, vec3 currentPos_opposite
+								// float isNode, float isLink, float isTarget,
+								// float nodeId, float nodeId_opposite, linkId, linkId_opposite
+								"argsDirection":
+										// dir
+										"float4* ndirect,float enableNDirect,"+
+										// pp
+										"float* particlePolarity,"+lines_argumentsPoles(arrPP)+
+										// destination
+										"float4* dest,float destinationForce,float enableDestination,"+
+										// lifeDistance
+										"float4* initPos,float4* initDir,float lifeDistance,"+
+                                        // lock
+                                        "float* nodeLock",
+								"codeDirection":
+									// pp
+									lines_poles(arrPP)+
+									// destination
+									'if(enableDestination == 1.0) {\n'+
+										'vec3 destinationPos = dest[x].xyz;\n'+
+										'vec3 dirDestination = normalize(destinationPos-currentPos);\n'+
+										'float distan = abs(distance(currentPos,destinationPos));\n'+
+										'float dirDestWeight = sqrt(distan);\n'+
+										'currentDir = (currentDir+(dirDestination*dirDestWeight*destinationForce))*dirDestWeight*0.1;\n'+
+									'}\n'+
+									// dir
+									"if(enableNDirect == 1.0) currentDir += (ndirect[x].xyz*0.0001);"+
+									// lifeDistance
+									'vec3 newPos = (currentPos+currentDir);\n'+
+									'vec4 initPos = initPos[x];'+
+									'if(lifeDistance > 0.0 && distance(vec3(initPos.x,initPos.y,initPos.z),newPos) > lifeDistance) {'+
+										'vec4 initDir = vec4(initDir[x]);'+
+										'currentDir = vec3(initDir.x,initDir.y,initDir.z);'+
+									'}'+
+									// lifeDistance pos
+                                    'if(lifeDistance > 0.0 && distance(vec3(initPos.x,initPos.y,initPos.z), currentPos) > lifeDistance)'+
+                                    'currentPos = vec3(initPos.x,initPos.y,initPos.z);'+
+                                        // lock
+                                    'if(nodeLock[x] == 1.0)'+
+                                    'currentDir = vec3(0.0, 0.0, 0.0);\n',
+
+								// OBJECT
+								// [x], vec4 nodeVertexColor, vec4 nodeVertexPosition, vec4 XYZW_opposite
+								// float isNode, float isLink, float isArrow, float isNodeText, float isTarget
+								"argsObject":
+									// nodeColor
+									"float4*attr nodeColor,"+
+									// selfShadows
+									"float4 sunPos,float selfShadows,float4 ambientColor,"+
+									// lock
+									"float*attr nodeLock",
+								"codeObject":
+									// nodeColor
+									'if(isNode == 1.0) nodeVertexColor = nodeColor[x];'+
+									//'if(isLink == 1.0 && currentLineVertex == 1.0) nodeVertexColor = vec4(0.0, 1.0, 0.0, 1.0);'+  // this is isTarget for arrows
+
+                                    'float degr = (currentLineVertex/vertexCount)/2.0;'+
+                                    'if(isLink == 1.0) nodeVertexColor = vec4(0.5+degr, 0.5+degr, 0.5+degr, 1.0);'+ // this is isTarget for arrows
+									'if(isArrow == 1.0 && currentLineVertex == vertexCount) nodeVertexColor = vec4(0.0, 1.0, 0.0, 1.0);'+  // this is isTarget for arrows
+									'if(isArrow == 1.0 && currentLineVertex == 0.0) nodeVertexColor = vec4(1.0, 0.0, 0.0, 0.0);'+  // this is isTarget for arrows
+									// selfShadows
+					       			'vec3 lightDirection = normalize(sunPos.xyz * -1.0);\n'+
+					       			'float lightWeighting = max(dot(normalize(vWNMatrix.xyz), -lightDirection)*-1.0, 0.0);\n'+
+					       			'vec3 weightDiffuse = min(vec3(1.0,1.0,1.0),vec3(lightWeighting,lightWeighting,lightWeighting));\n'+
+					       			'if(selfShadows == 1.0) nodeVertexColor = (vVertexColor*vec4(weightDiffuse,1.0))+(ambientColor*vVertexColor);\n'+
+									// lock
+									'if(nodeLock[x] == 1.0) nodeVertexColor *= vec4(0.8, 0.3, 0.3, 1.0);'+
+									//'if(nodeLock[x] == 0.0 && isNode == 1.0) nodeVertexPosition = vec4(nodeVertexPosition.x*3.0, nodeVertexPosition.y*3.0, nodeVertexPosition.z*3.0, 1.0);'+
+									'gl_PointSize = 10.0;\n'});
+
+
+			// NODES AND LINKS CREATION
+			var numNodes = 200;
+			var numLinks = 100;
+			for(var n=0; n < numNodes; n++) {
+				var pos = [-(offs/2)+(Math.random()*offs), -(offs/2)+(Math.random()*offs), -(offs/2)+(Math.random()*offs), 1.0];
+
+				var node = graph.addNode({
+					"name": "#"+n.toString()+":"+n.toString(),
+					"data": "#"+n.toString()+":"+n.toString(),
+					"position": pos,
+					"color": ((Math.floor(n%2) == 0.0) ? "../_RESOURCES/lena_128x128.jpg" : "../_RESOURCES/cartman08.jpg"),
+					"layoutNodeArgumentData": {
+												// dir
+												"ndirect": [0.0, 0.0, 0.0, 1.0],
+												// pp
+												"particlePolarity": 0.0,
+												// destination
+												"dest": [0.0, 0.0, 0.0, 0.0],
+												// lifeDistance
+												"initPos": pos, "initDir": [0.0, 0.0, 0.0, 0.0],
+												// nodeColor
+												"nodeColor": [Math.random(), Math.random(), Math.random(), 1.0],
+												// lock
+												"nodeLock": 0.0},
+					"onmouseup": (function(nodeData) {
+
+				}).bind(this)});
+			}
+
+			for(var n=0; n < numLinks; n++) {
+				var A = parseInt(Math.random()*numNodes).toString();
+				var B = parseInt(Math.random()*numNodes).toString();
+
+				graph.addLink({	"origin": "#"+A+":"+A,
+								"target": "#"+B+":"+B,
+								"directed": true});
+			}
+
+            graph.createWebGLBuffers();
+
+            // SET LAYOUT GLOBAL ARGUMENTS DATA
+            // pp
+            for(var n = 0, f = arrPP.length; n < f; n++) {
+                graph.setLayoutArgumentData({"argName": 'pole'+n+'X', "value": arrPP[n].x});
+                graph.setLayoutArgumentData({"argName": 'pole'+n+'Y', "value": arrPP[n].y});
+                graph.setLayoutArgumentData({"argName": 'pole'+n+'Z', "value": arrPP[n].z});
+                graph.setLayoutArgumentData({"argName": 'pole'+n+'Polarity', "value": arrPP[n].polarity});
+                graph.setLayoutArgumentData({"argName": 'pole'+n+'Orbit', "value": arrPP[n].orbit});
+                graph.setLayoutArgumentData({"argName": 'pole'+n+'Force', "value": arrPP[n].force});
+            }
+            // destination
+            graph.setLayoutArgumentData({"argName": "destinationForce", "value": 0.1});
+            graph.setLayoutArgumentData({"argName": "enableDestination", "value": 0.0});
+            // lifeDistance
+            graph.setLayoutArgumentData({"argName": "lifeDistance", "value": 0.0});
+            // selfShadows
+            graph.setLayoutArgumentData({"argName": "sunPos", "value": [0.2, -0.5, 0.4, 1.0]});
+            graph.setLayoutArgumentData({"argName": "selfShadows", "value": 0.0});
+            graph.setLayoutArgumentData({"argName": "ambientColor", "value": [0.2, 0.2, 0.2, 1.0]});
+
+			/*graph.adjacencyMatrixToImage(function(im) {
+				document.body.appendChild(im);
+				im.style.border = "1px solid red";
+			});*/
+
+			// SET SOME LAYOUT NODE ARGUMENTS DATA
+			/*graph.setLayoutNodeArgumentData({	"nodeName": "#0:0",
+												"argName": "nodeLock",
+												"value": 1.0});*/
+												
+			//*********
+			// RENDER STAGE
+			//*********
+            var render = function() {
+                project.getActiveStage().tick();
+                requestAnimFrame(render);
+            }
+            render();
+
+
+			window.onresize = (function() {
+				//sce.setDimensions(512, 128);
+		    }).bind(this);
+		</script>
+
+
+
+
+		<script>
+			// BUTTONS UI
+			var arrayGenerator = new ArrayGenerator();
+												
+												
+												
+			document.getElementById("BTNID_FORCELAYOUT_ON").addEventListener("click", (function() {
+				graph.enableForceLayout();
+			}).bind(this));
+			document.getElementById("BTNID_FORCELAYOUT_OFF").addEventListener("click", (function() {
+				graph.disableForceLayout();
+			}).bind(this));
+
+
+
+			document.getElementById("BTNID_RD").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableDestination", "value": 1.0});
+				graph.setLayoutNodeArgumentArrayData({	"argName": "dest",
+														"value": arrayGenerator.randomArray({	"count": numNodes,
+																								"offset": 100.0,
+																								"type": "float4"})
+													});
+			}).bind(this));
+			document.getElementById("BTNID_WH").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableDestination", "value": 1.0});
+				graph.setLayoutNodeArgumentArrayData({	"argName": "dest",
+														"value": arrayGenerator.widthHeightArray({	"count": numNodes,
+																									"width": 128,
+																									"height": 128,
+																									"spacing": 3.0})
+													});
+			}).bind(this));
+			document.getElementById("BTNID_SPHERICAL").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableDestination", "value": 1.0});
+				graph.setLayoutNodeArgumentArrayData({	"argName": "dest",
+														"value": arrayGenerator.sphericalArray({"count": numNodes,
+																								"radius": 100.0})
+													});
+			}).bind(this));
+			document.getElementById("BTNID_HEM").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableDestination", "value": 1.0});
+				graph.setLayoutNodeArgumentArrayData({	"argName": "dest",
+														"value": arrayGenerator.hemArray({	"count": numNodes,
+																							"radius": 100.0,
+																							"normalVector": $V3([0.0, 1.0, 0.0]),
+																							"degrees": 1.0})
+													});
+			}).bind(this));
+			document.getElementById("BTNID_DESTINATION_OFF").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableDestination", "value": 0.0});
+			}).bind(this));
+
+
+			document.getElementById("BTNID_DIR").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableNDirect", "value": 1.0});
+				graph.setLayoutNodeArgumentArrayData({	"argName": "ndirect",
+														"value": arrayGenerator.randomArray({	"count": numNodes,
+																								"offset": 100.0,
+																								"type": "float4"})
+													});
+													setTimeout(function() {
+														graph.setLayoutArgumentData({"argName": "enableNDirect", "value": 0.0});
+													}, 100);
+			}).bind(this));
+			document.getElementById("BTNID_DIRECTION_OFF").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableNDirect", "value": 0.0});
+			}).bind(this));
+
+
+			document.getElementById("BTNID_IMG").addEventListener("click", (function() {
+				graph.setLayoutNodeArgumentArrayData({	"argName": "nodeColor",
+														"value": arrayGenerator.imageArray({"count": numNodes,
+																							"image": document.getElementById("IMGID_lena")})
+													});
+			}).bind(this));
+		</script>
+
+	</body>
+</html>

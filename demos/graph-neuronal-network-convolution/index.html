@@ -1,0 +1,261 @@
+<html>
+	<head>
+		<title>SCEJS ConvNeuronalNetwork</title>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+        <!--<script src="../../dist/scejs/SCEJS.min.js"></script>-->
+        <script src="../../dist/scejs/ArrayGenerator.class.js"></script>
+        <script src="../../dist/scejs/Component.class.js"></script>
+        <script src="../../dist/scejs/Component_GPU.class.js"></script>
+        <script src="../../dist/scejs/ComponentControllerTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/ComponentKeyboardEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentMouseEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentProjection.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransform.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/Constants.js"></script>
+        <script src="../../dist/scejs/Mesh.class.js"></script>
+        <script src="../../dist/scejs/Node.class.js"></script>
+        <script src="../../dist/scejs/Project.class.js"></script>
+        <script src="../../dist/scejs/SCE.class.js"></script>
+        <script src="../../dist/scejs/Stage.class.js"></script>
+        <script src="../../dist/scejs/StormMath.class.js"></script>
+        <script src="../../dist/scejs/SystemEvents.class.js"></script>
+        <script src="../../dist/scejs/Utils.class.js"></script>
+        <script src="../../dist/scejs/VFP_RGB.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleCamera/SimpleCamera.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleNode/SimpleNode.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Grid/Grid.class.js"></script>
+
+        <script src="../../dist/scejs/Prefabs/Graph/Graph.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_DIR.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/graphUtil.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_ADJMATRIX_UPDATE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODEPICKDRAG.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/ProccessImg.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain-rl.js"></script>
+	</head>
+
+	<body>
+        <div style="width:20%;display:inline-block">
+            T for top view<br />
+            Alt+LeftMouse for Orbit<br />
+            Alt+MiddleMouse for Pan<br />
+            P for perspective view<br />
+            WASD for to move<br />
+            <br />
+
+            [-1.0,1.0] = [0,255] = [<span style='background-color:red'>_</span>,<span style='background-color:green'>_</span>] <br />
+            <div id='elem_bgColor' style='width:150px;height:150px;border:2px solid #333;text-align: center;'>
+                <div id='elem_fgColor'>SCEJS</div>
+            </div>
+
+            <button id="BTNID_AFFERENCEDATA">random input data</button> <br />
+            <button id="BTNID_EFFERENCEDATA0">train animal</button> <br />
+            <button id="BTNID_EFFERENCEDATA1">train house</button> <br />
+            <!--<button id="BTNID_NETWORKSTEP">network step</button> <br />-->
+        </div>
+        <div style="width:79%;display:inline-block">
+            <div id="SCEJS"></div>
+        </div>
+		<script>
+			var sce = new SCE();
+			sce.initialize({"target": document.getElementById("SCEJS"),
+							"dimensions": {"width": window.innerWidth*0.7, "height": window.innerHeight-100}});
+
+
+			var project = new Project();
+			sce.loadProject(project);
+
+			var stage = new Stage();
+			project.addStage(stage);
+			project.setActiveStage(stage);
+
+			// CAMERA
+			var simpleCamera = new SimpleCamera(sce);
+			simpleCamera.setView(Constants.VIEW_TYPES.TOP);
+			simpleCamera.setVelocity(1.0);
+			sce.setDimensions(window.innerWidth*0.7, window.innerHeight-100);
+
+			// GRID
+			//var grid = new Grid(sce);
+			//grid.generate(100.0, 1.0);
+
+
+			// GRAPH NEURONAL NETWORK
+            var OFFSET = 1000.0;
+            var offs = OFFSET/10;
+
+            var graph = new Graph(sce, {"enableFonts": false});
+            graph.enableNeuronalNetwork();
+
+            var mesh_point = new Mesh().loadPoint();
+            //graph.setNodeMesh(mesh_point);
+
+
+            graph.setFontsImage("../../SCEJS/Prefabs/Graph/fonts.png");
+
+            graph.layerCount = 0;
+            // convolutions neurons
+            var W = 22, H = 22, nodSep = 5.0;
+            var convM = {};
+            convM["emboss"] = [
+                -2.0,   -1.0,   0.0,
+                -1.0,   1.0,    1.0,
+                0.0,    1.0,    2.0];
+            convM["outline"] = [
+                -1.0,   -1.0,   -1.0,
+                -1.0,   8.0,    -1.0,
+                -1.0,   -1.0,   -1.0];
+            var posInputNeuron = [0.0, 0.0, 0.0, 1.0];
+            var inputNeuron = graph.createXYNeuronsFromImage({  "neuron": "0_",
+                                                                "position": posInputNeuron,
+                                                                "w": W,
+                                                                "h": H});//TODO
+
+            var convNeurons;
+            for(var n=0; n < 3; n++) {
+                var posConvNeurons = [posInputNeuron[0]+((W*(n+1))*(nodSep*1.2)), 0.0, posInputNeuron[2]-(H*(nodSep*1.2)), 1.0];
+                convNeurons = graph.createConvXYNeuronsFromXYNeurons({  "position": posConvNeurons,
+                                                                        "w": W-(n*2),
+                                                                        "h": H-(n*2),
+                                                                        "idOrigin": n+"_",
+                                                                        "idTarget": (n+1)+"_",
+                                                                        "activationFunc": 1.0,
+                                                                        "convMatrix": convM["outline"]});
+                graph.layerCount++;//TODO
+            }
+
+            var posNeuronLayer1 = [posInputNeuron[0]+((W*(n+1))*(nodSep*1.2)), 0.0, 0.0, 1.0];
+            var neuronLayer1 = graph.createNeuronLayer(6, 6, posNeuronLayer1);
+
+            graph.connectNeuronLayerWithNeuronLayer({   "neuronLayerOrigin": convNeurons,
+                                                        "neuronLayerTarget": neuronLayer1,
+                                                        "layerNum": graph.layerCount});
+            graph.layerCount++;
+
+            graph.addNeuron("color", [posInputNeuron[0]+((W*(n+2))*(nodSep*1.2)), 0.0, 0.0, 1.0]);
+            graph.connectNeuronLayerWithNeuron({"neuronLayer": neuronLayer1,
+                                                "neuron": "color",
+                                                "layerNum": graph.layerCount});
+
+            graph.createWebGLBuffers();
+
+			//*********
+			// RENDER STAGE
+			//*********
+            var render = function() {
+                project.getActiveStage().tick();
+                requestAnimFrame(render);
+            }
+            render();
+
+
+			window.onresize = (function() {
+				//sce.setDimensions(512, 128);
+		    }).bind(this);
+		</script>
+
+
+		<script>
+		    var elem_bgColor = document.getElementById("elem_bgColor");
+            var elem_fgColor = document.getElementById("elem_fgColor");
+
+            document.getElementById("BTNID_AFFERENCEDATA").addEventListener("click", (function() {
+                loadImg();
+            }).bind(this));
+
+            document.getElementById("BTNID_EFFERENCEDATA0").addEventListener("click", (function() {
+                graph.setEfferentData({ "data": [0.0],
+                                        "onLearned": (function(output) { // output[3] = error
+
+                                        }).bind(this)});
+                elem_fgColor.innerHTML = "animal";
+            }).bind(this));
+            document.getElementById("BTNID_EFFERENCEDATA1").addEventListener("click", (function() {
+                graph.setEfferentData({ "data": [1.0],
+                                        "onLearned": (function(output) { // output[3] = error
+
+                                        }).bind(this)});
+                elem_fgColor.innerHTML = "house";
+            }).bind(this));
+
+
+            var inputImage = function(img) {
+                elem_fgColor.innerHTML = "";
+                var thumb = img.cloneNode(true);
+                thumb.width = 60;
+                thumb.height = 60;
+                elem_fgColor.appendChild(thumb);
+
+                var arr = new Utils().getUint8ArrayFromHTMLImageElement(img);
+                console.log(arr.length);
+                var ad = {};
+                for(var x=0; x < W; x++) {
+                    for(var y=0; y < H; y++) {
+                        var ww = parseInt(img.width/W);
+                        var hh = parseInt(img.height/H);
+                        var id = (((y*hh)*img.width)+(x*ww))*4;
+                        ad["0_"+y+"_"+x] = (arr[id]/255);
+                    }
+                }
+                ad["efferentNeuron"] = ["color"];
+                ad["onAction"] = (function(data) {
+                    /*console.log("W output: %O", data.color.output);
+                    if(data.color.output < 0.0)
+                        elem_fgColor.innerHTML += "animal";
+                    else
+                        elem_fgColor.innerHTML += "house";*/
+                }).bind(this);
+
+                graph.setAfferentData(ad);
+            };
+            var loadImgL = function(url) {
+                var img = new Image();
+                img.addEventListener('load', function() {
+                    inputImage(this);
+                });
+                img.src = url;
+            };
+            loadImgL("house-00.jpg");
+
+            var loadImg = function() {
+                elem_fgColor.innerHTML = "Loading image...";
+
+                var urls = ["http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=n02084071",
+                    "http://www.image-net.org/api/text/imagenet.synset.geturls?wnid=n03544360"];
+                var req = new XMLHttpRequest();
+                var idu = Math.round(Math.random());
+                req.open("GET", urls[idu], true);
+                req.responseType = "blob";
+                req.onload = (function(onload) {
+                    var filereader = new FileReader();
+                    filereader.onload = (function(onload, event) {
+                        var text = event.target.result;
+
+                        var arrImgUrl = text.split("\n");
+                        var imgUrl = arrImgUrl[parseInt(Math.random()*arrImgUrl.length)];
+
+                        var img = new Image();
+                        img.crossOrigin = "Anonymous";
+                        img.addEventListener('load', function() {
+                            inputImage(this);
+                        });
+                        img.addEventListener('error', function() {
+                            loadImg();
+                        });
+                        img.src = imgUrl;
+
+                        if(onload != undefined && typeof(onload) == 'function')
+                            onload();
+                    }).bind(this, onload);
+                    filereader.readAsText(req.response);
+                }).bind(this, onload);
+                req.send(null);
+            };
+            //loadImg();
+		</script>
+	</body>
+</html>

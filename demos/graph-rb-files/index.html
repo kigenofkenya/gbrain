@@ -1,0 +1,406 @@
+<html>
+	<head>
+		<title>SCEJS Graph</title>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+        <!--<script src="../../dist/scejs/SCEJS.min.js"></script>-->
+        <script src="../../dist/scejs/ArrayGenerator.class.js"></script>
+        <script src="../../dist/scejs/Component.class.js"></script>
+        <script src="../../dist/scejs/Component_GPU.class.js"></script>
+        <script src="../../dist/scejs/ComponentControllerTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/ComponentKeyboardEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentMouseEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentProjection.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransform.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/Constants.js"></script>
+        <script src="../../dist/scejs/Mesh.class.js"></script>
+        <script src="../../dist/scejs/Node.class.js"></script>
+        <script src="../../dist/scejs/Project.class.js"></script>
+        <script src="../../dist/scejs/SCE.class.js"></script>
+        <script src="../../dist/scejs/Stage.class.js"></script>
+        <script src="../../dist/scejs/StormMath.class.js"></script>
+        <script src="../../dist/scejs/SystemEvents.class.js"></script>
+        <script src="../../dist/scejs/Utils.class.js"></script>
+        <script src="../../dist/scejs/VFP_RGB.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleCamera/SimpleCamera.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleNode/SimpleNode.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Grid/Grid.class.js"></script>
+
+        <script src="../../dist/scejs/Prefabs/Graph/Graph.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_DIR.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/graphUtil.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_ADJMATRIX_UPDATE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODEPICKDRAG.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/ProccessImg.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain-rl.js"></script>
+	</head>
+
+	<body>
+		<div id="SCEJS"></div>
+        <div id="SCEJS_timeline"></div>
+
+		<script>
+			var sce = new SCE();
+			sce.initialize({"target": document.getElementById("SCEJS"),
+							"dimensions": {"width": 512, "height": 512}});
+
+
+			var project = new Project();
+			sce.loadProject(project);
+
+			var stage = new Stage();
+			project.addStage(stage);
+			project.setActiveStage(stage);
+
+			// CAMERA
+			var simpleCamera = new SimpleCamera(sce, {	"onmousemove": (function() {
+				if(simpleCamera.isAltKeyEnabled() == false) {
+					if(graph.getSelectedId() != -1) {
+						simpleCamera.preventMove(true);
+					} else {
+						simpleCamera.preventMove(false); 
+					}
+				}
+			}).bind(this)});
+			simpleCamera.setView(Constants.VIEW_TYPES.TOP);
+			simpleCamera.setFov(500);
+			simpleCamera.setVelocity(1.0);
+			sce.setDimensions(768, 512);
+			
+			// GRID
+			//var grid = new Grid(sce);
+			//grid.generate(100.0, 1.0);
+
+
+			// GRAPH
+			var OFFSET = 1000.0;
+			var offs = OFFSET/10;
+
+            var arrPP = [];
+            var aL = function(rbUrl) {
+                // APPLY THIS LAYOUT
+                var lines_argumentsPoles = (function(arrPP) {
+                    var str = '';
+                    for(var n = 0, f = arrPP.length; n < f; n++) {
+                        str += 'float pole'+n+'X,'+
+                                'float pole'+n+'Y,'+
+                                'float pole'+n+'Z,'+
+                                'float pole'+n+'Polarity,'+
+                                'float pole'+n+'Orbit,'+
+                                'float pole'+n+'Force,';
+                    }
+                    return str;
+                }).bind(this);
+                var lines_poles = (function(arrPP) {
+                    var str = 'float offset;vec3 polePos;vec3 vecN; float toDir; vec3 cc;float distanceToPole;\n';
+                    for(var n = 0, f = arrPP.length; n < f; n++) {
+                        str += 'polePos = vec3(pole'+n+'X,pole'+n+'Y,pole'+n+'Z);\n'+
+                                'toDir = -1.0;\n'+
+                                'if(sign(particlePolarity[x]) == 0.0 && sign(pole'+n+'Polarity) == 1.0) toDir = 1.0;\n'+
+                                'if(sign(particlePolarity[x]) == 1.0 && sign(pole'+n+'Polarity) == 0.0) toDir = 1.0;\n'+
+                                'offset = '+OFFSET.toFixed(20)+';'+
+
+                                'distanceToPole = 1.0-sqrt(length(vec3(polePos-currentPos)/offset));'+
+
+                                'vecN = ((vec3(polePos-currentPos)-(-1.0))/(1.0-(-1.0)) - 0.5 ) *2.0 * pole'+n+'Force * toDir;'+
+                                'cc = vecN*distanceToPole ;\n'+
+
+                                'currentDir = clamp(currentDir+(cc*0.01),-1.0,1.0);\n'+
+
+                                    //'if(pole'+n+'Orbit == 1.0) cc =
+                                '';
+                    }
+                    return str;
+                }).bind(this);
+				graph.applyLayout({	// DIRECTION
+									// [x], [xx_opposite]
+									// vec3 currentDir, vec3 currentDir_opposite, vec3 currentPos, vec3 currentPos_opposite
+									// float isNode, float isLink, float isTarget,
+									// float nodeId, float nodeId_opposite, linkId, linkId_opposite
+									"argsDirection":
+											// dir
+											"float4* ndirect,float enableNDirect,"+
+											// pp
+                                            "float* particlePolarity,"+lines_argumentsPoles(arrPP)+
+											// destination
+											"float4* dest,float destinationForce,float enableDestination",
+									"codeDirection":
+                                        // pp
+                                        lines_poles(arrPP)+
+										// destination
+										'if(enableDestination == 1.0) {\n'+
+											'vec3 destinationPos = dest[x].xyz;\n'+
+											'vec3 dirDestination = normalize(destinationPos-currentPos);\n'+
+											'float distan = abs(distance(currentPos,destinationPos));\n'+
+											'float dirDestWeight = sqrt(distan);\n'+
+											'currentDir = (currentDir+(dirDestination*dirDestWeight*destinationForce))*dirDestWeight*0.1;\n'+
+										'}\n'+
+										// dir
+										"if(enableNDirect == 1.0) currentDir += (ndirect[x].xyz*0.0001);",
+
+									// OBJECT
+									// [x], vec4 nodeVertexColor, vec4 nodeVertexPosition, vec4 XYZW_opposite
+									// float isNode, float isLink, float isArrow, float isNodeText, float isTarget
+									"argsObject":
+										// nodeColor
+										"float4*attr nodeColor",
+									"codeObject":
+										// nodeColor
+										'if(isNode == 1.0) nodeVertexColor = nodeColor[x];'+
+										//'if(isLink == 1.0 && currentLineVertex == 1.0) nodeVertexColor = vec4(0.0, 1.0, 0.0, 1.0);'+ // this is isTarget for arrows
+
+                                        'float degr = (currentLineVertex/(vertexCount/2.0));'+
+                                        'if(isLink == 1.0) nodeVertexColor = vec4(0.5+degr, 0.5+degr, 0.5+degr, 1.0);'+ // this is isTarget for arrows
+										'if(isArrow == 1.0 && currentLineVertex == 1.0) nodeVertexColor = vec4(0.0, 1.0, 0.0, 1.0);'+ // this is isTarget for arrows
+										'if(isArrow == 1.0 && currentLineVertex == 0.0) nodeVertexColor = vec4(1.0, 0.0, 0.0, 0.0);' // this is isTarget for arrows
+
+									});
+            };
+
+			var graph;
+			var loadGraph = function(rbUrl) {
+				if(graph != undefined) graph.clear();
+				
+				graph = new Graph(sce, {"nodeDrawMode": "point"});
+
+                graph.disableAutoLink();
+
+                var mesh_point = new Mesh().loadPoint();
+                //graph.setNodeMesh(mesh_point);
+
+                //graph.setTimelineDatetimeRange({"initDatetime": "24-Nov-2000 17:57:35", "endDatetime": "24-Nov-2015 17:57:35"});
+                //graph.setTimelineFramesLength(5000);
+                //graph.enableFonts(true);
+
+                graph.showTimeline(document.getElementById("SCEJS_timeline"));
+                //graph.enableNeuronalNetwork();
+                aL();
+
+                graph.setFontsImage("../../SCEJS/Prefabs/Graph/fonts.png");
+
+
+
+				// NODES AND LINKS CREATION
+				graph.loadRBFromFile(rbUrl.split(" ")[0], (function() {
+                                                            graph.createWebGLBuffers();
+
+                    graph.enableHover();
+                                                            // SET LAYOUT GLOBAL ARGUMENTS DATA
+                                                            // pp
+                                                            for(var n = 0, f = arrPP.length; n < f; n++) {
+                                                                graph.setLayoutArgumentData({"argName": 'pole'+n+'X', "value": arrPP[n].x});
+                                                                graph.setLayoutArgumentData({"argName": 'pole'+n+'Y', "value": arrPP[n].y});
+                                                                graph.setLayoutArgumentData({"argName": 'pole'+n+'Z', "value": arrPP[n].z});
+                                                                graph.setLayoutArgumentData({"argName": 'pole'+n+'Polarity', "value": arrPP[n].polarity});
+                                                                graph.setLayoutArgumentData({"argName": 'pole'+n+'Orbit', "value": arrPP[n].orbit});
+                                                                graph.setLayoutArgumentData({"argName": 'pole'+n+'Force', "value": arrPP[n].force});
+                                                            }
+                                                            // destination
+                                                            graph.setLayoutArgumentData({"argName": "destinationForce", "value": 0.1});
+                                                            graph.setLayoutArgumentData({"argName": "enableDestination", "value": 0.0});
+
+
+                                                            graph.enableForceLayout();
+                                                        }).bind(this), false, false);
+			};			
+			loadGraph("../_RESOURCES/rb-files/utm3060.rb");
+			
+			//*********
+			// RENDER STAGE
+			//*********
+			project.getActiveStage().render();
+
+
+			window.onresize = (function() {
+				//sce.setDimensions(512, 128);
+		    }).bind(this);
+		</script>
+
+
+        <button id="BTNID_AFFERENCEDATA">afference data</button> Input data<br />
+        <button id="BTNID_EFFERENCEDATA">efference data</button> Train output from current afference data updating link weights<br />
+
+		<br />
+		Load RB: <select id="select_rb">			
+			<option>b1_ss.rb (7 7 15)</option>
+			<option>grid1.rb (252 252 952)</option>			
+			<option>dwt_307.rb (307 307 2523)</option>
+			<option>dwt_492.rb (492 492 3156)</option>
+			<option>rw496.rb (496 496 1859)</option>
+			<option>west0497.rb (497 497 1721)</option>
+			<option>flower_8_1.rb (625 513 1538)</option>
+			<option>delaunay_n11.rb (2048 2048 12254)</option>
+			<option>blckhole.rb (2132 2132 14872)</option>
+			<option>diag.rb (2559 2559 8184)</option>
+			<option>dwt_2680.rb (2680 2680 25026)</option>			
+			<option>utm3060.rb (3060 3060 42211)</option>
+		</select>Graph visualization of matrices from the <a href="http://www.cise.ufl.edu/research/sparse/matrices/">University of Florida Collection</a><br />
+
+		<br />
+		<button id="BTNID_RD">random destination</button><br />
+		<button id="BTNID_WH">widthheight destination</button><br />
+		<button id="BTNID_SPHERICAL">spherical destination</button><br />
+		<button id="BTNID_HEM">hemispherical destination</button><br />
+		<button id="BTNID_DESTINATION_OFF">Destination Off</button><br />
+		<br />
+		<button id="BTNID_DIR">random direction</button><br />
+		<button id="BTNID_DIRECTION_OFF">Direction Off</button><br />
+		
+		<input type="text" id="INPUTID_ADDNODE_ID" /><button id="BTNID_ADDNODE">AddNode</button><br />
+		<input type="text" id="INPUTID_ADDLINK_ORIGIN" /><input type="text" id="INPUTID_ADDLINK_TARGET" /><button id="BTNID_ADDLINK">AddLink</button><br />
+		<br />
+        <button id="BTNID_PP">addPP</button>
+        <br />
+		<button id="BTNID_IMG">node per pixel color</button><br />
+		<img id="IMGID_lena" src="../_RESOURCES/lena_128x128.jpg" /><br />
+		
+		
+		T for top view<br />
+		Alt+LeftMouse for Orbit<br />
+		Alt+MiddleMouse for Pan<br />		
+		P for perspective view<br />
+		WASD for to move<br />
+		<script>
+			var select = document.getElementById("select_rb");
+			select.addEventListener("change", (function() {
+				loadGraph("../_RESOURCES/rb-files/"+select.options[select.selectedIndex].value, true);
+			}).bind(this));
+		
+			// BUTTONS UI
+			var arrayGenerator = new ArrayGenerator();
+
+
+			document.getElementById("BTNID_RD").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableDestination", "value": 1.0});
+				graph.setLayoutNodeArgumentArrayData({	"argName": "dest",
+														"value": arrayGenerator.randomArray({	"count": (graph.currentNodeId+1),
+																								"offset": 100.0,
+																								"type": "float4"})
+													});
+			}).bind(this));
+			document.getElementById("BTNID_WH").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableDestination", "value": 1.0});
+				graph.setLayoutNodeArgumentArrayData({	"argName": "dest",
+														"value": arrayGenerator.widthHeightArray({	"count": (graph.currentNodeId+1),
+																									"width": 128,
+																									"height": 128,
+																									"spacing": 3.0})
+													});
+			}).bind(this));
+			document.getElementById("BTNID_SPHERICAL").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableDestination", "value": 1.0});
+				graph.setLayoutNodeArgumentArrayData({	"argName": "dest",
+														"value": arrayGenerator.sphericalArray({"count": (graph.currentNodeId+1),
+																								"radius": 100.0})
+													});
+			}).bind(this));
+			document.getElementById("BTNID_HEM").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableDestination", "value": 1.0});
+				graph.setLayoutNodeArgumentArrayData({	"argName": "dest",
+														"value": arrayGenerator.hemArray({	"count": (graph.currentNodeId+1),
+																							"radius": 100.0,
+																							"normalVector": $V3([0.0, 1.0, 0.0]),
+																							"degrees": 1.0})
+													});
+			}).bind(this));
+			document.getElementById("BTNID_DESTINATION_OFF").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableDestination", "value": 0.0});
+			}).bind(this));
+
+
+			document.getElementById("BTNID_DIR").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableNDirect", "value": 1.0});
+				graph.setLayoutNodeArgumentArrayData({	"argName": "ndirect",
+														"value": arrayGenerator.randomArray({	"count": (graph.currentNodeId+1),
+																								"offset": 100.0,
+																								"type": "float4"})
+													});
+													setTimeout(function() {
+														graph.setLayoutArgumentData({"argName": "enableNDirect", "value": 0.0});
+													}, 100);
+			}).bind(this));
+			document.getElementById("BTNID_DIRECTION_OFF").addEventListener("click", (function() {
+				graph.setLayoutArgumentData({"argName": "enableNDirect", "value": 0.0});
+            }).bind(this));
+
+
+
+
+			document.getElementById("BTNID_ADDNODE").addEventListener("click", (function() {				
+				var pos = [-(offs/2)+(Math.random()*offs), -(offs/2)+(Math.random()*offs), -(offs/2)+(Math.random()*offs), 1.0];
+
+				var node = graph.addNode({
+					"name": document.getElementById("INPUTID_ADDNODE_ID").value,
+					"data": "",
+                    "label": document.getElementById("INPUTID_ADDNODE_ID").value,
+					"position": pos,
+					"color": ((Math.floor(n%2) == 0.0) ? "../_RESOURCES/lena_128x128.jpg" : "../_RESOURCES/cartman08.jpg"),
+                    /*"bornDate": "RANDOM",
+                    "dieDate": "RANDOM",*/
+					"layoutNodeArgumentData": {
+												// dir
+												"ndirect": [0.0, 0.0, 0.0, 1.0],
+												// pp
+												"particlePolarity": 0.0,
+												// destination
+												"dest": [0.0, 0.0, 0.0, 0.0],
+												// lifeDistance
+												"initPos": pos, "initDir": [0.0, 0.0, 0.0, 0.0],
+												// nodeColor
+												"nodeColor": [Math.random(), Math.random(), Math.random(), 1.0],
+												// lock
+												"nodeLock": 0.0},
+					"onmouseup": (function(nodeData) {
+
+					}).bind(this)});
+				graph.updateNodes();
+                graph.updateLinks();
+			}).bind(this));
+			
+			document.getElementById("BTNID_ADDLINK").addEventListener("click", (function() {
+				graph.addLink({	"origin": document.getElementById("INPUTID_ADDLINK_ORIGIN").value,
+								"target": document.getElementById("INPUTID_ADDLINK_TARGET").value,
+								"directed": true/*,
+                                "bornDate": "RANDOM",
+                                "dieDate": "RANDOM"*/});
+				graph.updateLinks();
+			}).bind(this));
+
+            document.getElementById("BTNID_PP").addEventListener("click", (function() {
+                arrPP.push({"x": 0.0, "y": 0.0, "z": 0.0,
+                            "polarity": 1.0,
+                            "orbit": 0.0,
+                            "force": 0.5});
+                aL();
+            }).bind(this));
+			
+			document.getElementById("BTNID_IMG").addEventListener("click", (function() {
+				graph.setLayoutNodeArgumentArrayData({	"argName": "nodeColor",
+														"value": arrayGenerator.imageArray({"count": (graph.currentNodeId+1),
+																							"image": document.getElementById("IMGID_lena")})
+													});
+			}).bind(this));
+
+            document.getElementById("BTNID_AFFERENCEDATA").addEventListener("click", (function() {
+                var randNode = parseInt(Math.random()*graph.getNodesCount()).toString();
+                var randNumber = Math.random();
+                console.log(randNode+" "+randNumber);
+                var ob = {};
+                ob[randNode] = (randNumber*2.0)-1.0;
+                graph.setAfferentData(ob);
+            }).bind(this));
+
+            document.getElementById("BTNID_EFFERENCEDATA").addEventListener("click", (function() {
+                var randNode = parseInt(Math.random()*graph.getNodesCount()).toString();
+
+                var ob = {};
+                ob[randNode] = 1.0;
+                graph.setEfferentData(ob);
+            }).bind(this));
+		</script>
+
+	</body>
+</html>

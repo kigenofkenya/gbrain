@@ -1,0 +1,254 @@
+# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
+# File Created: 24.04.2012 20:35:29
+
+newmtl aguapisci
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5882 0.7098 0.8471
+	Kd 0.5882 0.7098 0.8471
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\white.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\white.jpg
+
+newmtl tejado
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.8235 0.6784 0.4235
+	Kd 0.8235 0.6784 0.4235
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\tejado.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\tejado.jpg
+
+newmtl pinturablanca
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\white.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\white.jpg
+
+newmtl puertGaraje
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0902 0.0902 0.0902
+	Kd 0.0902 0.0902 0.0902
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\white.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\white.jpg
+
+newmtl paredroja
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.8902 0.5882 0.6471
+	Kd 0.8902 0.5882 0.6471
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\paredroja.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\paredroja.jpg
+
+newmtl marmol
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 0.5882 0.5882 0.5882
+	Ks 0.2520 0.2520 0.2520
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\suelomarmol.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\suelomarmol.jpg
+
+newmtl suelor
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\suelolargo.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\suelolargo.jpg
+
+newmtl ventanatorre
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.4157 0.4157 0.4157
+	Kd 0.4157 0.4157 0.4157
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\ventanatorre.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\ventanatorre.jpg
+
+newmtl ventanacuadrada
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\ventanacuadrada.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\ventanacuadrada.jpg
+
+newmtl ventanaredonda
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\ventanaredonda.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\ventanaredonda.jpg
+
+newmtl ventanatriangular
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\ventanatriangular.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\ventanatriangular.jpg
+
+newmtl puerta
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\puertacasa.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\puertacasa.jpg
+
+newmtl barra
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5882 0.5882 0.5882
+	Kd 0.5882 0.5882 0.5882
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\barra.png
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\barra.png
+
+newmtl piedrapiscina
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\piedrapiscina.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\piedrapiscina.jpg
+
+newmtl suelo2
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\suelocuadrado.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\suelocuadrado.jpg
+
+newmtl sueloGaraje
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\suelogaraje.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\suelogaraje.jpg
+
+newmtl cesped
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\cesped.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\cesped.jpg
+
+newmtl paredgotele
+	Ns 100.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\paredgotele.jpg
+	map_Kd R:\PROYECTS\PROGRAMACION\javascript\_EXTRAS\marquesadoExt\paredgotele.jpg

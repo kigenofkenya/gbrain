@@ -1,0 +1,10 @@
+node_modules/
+
+.idea/
+*.iml
+target/
+
+yarn-error.log
+yarn.lock
+.eslintrc.json
+dist/bundle.min.js.map

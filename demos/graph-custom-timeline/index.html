@@ -1,0 +1,186 @@
+<html>
+	<head>
+		<title>SCEJS Graph</title>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+        <!--<script src="../../dist/scejs/SCEJS.min.js"></script>-->
+        <script src="../../dist/scejs/ArrayGenerator.class.js"></script>
+        <script src="../../dist/scejs/Component.class.js"></script>
+        <script src="../../dist/scejs/Component_GPU.class.js"></script>
+        <script src="../../dist/scejs/ComponentControllerTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/ComponentKeyboardEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentMouseEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentProjection.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransform.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/Constants.js"></script>
+        <script src="../../dist/scejs/Mesh.class.js"></script>
+        <script src="../../dist/scejs/Node.class.js"></script>
+        <script src="../../dist/scejs/Project.class.js"></script>
+        <script src="../../dist/scejs/SCE.class.js"></script>
+        <script src="../../dist/scejs/Stage.class.js"></script>
+        <script src="../../dist/scejs/StormMath.class.js"></script>
+        <script src="../../dist/scejs/SystemEvents.class.js"></script>
+        <script src="../../dist/scejs/Utils.class.js"></script>
+        <script src="../../dist/scejs/VFP_RGB.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleCamera/SimpleCamera.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleNode/SimpleNode.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Grid/Grid.class.js"></script>
+
+        <script src="../../dist/scejs/Prefabs/Graph/Graph.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_DIR.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/graphUtil.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_ADJMATRIX_UPDATE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODEPICKDRAG.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/ProccessImg.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain-rl.js"></script>
+	</head>
+
+	<body>
+		<div id="SCEJS"></div>
+
+		<script>
+			var sce = new SCE();
+			sce.initialize({"target": document.getElementById("SCEJS"),
+							"dimensions": {"width": 512, "height": 512}});
+
+
+			var project = new Project();
+			sce.loadProject(project);
+
+			var stage = new Stage();
+			project.addStage(stage);
+			project.setActiveStage(stage);
+
+			// CAMERA
+			var simpleCamera = new SimpleCamera(sce);
+			simpleCamera.setView(Constants.VIEW_TYPES.TOP);
+			simpleCamera.setVelocity(1.0);
+			sce.setDimensions(1024, 750);
+			
+			// GRID
+			var grid = new Grid(sce);
+			grid.generate(100.0, 1.0);
+
+
+			// GRAPH
+			var OFFSET = 1000.0;
+			var offs = OFFSET/2;
+
+
+
+			var graph = new Graph(sce);
+
+			graph.setFontsImage("../../SCEJS/Prefabs/Graph/fonts.png");
+
+            graph.setTimelineDatetimeRange({"initDatetime": "24-Nov-2000 17:57:35",
+                                            "endDatetime": "24-Nov-2015 17:57:35"});
+            graph.setTimelineFramesLength(1000);
+
+			// APPLY THIS LAYOUT
+			graph.applyLayout({	// OBJECT
+                // [x], vec4 nodeVertexColor, vec4 nodeVertexPosition, vec4 XYZW_opposite
+                // float isNode, float isLink, float isArrow, float isNodeText, float isTarget
+                "argsObject":
+                // nodeColor
+                        "float4*attr nodeColor",
+                "codeObject":
+                // nodeColor
+                'if(isNode == 1.0) nodeVertexColor = nodeColor[x];'+
+                    //'if(isLink == 1.0 && currentLineVertex == 1.0) nodeVertexColor = vec4(0.0, 1.0, 0.0, 1.0);'+ // this is isTarget for arrows
+
+                'float degr = (currentLineVertex/vertexCount)/2.0;'+
+                'if(isLink == 1.0) nodeVertexColor = vec4(0.5+degr, 0.5+degr, 0.5+degr, 1.0);'+ // this is isTarget for arrows
+                'if(isArrow == 1.0 && currentLineVertex == vertexCount) nodeVertexColor = vec4(0.0, 1.0, 0.0, 1.0);'+ // this is isTarget for arrows
+                'if(isArrow == 1.0 && currentLineVertex == 0.0) nodeVertexColor = vec4(1.0, 0.0, 0.0, 0.0);' // this is isTarget for arrows
+
+            });
+
+
+
+			// NODES AND LINKS CREATION
+			var numNodes = 1000;
+			var numLinks = 1000;
+			for(var n=0; n < numNodes; n++) {
+				var pos = [-(offs/2)+(Math.random()*offs), -(offs/2)+(Math.random()*offs), -(offs/2)+(Math.random()*offs), 1.0];
+
+				var node = graph.addNode({
+					"name": "#"+n.toString()+":"+n.toString(),
+					"data": "#"+n.toString()+":"+n.toString(),
+					"position": pos,
+					"color": ((Math.floor(n%2) == 0.0) ? "../_RESOURCES/lena_128x128.jpg" : "../_RESOURCES/cartman08.jpg"),
+                    "bornDate": "RANDOM",
+                    "dieDate": "RANDOM",
+					"layoutNodeArgumentData": {"nodeColor": [0.0, 1.0, 0.0, 1.0]},
+					"onmouseup": (function(nodeData) {
+
+				}).bind(this)});
+			}
+
+			for(var n=0; n < numLinks; n++) {
+				var A = parseInt(Math.random()*numNodes).toString();
+				var B = parseInt(Math.random()*numNodes).toString();
+
+				graph.addLink({	"origin": "#"+A+":"+A,
+								"target": "#"+B+":"+B,
+								"directed": true,
+                                "bornDate": "RANDOM",
+                                "dieDate": "RANDOM"});
+			}
+
+            graph.createWebGLBuffers();
+
+
+												
+			//*********
+			// RENDER STAGE
+			//*********
+            var render = function() {
+                project.getActiveStage().tick();
+                requestAnimFrame(render);
+            }
+            render();
+
+
+			window.onresize = (function() {
+				//sce.setDimensions(512, 128);
+		    }).bind(this);
+		</script>
+
+
+
+		T for top view<br />
+		Alt+LeftMouse for Orbit<br />
+		Alt+MiddleMouse for Pan<br />		
+		P for perspective view<br />
+		WASD for to move<br />
+		<button id="BTNID_FORCELAYOUT_ON">ForceLayout On</button><br />
+		<button id="BTNID_FORCELAYOUT_OFF">ForceLayout Off</button><br />
+		<br />
+        <button id="BTNID_playTimeline">play</button><br />
+        <button id="BTNID_pauseTimeline">pause</button><br />
+		<br />
+
+		<script>
+												
+			document.getElementById("BTNID_FORCELAYOUT_ON").addEventListener("click", (function() {
+				graph.enableForceLayout();
+			}).bind(this));
+			document.getElementById("BTNID_FORCELAYOUT_OFF").addEventListener("click", (function() {
+				graph.disableForceLayout();
+			}).bind(this));
+
+            document.getElementById("BTNID_playTimeline").addEventListener("click", (function() {
+                graph.playTimeline();
+            }).bind(this));
+
+            document.getElementById("BTNID_pauseTimeline").addEventListener("click", (function() {
+                graph.pauseTimeline();
+            }).bind(this));
+
+		</script>
+
+	</body>
+</html>

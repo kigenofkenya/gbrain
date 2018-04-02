@@ -1,0 +1,250 @@
+<html>
+	<head>
+		<title>SCEJS Graph</title>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+        <!--<script src="../../dist/scejs/SCEJS.min.js"></script>-->
+        <script src="../../dist/scejs/ArrayGenerator.class.js"></script>
+        <script src="../../dist/scejs/Component.class.js"></script>
+        <script src="../../dist/scejs/Component_GPU.class.js"></script>
+        <script src="../../dist/scejs/ComponentControllerTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/ComponentKeyboardEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentMouseEvents.class.js"></script>
+        <script src="../../dist/scejs/ComponentProjection.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransform.class.js"></script>
+        <script src="../../dist/scejs/ComponentTransformTarget.class.js"></script>
+        <script src="../../dist/scejs/Constants.js"></script>
+        <script src="../../dist/scejs/Mesh.class.js"></script>
+        <script src="../../dist/scejs/Node.class.js"></script>
+        <script src="../../dist/scejs/Project.class.js"></script>
+        <script src="../../dist/scejs/SCE.class.js"></script>
+        <script src="../../dist/scejs/Stage.class.js"></script>
+        <script src="../../dist/scejs/StormMath.class.js"></script>
+        <script src="../../dist/scejs/SystemEvents.class.js"></script>
+        <script src="../../dist/scejs/Utils.class.js"></script>
+        <script src="../../dist/scejs/VFP_RGB.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleCamera/SimpleCamera.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/SimpleNode/SimpleNode.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Grid/Grid.class.js"></script>
+
+        <script src="../../dist/scejs/Prefabs/Graph/Graph.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_DIR.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/graphUtil.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_ADJMATRIX_UPDATE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODE.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODEPICKDRAG.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/ProccessImg.class.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain.js"></script>
+        <script src="../../dist/scejs/Prefabs/Graph/gbrain-rl.js"></script>
+	</head>
+
+	<body>
+		<div id="SCEJS"></div>
+		<br />
+        <div id="SCEJSB"></div>
+
+		<script>
+			var sce = new SCE();
+			sce.initialize({"target": document.getElementById("SCEJS"),
+							"dimensions": {"width": 256, "height": 256}});
+
+
+			var project = new Project();
+			sce.loadProject(project);
+
+			var stage = new Stage();
+			project.addStage(stage);
+			project.setActiveStage(stage);
+
+			// CAMERA
+			var simpleCamera = new SimpleCamera(sce);
+			simpleCamera.setView(Constants.VIEW_TYPES.TOP);
+			simpleCamera.setVelocity(1.0);
+			sce.setDimensions(512, 512);
+			
+			// GRID
+			var grid = new Grid(sce);
+			grid.generate(100.0, 1.0);
+
+
+			// GRAPH
+			var OFFSET = 1000.0;
+			var offs = OFFSET/10;
+
+			var graph = new Graph(sce);
+
+			var mesh_point = new Mesh().loadPoint();
+			//graph.setNodeMesh(mesh_point);
+
+			graph.setFontsImage("../../SCEJS/Prefabs/Graph/fonts.png");
+
+
+			// APPLY THIS LAYOUT
+			graph.applyLayout({	// OBJECT
+								// [x], vec4 nodeVertexColor, vec4 nodeVertexPosition, vec4 XYZW_opposite
+								// float isNode, float isLink, float isArrow, float isNodeText, float isTarget
+								"argsObject":
+									// nodeColor
+									"float4*attr nodeColor",
+								"codeObject":
+									// nodeColor
+									'if(isNode == 1.0) nodeVertexColor = nodeColor[x];'+
+									//'if(isLink == 1.0 && currentLineVertex == 1.0) nodeVertexColor = vec4(0.0, 1.0, 0.0, 1.0);'+ // this is isTarget for arrows
+
+									'float degr = (currentLineVertex/vertexCount)/2.0;'+
+									'if(isLink == 1.0) nodeVertexColor = vec4(0.5+degr, 0.5+degr, 0.5+degr, 1.0);'+ // this is isTarget for arrows
+									'if(isArrow == 1.0 && currentLineVertex == vertexCount) nodeVertexColor = vec4(0.0, 1.0, 0.0, 1.0);'+ // this is isTarget for arrows
+									'if(isArrow == 1.0 && currentLineVertex == 0.0) nodeVertexColor = vec4(1.0, 0.0, 0.0, 0.0);' // this is isTarget for arrows
+
+								});
+
+
+
+
+
+			// NODES AND LINKS CREATION
+			/*var numNodes = 100;
+			var numLinks = 100;
+			for(var n=0; n < numNodes; n++) {
+				var pos = [-(offs/2)+(Math.random()*offs), -(offs/2)+(Math.random()*offs), -(offs/2)+(Math.random()*offs), 1.0];
+
+				var node = graph.addNode({
+					"name": "#"+n.toString()+":"+n.toString(),
+					"data": "#"+n.toString()+":"+n.toString(),
+					"position": pos,
+					"color": ((Math.floor(n%2) == 0.0) ? "../_RESOURCES/lena_128x128.jpg" : "../_RESOURCES/cartman08.jpg"),
+					"layoutNodeArgumentData": { // nodeColor
+												"nodeColor": [Math.random(), Math.random(), Math.random(), 1.0]},
+					"onmouseup": (function(nodeData) {
+
+				}).bind(this)});
+			}
+			graph.updateNodes();
+
+			for(var n=0; n < numLinks; n++) {
+				var A = parseInt(Math.random()*numNodes).toString();
+				var B = parseInt(Math.random()*numNodes).toString();
+
+				graph.addLink({	"origin": "#"+A+":"+A,
+								"target": "#"+B+":"+B,
+								"directed": true});
+			}
+			graph.updateLinks();*/
+
+			// OTHER DISPOSITION OF NODES AND LINKS
+			graph.addNode({
+					"name": "#0",
+					"data": "#0",
+					"position": [-20.0, 0.0, 0.0, 1.0],
+					"color": "../_RESOURCES/lena_128x128.jpg",
+					"layoutNodeArgumentData": {"nodeColor": [1.0, 0.0, 0.0, 1.0]},
+					"onmouseup": (function(nodeData) {
+
+					}).bind(this)});
+			graph.addNode({
+					"name": "#1",
+					"data": "#1",
+					"position": [20.0, 0.0, 0.0, 1.0],
+					"color": "../_RESOURCES/lena_128x128.jpg",
+					"layoutNodeArgumentData": {"nodeColor": [0.0, 1.0, 0.0, 1.0]},
+					"onmouseup": (function(nodeData) {
+
+					}).bind(this)});
+			graph.addNode({
+					"name": "#2",
+					"data": "#2",
+					"position": [0.0, 0.0, -20.0, 1.0],
+					"color": "../_RESOURCES/lena_128x128.jpg",
+					"layoutNodeArgumentData": {"nodeColor": [0.0, 0.0, 1.0, 1.0]},
+					"onmouseup": (function(nodeData) {
+
+					}).bind(this)});
+			graph.addNode({
+					"name": "#3",
+					"data": "#3",
+					"position": [0.0, 0.0, 20.0, 1.0],
+					"color": "../_RESOURCES/lena_128x128.jpg",
+					"layoutNodeArgumentData": {"nodeColor": [1.0, 1.0, 1.0, 1.0]},
+					"onmouseup": (function(nodeData) {
+
+					}).bind(this)});
+			graph.addNode({
+					"name": "#4",
+					"data": "#4",
+					"position": [-20.0, 0.0, 30.0, 1.0],
+					"color": "../_RESOURCES/lena_128x128.jpg",
+					"layoutNodeArgumentData": {"nodeColor": [1.0, 0.0, 1.0, 1.0]},
+					"onmouseup": (function(nodeData) {
+
+					}).bind(this)});
+			graph.addNode({
+					"name": "#5",
+					"data": "#5",
+					"position": [20.0, 0.0, 30.0, 1.0],
+					"color": "../_RESOURCES/lena_128x128.jpg",
+					"layoutNodeArgumentData": {"nodeColor": [0.0, 1.0, 0.0, 1.0]},
+					"onmouseup": (function(nodeData) {
+
+					}).bind(this)});
+			graph.addNode({
+					"name": "#6",
+					"data": "#6",
+					"position": [-20.0, 0.0, 40.0, 1.0],
+					"color": "../_RESOURCES/lena_128x128.jpg",
+					"layoutNodeArgumentData": {"nodeColor": [1.0, 0.0, 1.0, 1.0]},
+					"onmouseup": (function(nodeData) {
+
+					}).bind(this)});
+			graph.addNode({
+					"name": "#7",
+					"data": "#7",
+					"position": [20.0, 0.0, 40.0, 1.0],
+					"color": "../_RESOURCES/lena_128x128.jpg",
+					"layoutNodeArgumentData": {"nodeColor": [0.0, 1.0, 0.0, 1.0]},
+					"onmouseup": (function(nodeData) {
+
+					}).bind(this)});
+
+			graph.addLink({	"origin": "#0",
+							"target": "#1",
+							"directed": true});
+            graph.addLink({	"origin": "#0",
+                            "target": "#1",
+                            "directed": true});
+            graph.addLink({	"origin": "#0",
+                            "target": "#1",
+                            "directed": true});
+			graph.addLink({	"origin": "#2",
+							"target": "#3",
+							"directed": true});
+			graph.addLink({	"origin": "#4",
+							"target": "#5",
+							"directed": true});
+			graph.addLink({	"origin": "#6",
+							"target": "#7",
+							"directed": true});
+
+            graph.createWebGLBuffers();
+
+			//*********
+			// RENDER STAGE
+			//*********
+            var render = function() {
+                project.getActiveStage().tick();
+                requestAnimFrame(render);
+            }
+            render();
+
+
+			window.onresize = (function() {
+				//sce.setDimensions(512, 128);
+		    }).bind(this);
+		</script>
+		
+		T for top view<br />
+		Alt+LeftMouse for Orbit<br />
+		Alt+MiddleMouse for Pan<br />		
+		P for perspective view<br />
+		WASD for to move<br />
+	</body>
+</html>
