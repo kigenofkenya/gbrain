@@ -12,6 +12,8 @@ import "./KERNEL_DIR.class";
 module.exports.KERNEL_DIR = global.KERNEL_DIR = KERNEL_DIR;
 import "./ProccessImg.class";
 module.exports.ProccessImg = global.ProccessImg = ProccessImg;
+import "./resources";
+module.exports.Resources = global.Resources = Resources;
 import "./VFP_NODE.class";
 module.exports.VFP_NODE = global.VFP_NODE = VFP_NODE;
 import "./VFP_NODEPICKDRAG.class";

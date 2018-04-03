@@ -55,9 +55,6 @@ export class GBrain {
 
         let mesh_point = new Mesh().loadPoint();
         //this.graph.setNodeMesh(mesh_point);
-
-
-        this.graph.setFontsImage('../../dist/gbrain/fonts.png');
     };
 
     /**

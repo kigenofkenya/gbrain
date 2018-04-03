@@ -4,6 +4,7 @@ import {KERNEL_ADJMATRIX_UPDATE} from "./KERNEL_ADJMATRIX_UPDATE.class";
 import {VFP_NODE} from "./VFP_NODE.class";
 import {VFP_NODEPICKDRAG} from "./VFP_NODEPICKDRAG.class";
 import {ProccessImg} from "./ProccessImg.class";
+import {Resources} from "./resources";
 
 /**
 * @class
@@ -248,6 +249,12 @@ export class Graph {
             // Component_GPU
             this.comp_renderer_nodesText = new Component_GPU();
             this.nodesText.addComponent(this.comp_renderer_nodesText);
+
+            let image = new Image();
+            image.onload = () => {
+                this.comp_renderer_nodesText.setArg("fontsImg", () => {return image;});
+            };
+            image.src = Resources.fonts();
         }
     }
 
@@ -569,19 +576,6 @@ export class Graph {
     };
 
     /**
-     * @param {String} url
-     */
-    setFontsImage(url) {
-        if(this._enableFont === true) {
-            let image = new Image();
-            image.onload = () => {
-                this.comp_renderer_nodesText.setArg("fontsImg", () => {return image;});
-            };
-            image.src = url;
-        }
-    };
-
-    /**
      * @param {Mesh} mesh
      */
     setNodeMesh(mesh) {
@@ -731,7 +725,7 @@ export class Graph {
                 "data": n.toString(),
                 "label": n.toString(),
                 "position": pos,
-                "color": ((this._enableNeuronalNetwork === false) ? "../_RESOURCES/UV.jpg" : "../_RESOURCES/white.jpg"),
+                "color": Resources.imgWhite(),
                 "bornDate": bd.bornDate,
                 "dieDate": bd.dieDate,
                 "layoutNodeArgumentData": {
@@ -1408,7 +1402,7 @@ export class Graph {
             "data": neuronName,
             "label": neuronName.toString(),
             "position": pos,
-            "color": "../_RESOURCES/white.jpg",
+            "color": Resources.imgWhite(),
             "layoutNodeArgumentData": {
                 "nodeColor": [1.0, 1.0, 1.0, 1.0],
                 "enableDestination": enableDest,
@@ -2178,14 +2172,14 @@ export class Graph {
                 this.nodesImgMaskLoaded = true;
                 this.generateNodesImage();
             };
-            this.nodesImgMask.src = "../../dist/gbrain/nodesImgMask.png";
+            this.nodesImgMask.src = Resources.nodesImgMask();
         } else if(this.nodesImgCrosshairLoaded === false) {
             this.nodesImgCrosshair = new Image();
             this.nodesImgCrosshair.onload = () => {
                 this.nodesImgCrosshairLoaded = true;
                 this.generateNodesImage();
             };
-            this.nodesImgCrosshair.src = "../../dist/gbrain/nodesImgCrosshair.png";
+            this.nodesImgCrosshair.src = Resources.nodesImgCrosshair();
         } else {
             new ProccessImg({
                 "stackNodesImg": this._stackNodesImg,
