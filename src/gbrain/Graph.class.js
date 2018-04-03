@@ -2178,14 +2178,14 @@ export class Graph {
                 this.nodesImgMaskLoaded = true;
                 this.generateNodesImage();
             };
-            this.nodesImgMask.src = this._sce.sceDirectory+"/Prefabs/Graph/nodesImgMask.png";
+            this.nodesImgMask.src = "../../dist/gbrain/nodesImgMask.png";
         } else if(this.nodesImgCrosshairLoaded === false) {
             this.nodesImgCrosshair = new Image();
             this.nodesImgCrosshair.onload = () => {
                 this.nodesImgCrosshairLoaded = true;
                 this.generateNodesImage();
             };
-            this.nodesImgCrosshair.src = this._sce.sceDirectory+"/Prefabs/Graph/nodesImgCrosshair.png";
+            this.nodesImgCrosshair.src = "../../dist/gbrain/nodesImgCrosshair.png";
         } else {
             new ProccessImg({
                 "stackNodesImg": this._stackNodesImg,

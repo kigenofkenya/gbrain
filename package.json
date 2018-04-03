@@ -7,7 +7,7 @@
     "url": "https://github.com/stormcolor/gbrain.git"
   },
   "dependencies": {
-    "scejs": "~0.0.296"
+    "scejs": "~0.0.297"
   },
   "devDependencies": {
     "babel-plugin-syntax-async-functions": "~6.13.0",

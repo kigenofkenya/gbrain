@@ -1,6 +1,5 @@
 import "scejs";
 import {Graph} from "./Graph.class";
-
 /**
  * @class
  * @param {Object} jsonIn
@@ -58,7 +57,7 @@ export class GBrain {
         //this.graph.setNodeMesh(mesh_point);
 
 
-        this.graph.setFontsImage(sce.sceDirectory+"/Prefabs/Graph/fonts.png");
+        this.graph.setFontsImage('../../dist/gbrain/fonts.png');
     };
 
     /**

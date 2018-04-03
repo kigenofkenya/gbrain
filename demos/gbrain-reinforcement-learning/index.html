@@ -4,38 +4,16 @@
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
 
     <!--<script src="../../dist/scejs/SCEJS.min.js"></script>-->
-    <script src="../../dist/scejs/ArrayGenerator.class.js"></script>
-    <script src="../../dist/scejs/Component.class.js"></script>
-    <script src="../../dist/scejs/Component_GPU.class.js"></script>
-    <script src="../../dist/scejs/ComponentControllerTransformTarget.class.js"></script>
-    <script src="../../dist/scejs/ComponentKeyboardEvents.class.js"></script>
-    <script src="../../dist/scejs/ComponentMouseEvents.class.js"></script>
-    <script src="../../dist/scejs/ComponentProjection.class.js"></script>
-    <script src="../../dist/scejs/ComponentTransform.class.js"></script>
-    <script src="../../dist/scejs/ComponentTransformTarget.class.js"></script>
-    <script src="../../dist/scejs/Constants.js"></script>
-    <script src="../../dist/scejs/Mesh.class.js"></script>
-    <script src="../../dist/scejs/Node.class.js"></script>
-    <script src="../../dist/scejs/Project.class.js"></script>
-    <script src="../../dist/scejs/SCE.class.js"></script>
-    <script src="../../dist/scejs/Stage.class.js"></script>
-    <script src="../../dist/scejs/StormMath.class.js"></script>
-    <script src="../../dist/scejs/SystemEvents.class.js"></script>
-    <script src="../../dist/scejs/Utils.class.js"></script>
-    <script src="../../dist/scejs/VFP_RGB.class.js"></script>
-    <script src="../../dist/scejs/Prefabs/SimpleCamera/SimpleCamera.class.js"></script>
-    <script src="../../dist/scejs/Prefabs/SimpleNode/SimpleNode.class.js"></script>
-    <script src="../../dist/scejs/Prefabs/Grid/Grid.class.js"></script>
 
-    <script src="../../dist/scejs/Prefabs/Graph/Graph.class.js"></script>
-    <script src="../../dist/scejs/Prefabs/Graph/KERNEL_DIR.class.js"></script>
-    <script src="../../dist/scejs/Prefabs/Graph/graphUtil.js"></script>
-    <script src="../../dist/scejs/Prefabs/Graph/KERNEL_ADJMATRIX_UPDATE.class.js"></script>
-    <script src="../../dist/scejs/Prefabs/Graph/VFP_NODE.class.js"></script>
-    <script src="../../dist/scejs/Prefabs/Graph/VFP_NODEPICKDRAG.class.js"></script>
-    <script src="../../dist/scejs/Prefabs/Graph/ProccessImg.class.js"></script>
-    <script src="../../dist/scejs/Prefabs/Graph/gbrain.js"></script>
-    <script src="../../dist/scejs/Prefabs/Graph/gbrain-rl.js"></script>
+    <script src="../../dist/gbrain/Graph.class.js"></script>
+    <script src="../../dist/gbrain/KERNEL_DIR.class.js"></script>
+    <script src="../../dist/gbrain/graphUtil.js"></script>
+    <script src="../../dist/gbrain/KERNEL_ADJMATRIX_UPDATE.class.js"></script>
+    <script src="../../dist/gbrain/VFP_NODE.class.js"></script>
+    <script src="../../dist/gbrain/VFP_NODEPICKDRAG.class.js"></script>
+    <script src="../../dist/gbrain/ProccessImg.class.js"></script>
+    <script src="../../dist/gbrain/gbrain.js"></script>
+    <script src="../../dist/gbrain/gbrain-rl.js"></script>
 
     <script src="convnet.js"></script>
     <script src="util.js"></script>
@@ -59,67 +37,6 @@
         <div style="display:inline-block;width:400px;height:300px;background-color: white">
             <canvas id="canvasChartJS" width="400" height="300"></canvas>
         </div>
-
-        <textarea id="qspec" style="width:100%; height:200px;">
-            if(agentLib === 0) {
-                var num_inputs = 27;
-                var num_actions = 5;
-                var temporal_window = 1;
-                var network_size = num_inputs*temporal_window + num_actions*temporal_window + num_inputs;
-
-                var layer_defs = [];
-                layer_defs.push({"type": "input", "depth": network_size});
-                layer_defs.push({"type": "fc", "num_neurons": 50, "activation": "sigm"});
-                layer_defs.push({"type": "fc", "num_neurons": 50, "activation": "sigm"});
-                layer_defs.push({"type": "regression", "num_neurons": num_actions});
-
-                gbrainRL = new GBrainRL({   "target": document.getElementById("el_gbrain"),
-                                                "dimensions": {"width": 800, "height": 800},
-                                                "num_inputs": num_inputs,
-                                                "num_actions": num_actions,
-                                                "temporal_window": temporal_window,
-                                                "experience_size": 30000,
-                                                "gamma": 0.7,
-                                                "epsilon_min": 0.05,
-                                                "epsilon_test_time": 0.05,
-                                                "start_learn_threshold": 1000,
-                                                "gpu_batch_repeats": 7, // 7cpu*7gpu= 56 batch size
-                                                "layer_defs": layer_defs});
-            } else {
-                var num_inputs = 27; // 9 eyes, each sees 3 numbers (wall, green, red thing proximity)
-                var num_actions = 5; // 5 possible angles agent can turn
-                var temporal_window = 1; // amount of temporal memory. 0 = agent lives in-the-moment :)
-                var network_size = num_inputs*temporal_window + num_actions*temporal_window + num_inputs;
-
-                // the value function network computes a value of taking any of the possible actions
-                // given an input state. Here we specify one explicitly the hard way
-                // but user could also equivalently instead use opt.hidden_layer_sizes = [20,20]
-                // to just insert simple relu hidden layers.
-                var layer_defs = [];
-                layer_defs.push({type:'input', out_sx:1, out_sy:1, out_depth:network_size});
-                layer_defs.push({type:'fc', num_neurons: 50, activation:'relu'});
-                layer_defs.push({type:'fc', num_neurons: 50, activation:'relu'});
-                layer_defs.push({type:'regression', num_neurons:num_actions});
-
-                // options for the Temporal Difference learner that trains the above net
-                // by backpropping the temporal difference learning rule.
-                var tdtrainer_options = {learning_rate:0.001, momentum:0.0, batch_size:64, l2_decay:0.01};
-
-                var opt = {};
-                opt.temporal_window = temporal_window;
-                opt.experience_size = 30000;
-                opt.start_learn_threshold = 1000;
-                opt.gamma = 0.7;
-                opt.learning_steps_total = 200000;
-                opt.learning_steps_burnin = 3000;
-                opt.epsilon_min = 0.05;
-                opt.epsilon_test_time = 0.05;
-                opt.layer_defs = layer_defs;
-                opt.tdtrainer_options = tdtrainer_options;
-
-                gbrainRL = new deepqlearn.Brain(num_inputs, num_actions, opt); // woohoo
-            }
-        </textarea>
     </div>
     <div style="display:inline-block;width:512px;background-color: white;vertical-align: top">
         <div style="display:inline-block" id="el_gbrain"></div>
@@ -183,20 +100,20 @@
         }
     });
 
-    var gbrainRL = null;
+    var brain = null;
     var showOutputWeighted = false;
 
     document.getElementById("elem_enableOutputWeighted").addEventListener("click", function () {
-        (showOutputWeighted === false) ? gbrainRL.gbrain.enableShowOutputWeighted() : gbrainRL.gbrain.disableShowOutputWeighted();
+        (showOutputWeighted === false) ? brain.gbrain.enableShowOutputWeighted() : brain.gbrain.disableShowOutputWeighted();
         showOutputWeighted = !showOutputWeighted;
     });
 
     document.getElementById("BTNID_STOP").addEventListener("click", function () {
-        gbrainRL.learning = false;
+        brain.learning = false;
     });
 
     document.getElementById("BTNID_RESUME").addEventListener("click", function () {
-        gbrainRL.learning = true;
+        brain.learning = true;
     });
 
     var waitingAction = false;
@@ -404,9 +321,9 @@
                 }
             }
 
-            document.getElementById("el_info").innerHTML =  "epsilon: "+this.agents[0].brain.epsilon+"<br />"+
-                                                            "reward: "+this.agents[0].brain.latest_reward+"<br />"+
-                                                            "age: "+this.agents[0].brain.age;
+            document.getElementById("el_info").innerHTML =  "epsilon: "+brain.epsilon+"<br />"+
+                                                            "reward: "+brain.latest_reward+"<br />"+
+                                                            "age: "+brain.age;
 
             this.agents[0].backward();
         }
@@ -443,9 +360,64 @@
         }
 
         // braaain
-        var spec = document.getElementById('qspec').value;
-        eval(spec);
-        this.brain = gbrainRL;
+        if(agentLib === 0) {
+            var num_inputs = 27;
+            var num_actions = 5;
+            var temporal_window = 1;
+            var network_size = num_inputs*temporal_window + num_actions*temporal_window + num_inputs;
+
+            var layer_defs = [];
+            layer_defs.push({"type": "input", "depth": network_size});
+            layer_defs.push({"type": "fc", "num_neurons": 50, "activation": "sigm"});
+            layer_defs.push({"type": "fc", "num_neurons": 50, "activation": "sigm"});
+            layer_defs.push({"type": "regression", "num_neurons": num_actions});
+
+            brain = new GBrainRL({   "target": document.getElementById("el_gbrain"),
+                "dimensions": {"width": 800, "height": 800},
+                "num_inputs": num_inputs,
+                "num_actions": num_actions,
+                "temporal_window": temporal_window,
+                "experience_size": 30000,
+                "gamma": 0.7,
+                "epsilon_min": 0.05,
+                "epsilon_test_time": 0.05,
+                "start_learn_threshold": 1000,
+                "gpu_batch_repeats": 7, // 7cpu*7gpu= 56 batch size
+                "layer_defs": layer_defs});
+        } else {
+            var num_inputs = 27; // 9 eyes, each sees 3 numbers (wall, green, red thing proximity)
+            var num_actions = 5; // 5 possible angles agent can turn
+            var temporal_window = 1; // amount of temporal memory. 0 = agent lives in-the-moment :)
+            var network_size = num_inputs*temporal_window + num_actions*temporal_window + num_inputs;
+
+            // the value function network computes a value of taking any of the possible actions
+            // given an input state. Here we specify one explicitly the hard way
+            // but user could also equivalently instead use opt.hidden_layer_sizes = [20,20]
+            // to just insert simple relu hidden layers.
+            var layer_defs = [];
+            layer_defs.push({type:'input', out_sx:1, out_sy:1, out_depth:network_size});
+            layer_defs.push({type:'fc', num_neurons: 50, activation:'relu'});
+            layer_defs.push({type:'fc', num_neurons: 50, activation:'relu'});
+            layer_defs.push({type:'regression', num_neurons:num_actions});
+
+            // options for the Temporal Difference learner that trains the above net
+            // by backpropping the temporal difference learning rule.
+            var tdtrainer_options = {learning_rate:0.001, momentum:0.0, batch_size:64, l2_decay:0.01};
+
+            var opt = {};
+            opt.temporal_window = temporal_window;
+            opt.experience_size = 30000;
+            opt.start_learn_threshold = 1000;
+            opt.gamma = 0.7;
+            opt.learning_steps_total = 200000;
+            opt.learning_steps_burnin = 3000;
+            opt.epsilon_min = 0.05;
+            opt.epsilon_test_time = 0.05;
+            opt.layer_defs = layer_defs;
+            opt.tdtrainer_options = tdtrainer_options;
+
+            brain = new deepqlearn.Brain(num_inputs, num_actions, opt); // woohoo
+        }
 
         this.reward_bonus = 0.0;
         this.digestion_signal = 0.0;
@@ -478,11 +450,11 @@
             waitingAction = true;
 
             if(agentLib === 0) {
-                this.brain.forward(input_array, (function (actionix) {
+                brain.forward(input_array, (function (actionix) {
                     this.fg(actionix);
                 }).bind(this));
             } else {
-                var actionix = this.brain.forward(input_array);
+                var actionix = brain.forward(input_array);
                 this.fg(actionix);
             }
         },
@@ -571,11 +543,11 @@
             waitingLearning = true;
 
             if(agentLib === 0) {
-                this.brain.backward(reward, (function () {
+                brain.backward(reward, (function () {
                     this.ff(reward);
                 }).bind(this));
             } else {
-                this.brain.backward(reward);
+                brain.backward(reward);
                 this.ff(reward);
             }
         },
@@ -675,7 +647,7 @@
 
         // draw agents
         // color agent based on reward it is experiencing at the moment
-        var r = Math.floor(agents[0].brain.latest_reward * 200);
+        var r = Math.floor(brain.latest_reward * 200);
         if (r > 255) r = 255;
         if (r < 0) r = 0;
         ctx.fillStyle = "rgb(" + r + ", 150, 150)";
@@ -769,7 +741,7 @@
             ctx.stroke();
         }
 
-        //w.agents[0].brain.visSelf(document.getElementById('brain_info_div'));
+        //brain.visSelf(document.getElementById('brain_info_div'));
     }
 
     // Tick the world
@@ -809,7 +781,7 @@
     }
 
     function savenet() {
-        var j = w.agents[0].brain.value_net.toJSON();
+        var j = brain.value_net.toJSON();
         var t = JSON.stringify(j);
         document.getElementById('tt').value = t;
     }
@@ -817,17 +789,17 @@
     function loadnet() {
         var t = document.getElementById('tt').value;
         var j = JSON.parse(t);
-        w.agents[0].brain.value_net.fromJSON(j);
+        brain.value_net.fromJSON(j);
         stoplearn(); // also stop learning
         gonormal();
     }
 
     function startlearn() {
-        w.agents[0].brain.learning = true;
+        brain.learning = true;
     }
 
     function stoplearn() {
-        w.agents[0].brain.learning = false;
+        brain.learning = false;
     }
 
     function reload() {
