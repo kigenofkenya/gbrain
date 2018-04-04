@@ -150,13 +150,6 @@ export class VFP_NODE {
             //╚██╗ ██╔╝██╔══╝  ██╔══██╗   ██║   ██╔══╝   ██╔██╗     ╚════██║██║   ██║██║   ██║██╔══██╗██║     ██╔══╝
             // ╚████╔╝ ███████╗██║  ██║   ██║   ███████╗██╔╝ ██╗    ███████║╚██████╔╝╚██████╔╝██║  ██║╚██████╗███████╗
             //  ╚═══╝  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝    ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚══════╝
-            // Nodes
-            // Data: nodeId, acums, bornDate, dieDate
-            // DataB: bornDate, dieDate, netFOutputA, netErrorWeightA (SHARED with LINKS, ARROWS & NODESTEXT)
-
-            // Links
-            // Data: nodeId origin, nodeId target, currentLineVertex, repeatId
-            // DataC: linkBornDate, linkDieDate, linkWeight, 0
             `
             mat4 nodepos = nodeWMatrix;
             

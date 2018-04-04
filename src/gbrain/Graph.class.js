@@ -2045,14 +2045,6 @@ export class Graph {
 
             let ts = this.getBornDieTS(jsonIn.bornDate, jsonIn.dieDate);
 
-            // Nodes
-            // Data: nodeId, acums, bornDate, dieDate
-            // DataB: bornDate, dieDate, netFOutputA, netErrorWeightA (SHARED with LINKS, ARROWS & NODESTEXT)
-
-            // Links
-            // Data: nodeId origin, nodeId target, currentLineVertex, repeatId
-            // DataC: linkBornDate, linkDieDate, linkWeight, 0
-
             this.arrayNodeData.push(this.currentNodeId, 0.0, ts.bornDate, ts.dieDate);
             this.arrayNodeDataB.push(ts.bornDate, ts.dieDate, 0.0, 0.0);
             this.arrayNodeDataF.push(0.0, 0.0, 0.0, 0.0);
@@ -2342,13 +2334,6 @@ export class Graph {
             this.createLinksObjItem();
 
         for(let n=0; n < this.lineVertexCount*2; n++) {
-            // Nodes
-            // Data: nodeId, acums, bornDate, dieDate
-            // DataB: bornDate, dieDate, netFOutputA, netErrorWeightA (SHARED with LINKS, ARROWS & NODESTEXT)
-
-            // Links
-            // Data: nodeId origin, nodeId target, currentLineVertex, repeatId
-            // DataC: linkBornDate, linkDieDate, linkWeight, 0
             this.linksObj[this.currentLinksObjItem].arrayLinkData.push(jsonIn.origin_nodeId, jsonIn.target_nodeId, Math.ceil(n/2), jsonIn.repeatId);
             this.linksObj[this.currentLinksObjItem].arrayLinkDataC.push(jsonIn.bornDate, jsonIn.dieDate, jsonIn.weight, 0.0);
 
