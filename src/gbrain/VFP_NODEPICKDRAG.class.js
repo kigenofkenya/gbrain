@@ -27,9 +27,6 @@ export class VFP_NODEPICKDRAG {
             'vec2 xGeometry = get_global_id(data[].x, uBufferWidth, '+geometryLength.toFixed(1)+');'+
 
             'vec4 nodePosition = posXYZW[xGeometry];\n'+
-            'float bornDate = dataB[xGeometry].x;'+
-            'float dieDate = dataB[xGeometry].y;'+
-
 
             'mat4 nodepos = nodeWMatrix;'+
 
@@ -40,17 +37,7 @@ export class VFP_NODEPICKDRAG {
             'nodepos[3][1] = nodePosition.y;'+
             'nodepos[3][2] = nodePosition.z;'+
 
-            'vColor = vec4(1.0, 1.0, 1.0, 1.0);'+
-            'int mak = 0;'+
-            'if(dieDate != 0.0) {'+
-                'if(currentTimestamp > bornDate && currentTimestamp < dieDate) '+
-                    'mak = 1;'+
-            '} else '+
-                'mak = 1;'+
-
-            'if(mak == 1) {'+
-                'vColor = pack((data[].x+1.0)/1000000.0);'+
-            '}'+
+            'vColor = pack((data[].x+1.0)/1000000.0);'+
 
             'if(vColor.x == 1.0 && vColor.y == 1.0 && vColor.z == 1.0 && vColor.w == 1.0) '+
                 'nodepos[3][0] = 10000.0;'+

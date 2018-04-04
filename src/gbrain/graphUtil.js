@@ -29,7 +29,6 @@ export class GraphUtils {
             vec3 atraction;
             float acumAtraction;
             vec3 repulsion;
-            float collisionExists;
             float netChildInputSumA;
             float netParentErrorWeightA;
             float netChildInputSumB;
@@ -46,15 +45,12 @@ export class GraphUtils {
             float netParentErrorWeightG;
         };`+
 
-        // pixAdjMatA (bornDate, dieDate, weight (parent:-2;child:w), isParent (1.0:parent;0.0:child))
-        // pixAdjMatA (linkMultiplier, activationFunction)
         `CalculationResponse calculate(float nodeId,
                                         vec4 pixAdjMatACurrent, vec4 pixAdjMatAOpposite,
                                         vec4 pixAdjMatBCurrent, vec4 pixAdjMatBOpposite,
                                         vec2 xGeomCurrent, vec2 xGeomOpposite,
                                         vec3 currentPos, vec3 currentDir,
                                         vec3 atraction, float acumAtraction, vec3 repulsion,
-                                        float enableNeuronalNetwork,
                                         float netChildInputSumA, float netParentErrorWeightA,
                                         float netChildInputSumB, float netParentErrorWeightB,
                                         float netChildInputSumC, float netParentErrorWeightC,
@@ -63,15 +59,11 @@ export class GraphUtils {
                                         float netChildInputSumF, float netParentErrorWeightF,
                                         float netChildInputSumG, float netParentErrorWeightG) {`+
             // pixAdjMatACurrent
-            `float currentBornDate = pixAdjMatACurrent.x;
-            float currentDieDate = pixAdjMatACurrent.y;
-            float currentWeight = pixAdjMatACurrent.z;
+            `float currentWeight = pixAdjMatACurrent.z;
             float currentIsParent = pixAdjMatACurrent.w;`+
 
             // pixAdjMatAOpposite
-            `float oppositeBornDate = pixAdjMatAOpposite.x;
-            float oppositeDieDate = pixAdjMatAOpposite.y;
-            float oppositeWeight = pixAdjMatAOpposite.z;
+            `float oppositeWeight = pixAdjMatAOpposite.z;
             float oppositeIsParent = pixAdjMatAOpposite.w;`+
 
 
@@ -85,14 +77,12 @@ export class GraphUtils {
 
 
             // dataB Current
-            //'float currentBornDate = dataB[xGeomCurrent].x;'+
-            //'float currentDieDate = dataB[xGeomCurrent].y;'+
+            //'float currentBiasNode = dataB[xGeomCurrent].x;'+
             //'float currentNetOutput = dataB[xGeomCurrent].z;'+
             //'float currentNetError = dataB[xGeomCurrent].w;'+
 
             // dataB Opposite
-            //'float oppositeBornDate = dataB[xGeomOpposite].x;'+
-            //'float oppositeDieDate = dataB[xGeomOpposite].y;'+
+            //'float oppositeBiasNode = dataB[xGeomOpposite].x;'+
             `float oppositeNetOutputA = dataB[xGeomOpposite].z;
             float oppositeNetErrorA = dataB[xGeomOpposite].w;
 
@@ -130,60 +120,39 @@ export class GraphUtils {
             'float dist = distance(oppositePos, currentPos);\n'+ // near=0.0 ; far=1.0
             'float distN = max(0.0,dist)/100000.0;'+
 
+            'float m1 = 0.0;'+ // 400000.0
+            'float m2 = 0.0;'+ // 48.0
+            'if(currentIsParent == 1.0) {'+
+                'netChildInputSumA += oppositeNetOutputA*oppositeWeight;'+
+                'netChildInputSumB += oppositeNetOutputB*oppositeWeight;'+
+                'netChildInputSumC += oppositeNetOutputC*oppositeWeight;'+
+                'netChildInputSumD += oppositeNetOutputD*oppositeWeight;'+
+                'netChildInputSumE += oppositeNetOutputE*oppositeWeight;'+
+                'netChildInputSumF += oppositeNetOutputF*oppositeWeight;'+
+                'netChildInputSumG += oppositeNetOutputG*oppositeWeight;'+
 
-            'float p = 1.0;'+
-            'if(currentDieDate != 0.0 && (currentTimestamp < currentBornDate || currentTimestamp > currentDieDate)) '+
-                'p = 0.0;'+
-            'if(oppositeDieDate != 0.0 && (currentTimestamp < oppositeBornDate || currentTimestamp > oppositeDieDate)) '+
-                'p = 0.0;'+
+                'atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));\n'+
+                'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));\n'+
+                'acumAtraction += 1.0;\n'+
+            '} else if(currentIsParent == 0.5) {'+
+                'netParentErrorWeightA += oppositeNetErrorA*currentWeight;'+
+                'netParentErrorWeightB += oppositeNetErrorB*currentWeight;'+
+                'netParentErrorWeightC += oppositeNetErrorC*currentWeight;'+
+                'netParentErrorWeightD += oppositeNetErrorD*currentWeight;'+
+                'netParentErrorWeightE += oppositeNetErrorE*currentWeight;'+
+                'netParentErrorWeightF += oppositeNetErrorF*currentWeight;'+
+                'netParentErrorWeightG += oppositeNetErrorG*currentWeight;'+
 
-            'if(p == 1.0) {'+
-                'float m1 = (enableNeuronalNetwork == 1.0) ? 0.0 : 400000.0;'+
-                'float m2 = (enableNeuronalNetwork == 1.0) ? 0.0 : 48.0;'+
-                'if(currentIsParent == 1.0) {'+
-                    //'if(enableNeuronalNetwork == 1.0) '+
-                        'netChildInputSumA += oppositeNetOutputA*oppositeWeight;'+
-                        'netChildInputSumB += oppositeNetOutputB*oppositeWeight;'+
-                        'netChildInputSumC += oppositeNetOutputC*oppositeWeight;'+
-                        'netChildInputSumD += oppositeNetOutputD*oppositeWeight;'+
-                        'netChildInputSumE += oppositeNetOutputE*oppositeWeight;'+
-                        'netChildInputSumF += oppositeNetOutputF*oppositeWeight;'+
-                        'netChildInputSumG += oppositeNetOutputG*oppositeWeight;'+
-                    //'else {'+
-                        'atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));\n'+
-                        'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));\n'+
-                        'acumAtraction += 1.0;\n'+
-                    //'}'+
-                '} else if(currentIsParent == 0.5) {'+
-                    //'if(enableNeuronalNetwork == 1.0) '+
-                        'netParentErrorWeightA += oppositeNetErrorA*currentWeight;'+
-                        'netParentErrorWeightB += oppositeNetErrorB*currentWeight;'+
-                        'netParentErrorWeightC += oppositeNetErrorC*currentWeight;'+
-                        'netParentErrorWeightD += oppositeNetErrorD*currentWeight;'+
-                        'netParentErrorWeightE += oppositeNetErrorE*currentWeight;'+
-                        'netParentErrorWeightF += oppositeNetErrorF*currentWeight;'+
-                        'netParentErrorWeightG += oppositeNetErrorG*currentWeight;'+
-                    //'else {'+
-                        'atraction += dirToOppositeN*max(1.0, distN*abs(currentWeight)*m1);\n'+
-                        'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*m2);\n'+
-                        'acumAtraction += 1.0;\n'+
-                    //'}'+
-                '}'+
-
-                //'if(enableNeuronalNetwork == 0.0) {'+
-                    'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*(m2/8.0));\n'+
-                    'acumAtraction += 1.0;\n'+
-                //'}'+
+                'atraction += dirToOppositeN*max(1.0, distN*abs(currentWeight)*m1);\n'+
+                'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*m2);\n'+
+                'acumAtraction += 1.0;\n'+
             '}'+
 
+            'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*(m2/8.0));\n'+
+            'acumAtraction += 1.0;\n'+
 
-            `float collisionExists = 0.0;
-            if(enableForceLayoutCollision == 1.0 && dist < 4.0) {
-                collisionExists = 1.0;
-                atraction = sphericalColl(currentDir, oppositeDir, dirToOppositeN);
-            }
 
-            return CalculationResponse(atraction, acumAtraction, repulsion, collisionExists,
+            `return CalculationResponse(atraction, acumAtraction, repulsion,
                                         netChildInputSumA, netParentErrorWeightA,
                                         netChildInputSumB, netParentErrorWeightB,
                                         netChildInputSumC, netParentErrorWeightC,
@@ -194,7 +163,6 @@ export class GraphUtils {
         }
         struct idAdjMatrixResponse {
             vec3 force;
-            float collisionExists;
             float netFOutputA;
             float netErrorWeightA;
             float netFOutputB;
@@ -218,12 +186,11 @@ export class GraphUtils {
         float sigm(float val) {
             return (1.0 / (1.0 + exp(-val)));
         }
-        idAdjMatrixResponse idAdjMatrix_ForceLayout(float nodeId, vec3 currentPos, vec3 currentDir, float numOfConnections, float currentTimestamp, float bornDate, float dieDate, float enableNeuronalNetwork) {
+        idAdjMatrixResponse idAdjMatrix_ForceLayout(float nodeId, vec3 currentPos, vec3 currentDir, float numOfConnections) {
             vec3 atraction = vec3(0.0, 0.0, 0.0);
             float acumAtraction = 1.0;
             vec3 repulsion = vec3(0.0, 0.0, 0.0);
 
-            float collisionExists = 0.0;
             vec3 force = vec3(0.0, 0.0, 0.0);
 
 
@@ -281,7 +248,6 @@ export class GraphUtils {
                                                                     xGeomCurrent, xGeomOpposite,
                                                                     currentPos, currentDir,
                                                                     atraction, acumAtraction, repulsion,
-                                                                    enableNeuronalNetwork,
                                                                     netChildInputSumA, netParentErrorWeightA,
                                                                     netChildInputSumB, netParentErrorWeightB,
                                                                     netChildInputSumC, netParentErrorWeightC,
@@ -314,34 +280,13 @@ export class GraphUtils {
                         
                         netChildInputSumG = calcResponse.netChildInputSumG;
                         netParentErrorWeightG = calcResponse.netParentErrorWeightG;
-
-
-                        if(calcResponse.collisionExists == 1.0) {
-                            collisionExists = 1.0;
-                            force = calcResponse.atraction;
-                            break;
-                        }
-
-                        if(dieDate != 0.0) {
-                            if(currentTimestamp < bornDate || currentTimestamp > dieDate) {
-                                force = vec3(0.0, 0.0, 0.0);
-                                break;
-                            }
-                        }
                     }
                 }
 
-                if(collisionExists == 0.0) {
-                    force += (atraction/acumAtraction)*1.0;
-                    force += (repulsion/acumAtraction)*1.0;
-                }
-
-                if(enableNeuronalNetwork == 1.0) {
-                    ${GraphUtils.efferentNodesStr(efferentStart, efferentNodesCount)}
-                }
+                ${GraphUtils.efferentNodesStr(efferentStart, efferentNodesCount)}
             }
 
-            return idAdjMatrixResponse(vec3(force), collisionExists,
+            return idAdjMatrixResponse(vec3(force),
                                         foutputA, netParentErrorWeightA,
                                         foutputB, netParentErrorWeightB,
                                         foutputC, netParentErrorWeightC,
@@ -443,94 +388,6 @@ export class GraphUtils {
         }`;
 
         return str;
-    };
-
-    static adjMatrix_Autolink_GLSLFunctionString(geometryLength) {
-        return ''+
-        'float GetAngle(vec3 A, vec3 B) {'+ // from -180.0 to 180.0
-            'vec3 cr = cross(A, B);'+
-            'float d = dot(A, B);'+
-
-            'if(cr.y < 0.0) {'+
-                'if(d > 0.0) {'+
-                    'd =        (1.0-d)*90.0;'+
-                '} else {'+
-                    'd = 90.0+  (abs(d)*90.0);'+
-                '}'+
-            '} else {'+
-                'if(d > 0.0) {'+
-                    'd = 270.0+ (d*90.0);'+
-                '} else {'+
-                    'd = 180.0+ ((1.0-abs(d))*90.0);'+
-                '}'+
-            '}'+
-
-            'return d;'+
-        '}'+
-        'vec4 idAdjMatrix_Autolink(float nodeId, vec3 currentPos) {\n'+
-            // INIT VARS
-            'vec2 totalIDrelation = vec2(0.0, 0.0);'+
-            'float totalAngleRelations = 0.0;'+
-            // END INIT VARS
-
-            'if(nodeId < nodesCount) {\n'+
-
-                'for(int n=0; n < 4096; n++) {\n'+
-                    'if(float(n) >= nodesCount) break;\n'+
-                    'if(float(n) != nodeId) {'+
-                        'vec2 xAdjMatCurrent = get_global_id(vec2(float(n), nodeId), widthAdjMatrix);'+
-                        'vec4 pixAdjMatACurrent = adjacencyMatrix[xAdjMatCurrent];\n'+
-
-                        // RELATION FOUND
-                        'if(pixAdjMatACurrent.x > 0.0) {'+
-                            'vec2 xGeomOpposite = get_global_id(float(n), uBufferWidth, '+geometryLength.toFixed(1)+');\n'+
-                            'vec3 currentPosB = posXYZW[xGeomOpposite].xyz;\n'+
-                            'vec3 dirToBN = normalize(currentPosB-currentPos);\n'+
-
-                            'vec2 IDrelation = vec2(0.0, 0.0);'+
-                            'float angleRelations = 360.0;'+
-
-                            'if(nodeId < nodesCount) {\n'+
-
-                                'for(int nB=0; nB < 4096; nB++) {\n'+
-                                    'if(float(nB) >= nodesCount) break;\n'+
-                                    'if(float(nB) != float(n) && float(nB) != nodeId) {'+
-                                        'vec2 xAdjMatCurrentB = get_global_id(vec2(float(nB), nodeId), widthAdjMatrix);'+
-                                        'vec4 pixAdjMatACurrent_B = adjacencyMatrix[xAdjMatCurrentB];\n'+
-
-                                        'if(pixAdjMatACurrent_B.x > 0.0) {'+
-                                            'vec2 xGeom_oppoB = get_global_id(float(nB), uBufferWidth, '+geometryLength.toFixed(1)+');\n'+
-                                            'vec3 currentPosBB = posXYZW[xGeom_oppoB].xyz;\n'+
-                                            'vec3 dirToBBN = normalize(currentPosBB-currentPos);\n'+
-
-                                            'float angle = GetAngle(dirToBN,dirToBBN);'+
-
-                                            'if(angle > 0.0 && angle < angleRelations) {'+
-                                                'IDrelation = xGeom_oppoB;'+
-                                                'angleRelations = angle;'+
-                                            '}'+
-                                        '}'+
-                                    '}'+
-                                '}'+
-
-                            '}'+
-
-                            'if(angleRelations < 360.0 && angleRelations > totalAngleRelations) {'+
-                                 'totalIDrelation = IDrelation;'+
-                                 'totalAngleRelations = angleRelations;'+
-                            '}'+
-                        '}'+
-                        // END RELATION FOUND
-
-                    '}'+
-                '}'+
-                // SUMMATION
-                // END SUMMATION
-
-            '}'+
-
-            'return vec4(totalIDrelation, totalAngleRelations, 0.0);'+
-        '}';
     };
 }
 global.GraphUtils = GraphUtils;

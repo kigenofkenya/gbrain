@@ -5,16 +5,9 @@ export class KERNEL_DIR {
 
     }
 
-    static getSrc(customCode, geometryLength, efferentStart, efferentNodesCount, _enableNeuronalNetwork) {
-        let outputArr = null;
-        let returnStr = null;
-        if(_enableNeuronalNetwork === true) {
-            outputArr = ["dir", "posXYZW", "dataB", "dataF", "dataG", "dataH"];
-            returnStr = 'return [vec4(currentDir, 1.0), vec4(currentPos.x, currentPos.y, currentPos.z, 1.0), currentDataB, currentDataF, currentDataG, currentDataH];';
-        } else {
-            outputArr = ["dir", "posXYZW"];
-            returnStr = 'return [vec4(currentDir, 1.0), vec4(currentPos.x, currentPos.y, currentPos.z, 1.0)];';
-        }
+    static getSrc(customCode, geometryLength, efferentStart, efferentNodesCount) {
+        let outputArr = ["dir", "posXYZW", "dataB", "dataF", "dataG", "dataH"];
+        let returnStr = 'return [vec4(currentDir, 1.0), vec4(currentPos.x, currentPos.y, currentPos.z, 1.0), currentDataB, currentDataF, currentDataG, currentDataH];';
 
         return ["x", outputArr,
                     // head
@@ -27,10 +20,6 @@ export class KERNEL_DIR {
 
 
                     vec3 currentPos = posXYZW[xGeometry].xyz;
-
-                    float bornDate = dataB[xGeometry].x;
-                    float dieDate = dataB[xGeometry].y;
-
                     vec3 currentDir = dir[xGeometry].xyz;
 
 
@@ -42,10 +31,10 @@ export class KERNEL_DIR {
                     currentDir = vec3(0.0, 0.0, 0.0);
 
                     if(enableForceLayout == 1.0) {
-                        idAdjMatrixResponse adjM = idAdjMatrix_ForceLayout(nodeId, currentPos, currentDir, numOfConnections, currentTimestamp, bornDate, dieDate, enableNeuronalNetwork);
-                        currentDir = (adjM.collisionExists == 1.0) ? adjM.force : currentDir+(adjM.force*1.0);
+                        idAdjMatrixResponse adjM = idAdjMatrix_ForceLayout(nodeId, currentPos, currentDir, numOfConnections);
+                        currentDir += adjM.force;
 
-                        if(enableNeuronalNetwork == 1.0 && currentTrainLayer == -3.0) {
+                        if(currentTrainLayer == -3.0) {
                             currentDataB = vec4(currentDataB.x, currentDataB.y, adjM.netFOutputA, adjM.netErrorWeightA);
                             currentDataF = vec4(adjM.netFOutputB, adjM.netErrorWeightB, adjM.netFOutputC, adjM.netErrorWeightC);
                             currentDataG = vec4(adjM.netFOutputD, adjM.netErrorWeightD, adjM.netFOutputE, adjM.netErrorWeightE);

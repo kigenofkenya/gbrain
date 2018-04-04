@@ -9,20 +9,16 @@ export class KERNEL_ADJMATRIX_UPDATE {
             "",
 
             // source
-            // adjacencyMatrix= bornDate, dieDate, weight(childs), isParent(1.0:parent;0.5:child)
-            // adjacencyMatrixB= linkMultiplier, activationFunc, nodeId, nodeIdInv
             `vec4 adjMat = adjacencyMatrix[x]; 
-            vec4 adjMatB = adjacencyMatrixB[x]; 
-            vec4 adjMatC = adjacencyMatrixC[x]; 
+            vec4 adjMatB = adjacencyMatrixB[x];
 
-            float linkBornDate = adjMat.x;
-            float linkDieDate = adjMat.y;
+            float linkLayerNum = adjMat.x;
             float linkWeight = adjMat.z;
             float linkTypeParent = adjMat.w;
 
             float id = adjMatB.z;
             float idInv = adjMatB.w;
-            float linkLayerNum = adjMatC.y;
+            
 
            if(linkTypeParent == 0.5) {
                 vec2 xGeometryCurrentChild = get_global_id(id, bufferNodesWidth, `+geometryLength.toFixed(1)+`);
@@ -63,7 +59,7 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 }
             }
             
-            return [vec4(linkBornDate, linkDieDate, linkWeight, linkTypeParent)];
+            return [vec4(linkLayerNum, 0.0, linkWeight, linkTypeParent)];
             `];
     };
 }

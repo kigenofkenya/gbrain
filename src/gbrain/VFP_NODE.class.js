@@ -24,7 +24,6 @@ export class VFP_NODE {
             'varying float vNodeId;\n'+
             'varying float vNodeIdOpposite;\n'+
        		'varying float vDist;\n'+
-            'varying float vVisibility;\n'+
        		'varying float vIsSelected;\n'+
             'varying float vIsHover;\n'+
        		'varying float vUseCrosshair;\n'+
@@ -85,62 +84,11 @@ export class VFP_NODE {
        			'0.0,                                0.0,                                0.0,                                1.0);'+
        		'}'+
 
-            GraphUtils.adjMatrix_Autolink_GLSLFunctionString(geometryLength)+
-
             Utils.degToRadGLSLFunctionString()+
             Utils.radToDegGLSLFunctionString()+
             Utils.cartesianToSphericalGLSLFunctionString()+
             Utils.sphericalToCartesianGLSLFunctionString()+
-            Utils.getVectorGLSLFunctionString()+
-            'vec3 getVV(vec3 crB, float acum) {'+
-                'vec3 ob = cartesianToSpherical(crB);'+
-                'float angleLat = ob.y;'+
-                'float angleLng = ob.z;'+
-
-                'float desvLat = 0.0;'+ // (vecNoise.x*180.0)-90.0
-                'float desvLng = 10.0;'+ // (vecNoise.x*180.0)-90.0
-                    //'angleLat += (degrees*desvLat);'+
-                'angleLng += (acum*desvLng);'+
-
-                'return sphericalToCartesian(vec3(1.0, angleLat, angleLng));'+
-            '}'+
-            'float getOddEven(float repeatId) {'+
-                'return (ceil(fract(repeatId/2.0)) == 0.0) ? 1.0*floor(repeatId/2.0) : -1.0*floor(repeatId/2.0);'+
-            '}'+
-            'vec3 getFirstDispl(float nodeId, vec4 currentPosition, float repeatId) {'+
-                'float repeatDistribution = -0.1;'+
-                // first check output edges of own node and return the node (textCoord for get posXYZW) with max available angle to the right
-                'vec4 adjMatrix = idAdjMatrix_Autolink(nodeId, currentPosition.xyz);'+
-                'vec3 initialVec = normalize(posXYZW[adjMatrix.xy].xyz-currentPosition.xyz)*vec3(1.0, -1.0, 1.0);'+
-                'float totalAngleRelations = adjMatrix.z;'+
-                // then first sum half of available angle received
-                'initialVec = getVV(initialVec, (totalAngleRelations/2.0)*repeatDistribution);'+
-                // and now left or right (oddEven)
-                'return getVV(initialVec, getOddEven(repeatId)*totalAngleRelations*0.01);'+
-            '}'+
-            'float checkLinkArrowVisibility(float currentTimestamp, float bornDate, float dieDate, float bornDateOpposite, float dieDateOpposite, float linkBornDate, float linkDieDate) {'+
-                'float visible =1.0;'+
-                'if(dieDate != 0.0) {'+
-                    'if((currentTimestamp < bornDate || currentTimestamp > dieDate) || (currentTimestamp < bornDateOpposite || currentTimestamp > dieDateOpposite)) {'+
-                        'visible = 0.0;'+
-                    '} else {'+
-                        // now check link
-                        'if(linkDieDate != 0.0) {'+
-                            'if(currentTimestamp < linkBornDate || currentTimestamp > linkDieDate) {'+
-                                'visible = 0.0;'+
-                            '}'+
-                        '}'+
-                    '}'+
-                '} else {'+
-                    // now check link
-                    'if(linkDieDate != 0.0) {'+
-                        'if(currentTimestamp < linkBornDate || currentTimestamp > linkDieDate) {'+
-                            'visible = 0.0;'+
-                        '}'+
-                    '}'+
-                '}'+
-                'return visible;'+
-            '}',
+            Utils.getVectorGLSLFunctionString(),
 
 
 
@@ -171,12 +119,9 @@ export class VFP_NODE {
             vVertexUV = vec2(-1.0, -1.0);
 
             if(isNode == 1.0) {
-                float bornDate = dataB[xGeometryNode].x;
-                float dieDate = dataB[xGeometryNode].y;
                 float foutput = dataB[xGeometryNode].z;
                 float error = dataB[xGeometryNode].w;
             
-                vVisibility = 1.0;
                 currentPosition += vec4(0.0, 0.1, 0.0, 1.0);
 
                 mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);
@@ -188,25 +133,19 @@ export class VFP_NODE {
                     vVertexUV = get2Dfrom1D(nodeImgId, nodeImgColumns)+vec2(nodeVertexTexture.x/nodeImgColumns,nodeVertexTexture.y/nodeImgColumns);
                 }
 
-                if(dieDate != 0.0 && (currentTimestamp < bornDate || currentTimestamp > dieDate)) {
-                    vVisibility = 0.0;
+                nodeVertexColor = vec4(0.0, 0.0, 0.0, 1.0);
+                if(foutput > 0.0) {
+                    nodeVertexColor = vec4(abs(foutput), abs(foutput), abs(foutput), 1.0);
+                } else if(foutput < 0.0) {
+                    nodeVertexColor = vec4(abs(foutput), 0.0, 0.0, 1.0);
                 }
 
-                if(enableNeuronalNetwork == 1.0) {
-                    nodeVertexColor = vec4(0.0, 0.0, 0.0, 1.0);
-                    if(foutput > 0.0) {
-                        nodeVertexColor = vec4(abs(foutput), abs(foutput), abs(foutput), 1.0);
-                    } else if(foutput < 0.0) {
-                        nodeVertexColor = vec4(abs(foutput), 0.0, 0.0, 1.0);
-                    }
-
-                    if(error > 0.0) {
-                        nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);
-                    } else if(error < 0.0) {
-                        nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);
-                    } else {
-                        nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);
-                    }
+                if(error > 0.0) {
+                    nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);
+                } else if(error < 0.0) {
+                    nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);
+                } else {
+                    nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);
                 }
 
                 vIsSelected = (idToDrag == data[].x) ? 1.0 : 0.0;
@@ -214,49 +153,14 @@ export class VFP_NODE {
             }
             if(isLink == 1.0) {        
                 float nodeIdOpposite = data[].y;
-                 
-                float linkBornDate = dataC[].x;
-                float linkDieDate = dataC[].y;
                 
                 vec2 xGeometryNode_opposite = get_global_id(nodeIdOpposite, bufferNodesWidth, `+geometryLength.toFixed(1)+`);
                 vec3 oppositePosition = posXYZW[xGeometryNode_opposite].xyz;
                 
-                ${VFP_NODE.linkStr()}        
-                
-                vec2 xGeometryLinks = get_global_id(nodeId, bufferLinksWidth, 2.0); ${/* bufferWidth, geometryLength */''}
-                vec2 xGeometryLinks_opposite = get_global_id(nodeIdOpposite, bufferLinksWidth, 2.0);
-                
-                float bornDateOpposite = dataB[xGeometryNode_opposite].x;
-                float dieDateOpposite = dataB[xGeometryNode_opposite].y;
+                ${VFP_NODE.linkStr()}
             
-            
-                if(xGeometryLinks != xGeometryLinks_opposite) {
-                    currentPosition += vec4(dirN*(lineIncrements*currentLineVertex), 1.0); ${/* displacing from center to first point */''}
+                currentPosition += vec4(dirN*(lineIncrements*currentLineVertex), 1.0); ${/* displacing from center to first point */''}
 
-                    if(currentLineVertex != 0.0 && currentLineVertex != vertexCount) {${/* displacing from first point to cross direction (repeatId) */''}
-                        currentPosition += vec4(cr*currentLineVertexSQRT*getOddEven(repeatId)*4.0, 1.0);
-                    }
-                } else { ${/* is Autolink */''}
-                    float currentLineVertexMM = abs( currentLineVertex-(vertexCount/2.0) );
-                    currentLineVertexMM = (vertexCount/2.0)-currentLineVertexMM;
-
-                    ${/* displacing from center to first point */''}
-                    vec3 initialVec = getFirstDispl(nodeId, currentPosition, repeatId);
-                    currentPosition += vec4(initialVec*(5.0*currentLineVertexMM), 1.0);
-
-                    ${/* displacing from first point to cross direction (repeatId) */''}
-                    if(currentLineVertex != 0.0 && currentLineVertex != vertexCount) {
-                        float sig = (currentLineVertex > (vertexCount/2.0)) ? 1.0 : -1.0;
-
-                        vec3 crB = cross(vec3(0.0, 1.0, 0.0), initialVec);
-
-                        float hhSCount = (vertexCount/2.0)/2.0;
-                        float currentLineVertexMMB = hhSCount-(abs(currentLineVertexMM-hhSCount));
-                        currentPosition += vec4((crB*sig)*currentLineVertexMMB*1.0, 1.0);
-                    }
-                }
-
-                vVisibility = checkLinkArrowVisibility(currentTimestamp, linkBornDate, linkDieDate, bornDateOpposite, dieDateOpposite, linkBornDate, linkDieDate);
                 vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;
                 vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;
                 
@@ -265,54 +169,15 @@ export class VFP_NODE {
             if(isArrow == 1.0) {
                 float nodeIdOpposite = data[].y;
                 
-                float linkBornDate = dataC[].x;
-                float linkDieDate = dataC[].y;
-                
                 vec2 xGeometryNode_opposite = get_global_id(nodeIdOpposite, bufferNodesWidth, `+geometryLength.toFixed(1)+`);
                 vec3 oppositePosition = posXYZW[xGeometryNode_opposite].xyz;
                 
-                ${VFP_NODE.linkStr()}
-        
-                vec2 xGeometryArrows = get_global_id(nodeId, bufferArrowsWidth, 3.0); ${/* bufferWidth, geometryLength */''}
-                vec2 xGeometryArrows_opposite = get_global_id(nodeIdOpposite, bufferArrowsWidth, 3.0);
-            
-                float bornDateOpposite = dataB[xGeometryNode_opposite].x;
-                float dieDateOpposite = dataB[xGeometryNode_opposite].y;
-                
+                ${VFP_NODE.linkStr()}                
             
                 vec3 currentPositionTMP;
-                if(xGeometryArrows != xGeometryArrows_opposite) {
-                    ${/* displacing from center to first point */''}
-                    float currentLineVertexU = vertexCount-1.0;
-                    currentPositionTMP = oppositePosition+((dirN*-1.0)*(lineIncrements*currentLineVertexU));
-
-                    ${/* displacing from first point to cross direction (repeatId) */''}
-                    currentPositionTMP -= cr*(currentLineVertexSQRT*getOddEven(repeatId)*4.0);
-                } else { ${/* is Autolink */''}
-                    float currentLineVertexU = vertexCount-1.0;
-                    float currentLineVertexMM = abs( currentLineVertexU-(vertexCount/2.0) );
-                    currentLineVertexMM = (vertexCount/2.0)-currentLineVertexMM;
-
-                    
-                    ${/* displacing from center to first point */''}
-                    vec3 initialVec = getFirstDispl(nodeId, currentPosition, repeatId);
-                    currentPositionTMP = oppositePosition+(initialVec*(5.0*currentLineVertexMM));
-
-                    
-                    ${/* displacing from first point to cross direction (repeatId) */''}
-                    if(currentLineVertex != 0.0 && currentLineVertex != vertexCount) {
-                        float sig = (currentLineVertex > (vertexCount/2.0)) ? 1.0 : -1.0;
-
-                        vec3 crB = cross(vec3(0.0, 1.0, 0.0), initialVec);
-
-                        float hhSCount = (vertexCount/2.0)/2.0;
-                        float currentLineVertexMMB = hhSCount-(abs(currentLineVertexMM-hhSCount));
-
-                        currentPositionTMP += (crB*sig)*currentLineVertexMMB*1.0;
-                        
-                        ${/* currentPositionTMP -= vec4((crB*sig)*(currentLineVertexSQRT*(repeatId+1.0)*4.0), 1.0); */''}
-                    }
-                }
+                ${/* displacing from center to first point */''}
+                float currentLineVertexU = vertexCount-1.0;
+                currentPositionTMP = oppositePosition+((dirN*-1.0)*(lineIncrements*currentLineVertexU));
 
                 mat4 pp = lookAt(currentPositionTMP, vec3(currentPosition.x, currentPosition.y, currentPosition.z), vec3(0.0, 1.0, 0.0));
                 pp = transpose(pp);
@@ -332,7 +197,6 @@ export class VFP_NODE {
                 dir = currentPositionTMP-vec3(currentPosition.x, currentPosition.y, currentPosition.z);
                 currentPosition += vec4(normalize(dir),1.0)*2.0;
 
-                vVisibility = checkLinkArrowVisibility(currentTimestamp, linkBornDate, linkDieDate, bornDateOpposite, dieDateOpposite, linkBornDate, linkDieDate);
                 vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;
                 vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;
                 
@@ -347,7 +211,6 @@ export class VFP_NODE {
                 nodeVertexPosition = vec4(nodeVertexPosition.x*0.1, nodeVertexPosition.y*0.1, nodeVertexPosition.z*0.1, 1.0);
                 currentPosition.z += 2.5;
 
-                vVisibility = 1.0;
                 vIsSelected = (idToDrag == data[].x) ? 1.0 : 0.0;
                 vIsHover = (idToHover == data[].x) ? 1.0 : 0.0;
                 
@@ -390,7 +253,6 @@ export class VFP_NODE {
             varying float vNodeId;
             varying float vNodeIdOpposite;
        		varying float vDist;
-            varying float vVisibility;
        		varying float vIsSelected;
             varying float vIsHover;
        		varying float vUseCrosshair;
@@ -428,41 +290,28 @@ export class VFP_NODE {
                 'if(color.a < 0.1) discard;'+
 
                 'fcolor = color;\n'+
-                'if(enableNeuronalNetwork == 1.0) {'+
-                    // half up: ouput; half down: error
-                    'if(vUV.y > (0.7)) '+
-                        'fcolor = colorB;\n'+ // 0.75-(colorB.w*1.0)   'fcolor = (vUV.y < (0.5)) ? color : ((colorB.w == 0.0)?color:colorB);\n'+
-                '}'+
+                // half up: ouput; half down: error
+                'if(vUV.y > (0.7)) '+
+                    'fcolor = colorB;\n'+ // 0.75-(colorB.w*1.0)   'fcolor = (vUV.y < (0.5)) ? color : ((colorB.w == 0.0)?color:colorB);\n'+
             '} else if(isLink == 1.0) {'+
                 'if(vIsSelected == 1.0) '+
                     'color = colorOrange;'+
                 'else if(vIsHover == 1.0) '+
                     'color = colorPurple;'+
 
-                'if(enableNeuronalNetwork == 1.0) {'+
-                    // weight color
-                    'vec2 xAdjMatCurrent = get_global_id(vec2(vNodeIdOpposite, vNodeId), widthAdjMatrix);'+
-                    'vec4 pixAdjMatACurrent = adjacencyMatrix[xAdjMatCurrent];\n'+
-                    'vec4 pixAdjMatCCurrent = adjacencyMatrixC[xAdjMatCurrent];\n'+
+                // weight color
+                'vec2 xAdjMatCurrent = get_global_id(vec2(vNodeIdOpposite, vNodeId), widthAdjMatrix);'+
+                'vec4 pixAdjMatACurrent = adjacencyMatrix[xAdjMatCurrent];\n'+
 
-                    // x weight
-                    'if(pixAdjMatACurrent.z > 0.0) '+
-                        'fcolor = vec4(0.0, pixAdjMatACurrent.z, 0.0, 1.0);\n'+
-                    'else '+
-                        'fcolor = vec4(abs(pixAdjMatACurrent.z), 0.0, 0.0, 1.0);\n'+
+                // x weight
+                'if(pixAdjMatACurrent.z > 0.0) '+
+                    'fcolor = vec4(0.0, pixAdjMatACurrent.z, 0.0, 1.0);\n'+
+                'else '+
+                    'fcolor = vec4(abs(pixAdjMatACurrent.z), 0.0, 0.0, 1.0);\n'+
 
-                    /*'if(pixAdjMatCCurrent.x > 0.0) '+
-                        'fcolor *= vec4(0.0, abs(pixAdjMatCCurrent.x), 0.0, 1.0);'+
-                    'else if(pixAdjMatCCurrent.x < 0.0) '+
-                        'fcolor *= vec4(abs(pixAdjMatCCurrent.x), 0.0, 0.0, 1.0);'+
-                    'else '+
-                        'fcolor *= vec4(0.0,0.0,0.0, 0.0);'+*/
-
-                    // x output
-                    'if(multiplyOutput == 1.0) '+
-                        'fcolor *= vec4(color.xyz, 1.0);\n'+
-                '} else '+
-                    'fcolor = vec4(color.xyz, 1.0);\n'+
+                // x output
+                'if(multiplyOutput == 1.0) '+
+                    'fcolor *= vec4(color.xyz, 1.0);\n'+
             '} else if(isArrow == 1.0) {'+
                 'if(vIstarget == 1.0) {'+
                     'if(vIsSelected == 1.0) {'+
@@ -477,9 +326,6 @@ export class VFP_NODE {
             '} else if(isNodeText == 1.0) {'+
                 'fcolor = fontsImg[vVertexUV.xy];\n'+
             '}'+
-
-            'if(vVisibility == 0.0) '+
-                 'discard;'+
 
             'return [fcolor];'
         ];
