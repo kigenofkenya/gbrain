@@ -4,38 +4,16 @@
 		<meta http-equiv="content-type" content="text/html; charset=utf-8">
 
         <!--<script src="../../dist/scejs/SCEJS.min.js"></script>-->
-        <script src="../../dist/scejs/ArrayGenerator.class.js"></script>
-        <script src="../../dist/scejs/Component.class.js"></script>
-        <script src="../../dist/scejs/Component_GPU.class.js"></script>
-        <script src="../../dist/scejs/ComponentControllerTransformTarget.class.js"></script>
-        <script src="../../dist/scejs/ComponentKeyboardEvents.class.js"></script>
-        <script src="../../dist/scejs/ComponentMouseEvents.class.js"></script>
-        <script src="../../dist/scejs/ComponentProjection.class.js"></script>
-        <script src="../../dist/scejs/ComponentTransform.class.js"></script>
-        <script src="../../dist/scejs/ComponentTransformTarget.class.js"></script>
-        <script src="../../dist/scejs/Constants.js"></script>
-        <script src="../../dist/scejs/Mesh.class.js"></script>
-        <script src="../../dist/scejs/Node.class.js"></script>
-        <script src="../../dist/scejs/Project.class.js"></script>
-        <script src="../../dist/scejs/SCE.class.js"></script>
-        <script src="../../dist/scejs/Stage.class.js"></script>
-        <script src="../../dist/scejs/StormMath.class.js"></script>
-        <script src="../../dist/scejs/SystemEvents.class.js"></script>
-        <script src="../../dist/scejs/Utils.class.js"></script>
-        <script src="../../dist/scejs/VFP_RGB.class.js"></script>
-        <script src="../../dist/scejs/Prefabs/SimpleCamera/SimpleCamera.class.js"></script>
-        <script src="../../dist/scejs/Prefabs/SimpleNode/SimpleNode.class.js"></script>
-        <script src="../../dist/scejs/Prefabs/Grid/Grid.class.js"></script>
 
-        <script src="../../dist/scejs/Prefabs/Graph/Graph.class.js"></script>
-        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_DIR.class.js"></script>
-        <script src="../../dist/scejs/Prefabs/Graph/graphUtil.js"></script>
-        <script src="../../dist/scejs/Prefabs/Graph/KERNEL_ADJMATRIX_UPDATE.class.js"></script>
-        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODE.class.js"></script>
-        <script src="../../dist/scejs/Prefabs/Graph/VFP_NODEPICKDRAG.class.js"></script>
-        <script src="../../dist/scejs/Prefabs/Graph/ProccessImg.class.js"></script>
-        <script src="../../dist/scejs/Prefabs/Graph/gbrain.js"></script>
-        <script src="../../dist/scejs/Prefabs/Graph/gbrain-rl.js"></script>
+        <script src="../../dist/gbrain/Graph.class.js"></script>
+        <script src="../../dist/gbrain/KERNEL_DIR.class.js"></script>
+        <script src="../../dist/gbrain/graphUtil.js"></script>
+        <script src="../../dist/gbrain/KERNEL_ADJMATRIX_UPDATE.class.js"></script>
+        <script src="../../dist/gbrain/VFP_NODE.class.js"></script>
+        <script src="../../dist/gbrain/VFP_NODEPICKDRAG.class.js"></script>
+        <script src="../../dist/gbrain/ProccessImg.class.js"></script>
+        <script src="../../dist/gbrain/gbrain.js"></script>
+        <script src="../../dist/gbrain/gbrain-rl.js"></script>
 	</head>
 
 	<body>
@@ -93,9 +71,6 @@
 
             var mesh_point = new Mesh().loadPoint();
             //graph.setNodeMesh(mesh_point);
-
-
-            graph.setFontsImage("../../SCEJS/Prefabs/Graph/fonts.png");
 
             graph.layerCount = 0;
             // convolutions neurons
