@@ -103,14 +103,17 @@ export class Graph {
         this.disabVal = 0.0;
 
 
+        // Nodes
+        // Data: nodeId, acums, bornDate, dieDate
+        // DataB: bornDate, dieDate, netFOutputA, netErrorWeightA (SHARED with LINKS, ARROWS & NODESTEXT)
+
+        // Links
+        // Data: nodeId origin, nodeId target, currentLineVertex, repeatId
+        // DataC: linkBornDate, linkDieDate, linkWeight, 0
 
         // nodes
-        this.arrayNodeData = []; // nodeId, acums, bornDate, dieDate
-        // if(own networkWaitData == this.disabVal)
-        // own has been read. then see networkWaitData of childs, calculate weights & save output in own networkWaitData & networkProcData(for visualization).
-        // else if(own networkWaitData != this.disabVal)
-        // own networkWaitData is being read. then set own networkWaitData to disabVal()
-        this.arrayNodeDataB = []; // bornDate, dieDate, networkWaitData, networkProcData (SHARED with LINKS, ARROWS & NODESTEXT)
+        this.arrayNodeData = [];
+        this.arrayNodeDataB = [];
         this.arrayNodeDataF = [];
         this.arrayNodeDataG = [];
         this.arrayNodeDataH = [];
@@ -1390,8 +1393,9 @@ export class Graph {
     /**
      * @param {String} neuronName
      * @param {Array<number>} [destination=[0.0, 0.0, 0.0, 1.0]]
+     * @param {boolean} [biasNeuron]
      */
-    addNeuron(neuronName, destination) {
+    addNeuron(neuronName, destination, biasNeuron) {
         let offs = 1000;
         let pos = [-(offs/2)+(Math.random()*offs), -(offs/2)+(Math.random()*offs), -(offs/2)+(Math.random()*offs), 1.0];
         let dest = (destination !== undefined && destination !== null) ? destination : [0.0, 0.0, 0.0, 1.0];
@@ -1410,7 +1414,8 @@ export class Graph {
             },
             "onmouseup": (nodeData) => {
 
-            }});
+            },
+            "biasNeuron": biasNeuron});
     };
 
     /**
@@ -1442,6 +1447,12 @@ export class Graph {
                 this.currHiddenNeuron++;
             }
         }
+
+        // bias neuron
+        let position = [pos[0], pos[1], pos[2]+(numY/2)+nodSep, pos[3]];
+        this.addNeuron(this.currHiddenNeuron.toString(), position, true);
+        arr.push(this.currHiddenNeuron);
+        this.currHiddenNeuron++;
 
         return arr;
     };
@@ -1980,6 +1991,7 @@ export class Graph {
 	* @param {Object} [jsonIn.layoutNodeArgumentData=undefined] - Data for the custom layout
 	* @param {Function} [jsonIn.onmousedown=undefined] - Event when mousedown
 	* @param {Function} [jsonIn.onmouseup=undefined] - Event when mouseup
+	* @param {boolean} [jsonIn.biasNeuron]
 	* @returns {String|boolean} - Name of node
 	 */
 	addNode(jsonIn) {
@@ -2007,6 +2019,7 @@ export class Graph {
      * @param {String} [jsonIn.color]
      * @param {int} [jsonIn.nodeId]
      * @param {int} [jsonIn.itemStart]
+     * @param {boolean} [jsonIn.biasNeuron]
      * @returns {Object}
      */
     createNode(jsonIn) {
@@ -2031,6 +2044,15 @@ export class Graph {
             let idxVertex = n*4;
 
             let ts = this.getBornDieTS(jsonIn.bornDate, jsonIn.dieDate);
+
+            // Nodes
+            // Data: nodeId, acums, bornDate, dieDate
+            // DataB: bornDate, dieDate, netFOutputA, netErrorWeightA (SHARED with LINKS, ARROWS & NODESTEXT)
+
+            // Links
+            // Data: nodeId origin, nodeId target, currentLineVertex, repeatId
+            // DataC: linkBornDate, linkDieDate, linkWeight, 0
+
             this.arrayNodeData.push(this.currentNodeId, 0.0, ts.bornDate, ts.dieDate);
             this.arrayNodeDataB.push(ts.bornDate, ts.dieDate, 0.0, 0.0);
             this.arrayNodeDataF.push(0.0, 0.0, 0.0, 0.0);
@@ -2320,6 +2342,13 @@ export class Graph {
             this.createLinksObjItem();
 
         for(let n=0; n < this.lineVertexCount*2; n++) {
+            // Nodes
+            // Data: nodeId, acums, bornDate, dieDate
+            // DataB: bornDate, dieDate, netFOutputA, netErrorWeightA (SHARED with LINKS, ARROWS & NODESTEXT)
+
+            // Links
+            // Data: nodeId origin, nodeId target, currentLineVertex, repeatId
+            // DataC: linkBornDate, linkDieDate, linkWeight, 0
             this.linksObj[this.currentLinksObjItem].arrayLinkData.push(jsonIn.origin_nodeId, jsonIn.target_nodeId, Math.ceil(n/2), jsonIn.repeatId);
             this.linksObj[this.currentLinksObjItem].arrayLinkDataC.push(jsonIn.bornDate, jsonIn.dieDate, jsonIn.weight, 0.0);
 
