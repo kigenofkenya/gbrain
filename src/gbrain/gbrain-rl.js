@@ -71,7 +71,8 @@ export class GBrainRL {
         this.gbrain.makeLayers(jsonIn.layer_defs);
 
         this.lastTotalError = 0;
-        this.currentBatchRepeat = jsonIn.gpu_batch_repeats;
+        this.currentBatchRepeat = 0;
+        this.maxBatchRepeat = jsonIn.gpu_batch_repeats;
     }
 
     getNetInput(xt) {
@@ -193,7 +194,7 @@ export class GBrainRL {
                 //this.avcost = this.avcost/this.gbrain.batch_size;
                 //this.average_loss_window.add(this.avcost); TODO
 
-                if(this.currentBatchRepeat === 9)
+                if(this.currentBatchRepeat === this.maxBatchRepeat)
                     this.onLearned();
                 else {
                     this.currentBatchRepeat++;

@@ -1,5 +1,4 @@
 import "scejs";
-import {GraphUtils} from "./graphUtil";
 
 export class VFP_NODE {
     constructor() {

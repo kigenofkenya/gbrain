@@ -535,7 +535,7 @@ export class Graph {
                                             {"type": "KERNEL",
                                             "name": "NODES_KERNEL_DIR",
                                             "viewSource": false,
-                                            "config": KERNEL_DIR.getSrc(this.layout.codeDirection, this._geometryLength, (this.currentNodeId-this.efferentNodesCount), this.efferentNodesCount),
+                                            "config": KERNEL_DIR.getSrc(this.layout.codeDirection, this._geometryLength, this.afferentNodesCount, (this.currentNodeId-this.efferentNodesCount), this.efferentNodesCount),
                                             "drawMode": ((this._geometryLength === 1) ? 0 : 4),
                                             "depthTest": true,
                                             "blend": false,
@@ -902,6 +902,7 @@ export class Graph {
      * @param {Array<number>} [destination=[0.0, 0.0, 0.0, 1.0]]
      */
     addAfferentNeuron(neuronName, destination) {
+        this.afferentNodesCount++;
         this.afferentNeuron.push(neuronName);
         this.addNeuron(neuronName, destination);
     };
@@ -911,6 +912,7 @@ export class Graph {
      * @param {Array<number>} [destination=[0.0, 0.0, 0.0, 1.0]]
      */
     addEfferentNeuron(neuronName, destination) {
+        this.efferentNodesCount++;
         this.efferentNeuron.push(neuronName);
         this.addNeuron(neuronName, destination);
     };
@@ -2058,8 +2060,6 @@ export class Graph {
     // ╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝    ╚══════╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝
 	updateLinks() {
 		console.log(Object.keys(this._links).length+" links");
-
-        this.comp_renderer_nodes.setArg("data", () => {return this.arrayNodeData;});
 
         for(let na=0; na < this.linksObj.length; na++) {
             this.linksObj[na].componentRenderer.setArg("data", () => {return this.linksObj[na].arrayLinkData;});

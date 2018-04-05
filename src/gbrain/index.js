@@ -4,8 +4,6 @@ import "./gbrain-rl";
 module.exports.GBrainRL = global.GBrainRL = GBrainRL;
 import "./Graph.class";
 module.exports.Graph = global.Graph = Graph;
-import "./graphUtil";
-module.exports.GraphUtils = global.GraphUtils = GraphUtils;
 import "./KERNEL_ADJMATRIX_UPDATE.class";
 module.exports.KERNEL_ADJMATRIX_UPDATE = global.KERNEL_ADJMATRIX_UPDATE = KERNEL_ADJMATRIX_UPDATE;
 import "./KERNEL_DIR.class";

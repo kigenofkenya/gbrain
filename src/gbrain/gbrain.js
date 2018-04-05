@@ -65,7 +65,6 @@ export class GBrain {
         let lType = {   "input": (l) => {
                             let offsetZ = -10.0*(l.depth/2);
                             for(let n=0; n < l.depth; n++) {
-                                this.graph.afferentNodesCount++;
                                 this.graph.addAfferentNeuron("input"+this.inputCount, [offsetX, 0.0, offsetZ, 1.0]); // afferent neuron (sensor)
                                 this.inputCount++;
                                 offsetZ += 10.0;
@@ -98,7 +97,6 @@ export class GBrain {
                         "regression": (l) => {
                             let offsetZ = -30.0*(l.num_neurons/2);
                             for(let n=0; n < l.num_neurons; n++) {
-                                this.graph.efferentNodesCount++;
                                 this.graph.addEfferentNeuron("output"+this.outputCount, [offsetX, 0.0, offsetZ, 1.0]); // efferent neuron (actuator)
                                 this.graph.connectNeuronLayerWithNeuron({   "neuronLayer": this.neuronLayers[this.neuronLayers.length-1],
                                                                             "neuron": "output"+this.outputCount,
