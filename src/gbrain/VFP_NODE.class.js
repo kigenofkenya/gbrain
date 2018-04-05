@@ -152,6 +152,9 @@ export class VFP_NODE {
                 vIsHover = (idToHover == data[].x) ? 1.0 : 0.0;
             }
             if(isLink == 1.0) {        
+                float foutput = dataB[xGeometryNode].z;
+                float error = dataB[xGeometryNode].w;
+                
                 float nodeIdOpposite = data[].y;
                 
                 vec2 xGeometryNode_opposite = get_global_id(nodeIdOpposite, bufferNodesWidth, `+geometryLength.toFixed(1)+`);
@@ -164,6 +167,16 @@ export class VFP_NODE {
                 vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;
                 vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;
                 
+                nodeVertexColor = vec4(abs(foutput), abs(foutput), abs(foutput), 1.0);
+
+                if(error > 0.0) {
+                    nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);
+                } else if(error < 0.0) {
+                    nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);
+                } else {
+                    nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);
+                }
+                        
                 vNodeIdOpposite = nodeIdOpposite;
             }
             if(isArrow == 1.0) {
