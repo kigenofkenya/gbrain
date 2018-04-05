@@ -3,33 +3,47 @@ export class GraphUtils {
 
     }
 
-    static nodesDrawMode(geometryLength) {
-        if(geometryLength === 1)
-            return "vec4(color.rgb, 1.0)";
-        else
-            return "vec4(tex.rgb*color.rgb, tex.a)";
-    };
-
     static adjMatrix_ForceLayout_GLSLFunctionString(geometryLength, efferentStart, efferentNodesCount) {
         return ''+
         `struct CalculationResponse {
             vec3 atraction;
             float acumAtraction;
             vec3 repulsion;
+            
             float netChildInputSumA;
             float netParentErrorWeightA;
+            float netChildInputSumBiasA;
+            float netParentErrorBiasA;
+            
             float netChildInputSumB;
             float netParentErrorWeightB;
+            float netChildInputSumBiasB;
+            float netParentErrorBiasB;
+            
             float netChildInputSumC;
             float netParentErrorWeightC;
+            float netChildInputSumBiasC;
+            float netParentErrorBiasC;
+            
             float netChildInputSumD;
             float netParentErrorWeightD;
+            float netChildInputSumBiasD;
+            float netParentErrorBiasD;
+            
             float netChildInputSumE;
             float netParentErrorWeightE;
+            float netChildInputSumBiasE;
+            float netParentErrorBiasE;
+            
             float netChildInputSumF;
             float netParentErrorWeightF;
+            float netChildInputSumBiasF;
+            float netParentErrorBiasF;
+            
             float netChildInputSumG;
             float netParentErrorWeightG;
+            float netChildInputSumBiasG;
+            float netParentErrorBiasG;
         };`+
 
         `CalculationResponse calculate(float nodeId,
@@ -38,13 +52,13 @@ export class GraphUtils {
                                         vec2 xGeomCurrent, vec2 xGeomOpposite,
                                         vec3 currentPos, vec3 currentDir,
                                         vec3 atraction, float acumAtraction, vec3 repulsion,
-                                        float netChildInputSumA, float netParentErrorWeightA,
-                                        float netChildInputSumB, float netParentErrorWeightB,
-                                        float netChildInputSumC, float netParentErrorWeightC,
-                                        float netChildInputSumD, float netParentErrorWeightD,
-                                        float netChildInputSumE, float netParentErrorWeightE,
-                                        float netChildInputSumF, float netParentErrorWeightF,
-                                        float netChildInputSumG, float netParentErrorWeightG) {`+
+                                        float netChildInputSumA, float netParentErrorWeightA,float netChildInputSumBiasA, float netParentErrorBiasA,
+                                        float netChildInputSumB, float netParentErrorWeightB,float netChildInputSumBiasB, float netParentErrorBiasB,
+                                        float netChildInputSumC, float netParentErrorWeightC,float netChildInputSumBiasC, float netParentErrorBiasC,
+                                        float netChildInputSumD, float netParentErrorWeightD,float netChildInputSumBiasD, float netParentErrorBiasD,
+                                        float netChildInputSumE, float netParentErrorWeightE,float netChildInputSumBiasE, float netParentErrorBiasE,
+                                        float netChildInputSumF, float netParentErrorWeightF,float netChildInputSumBiasF, float netParentErrorBiasF,
+                                        float netChildInputSumG, float netParentErrorWeightG,float netChildInputSumBiasG, float netParentErrorBiasG) {`+
             // pixAdjMatACurrent
             `float currentWeight = pixAdjMatACurrent.z;
             float currentIsParent = pixAdjMatACurrent.w;`+
@@ -69,8 +83,8 @@ export class GraphUtils {
             //'float currentNetError = dataB[xGeomCurrent].w;'+
 
             // dataB Opposite
-            //'float oppositeBiasNode = dataB[xGeomOpposite].x;'+
-            `float oppositeNetOutputA = dataB[xGeomOpposite].z;
+            `float oppositeBiasNode = dataB[xGeomOpposite].x;
+            float oppositeNetOutputA = dataB[xGeomOpposite].z;
             float oppositeNetErrorA = dataB[xGeomOpposite].w;
 
             float oppositeNetOutputB = dataF[xGeomOpposite].x;
@@ -107,8 +121,9 @@ export class GraphUtils {
             'float dist = distance(oppositePos, currentPos);\n'+ // near=0.0 ; far=1.0
             'float distN = max(0.0,dist)/100000.0;'+
 
-            'float m1 = 0.0;'+ // 400000.0
-            'float m2 = 0.0;'+ // 48.0
+            'float mm = 30.0;'+
+            'float m1 = 400000.0/mm;'+
+            'float m2 = 48.0/mm;'+
             'if(currentIsParent == 1.0) {'+
                 'netChildInputSumA += oppositeNetOutputA*oppositeWeight;'+
                 'netChildInputSumB += oppositeNetOutputB*oppositeWeight;'+
@@ -117,6 +132,14 @@ export class GraphUtils {
                 'netChildInputSumE += oppositeNetOutputE*oppositeWeight;'+
                 'netChildInputSumF += oppositeNetOutputF*oppositeWeight;'+
                 'netChildInputSumG += oppositeNetOutputG*oppositeWeight;'+
+
+                'netChildInputSumBiasA += oppositeWeight;'+
+                'netChildInputSumBiasB += oppositeWeight;'+
+                'netChildInputSumBiasC += oppositeWeight;'+
+                'netChildInputSumBiasD += oppositeWeight;'+
+                'netChildInputSumBiasE += oppositeWeight;'+
+                'netChildInputSumBiasF += oppositeWeight;'+
+                'netChildInputSumBiasG += oppositeWeight;'+
 
                 'atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));\n'+
                 'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));\n'+
@@ -130,6 +153,14 @@ export class GraphUtils {
                 'netParentErrorWeightF += oppositeNetErrorF*currentWeight;'+
                 'netParentErrorWeightG += oppositeNetErrorG*currentWeight;'+
 
+                'netParentErrorBiasA += oppositeNetErrorA;'+
+                'netParentErrorBiasB += oppositeNetErrorB;'+
+                'netParentErrorBiasC += oppositeNetErrorC;'+
+                'netParentErrorBiasD += oppositeNetErrorD;'+
+                'netParentErrorBiasE += oppositeNetErrorE;'+
+                'netParentErrorBiasF += oppositeNetErrorF;'+
+                'netParentErrorBiasG += oppositeNetErrorG;'+
+
                 'atraction += dirToOppositeN*max(1.0, distN*abs(currentWeight)*m1);\n'+
                 'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*m2);\n'+
                 'acumAtraction += 1.0;\n'+
@@ -140,13 +171,13 @@ export class GraphUtils {
 
 
             `return CalculationResponse(atraction, acumAtraction, repulsion,
-                                        netChildInputSumA, netParentErrorWeightA,
-                                        netChildInputSumB, netParentErrorWeightB,
-                                        netChildInputSumC, netParentErrorWeightC,
-                                        netChildInputSumD, netParentErrorWeightD,
-                                        netChildInputSumE, netParentErrorWeightE,
-                                        netChildInputSumF, netParentErrorWeightF,
-                                        netChildInputSumG, netParentErrorWeightG);
+                                        netChildInputSumA, netParentErrorWeightA, netChildInputSumBiasA, netParentErrorBiasA,
+                                        netChildInputSumB, netParentErrorWeightB, netChildInputSumBiasB, netParentErrorBiasB,
+                                        netChildInputSumC, netParentErrorWeightC, netChildInputSumBiasC, netParentErrorBiasC,
+                                        netChildInputSumD, netParentErrorWeightD, netChildInputSumBiasD, netParentErrorBiasD,
+                                        netChildInputSumE, netParentErrorWeightE, netChildInputSumBiasE, netParentErrorBiasE,
+                                        netChildInputSumF, netParentErrorWeightF, netChildInputSumBiasF, netParentErrorBiasF,
+                                        netChildInputSumG, netParentErrorWeightG, netChildInputSumBiasG, netParentErrorBiasG);
         }
         struct idAdjMatrixResponse {
             vec3 force;
@@ -184,30 +215,44 @@ export class GraphUtils {
             float netChildInputSumA = 0.0;
             float foutputA = 0.0;
             float netParentErrorWeightA = 0.0;
+            float netChildInputSumBiasA = 0.0;
+            float netParentErrorBiasA = 0.0;
             
             float netChildInputSumB = 0.0;
             float foutputB = 0.0;
             float netParentErrorWeightB = 0.0;
+            float netChildInputSumBiasB = 0.0;
+            float netParentErrorBiasB = 0.0;
             
             float netChildInputSumC = 0.0;
             float foutputC = 0.0;
             float netParentErrorWeightC = 0.0;
+            float netChildInputSumBiasC = 0.0;
+            float netParentErrorBiasC = 0.0;
             
             float netChildInputSumD = 0.0;
             float foutputD = 0.0;
             float netParentErrorWeightD = 0.0;
+            float netChildInputSumBiasD = 0.0;
+            float netParentErrorBiasD = 0.0;
             
             float netChildInputSumE = 0.0;
             float foutputE = 0.0;
             float netParentErrorWeightE = 0.0;
+            float netChildInputSumBiasE = 0.0;
+            float netParentErrorBiasE = 0.0;
             
             float netChildInputSumF = 0.0;
             float foutputF = 0.0;
             float netParentErrorWeightF = 0.0;
+            float netChildInputSumBiasF = 0.0;
+            float netParentErrorBiasF = 0.0;
             
             float netChildInputSumG = 0.0;
             float foutputG = 0.0;
             float netParentErrorWeightG = 0.0;
+            float netChildInputSumBiasG = 0.0;
+            float netParentErrorBiasG = 0.0;
             
 
             if(nodeId < nodesCount) {
@@ -235,41 +280,57 @@ export class GraphUtils {
                                                                     xGeomCurrent, xGeomOpposite,
                                                                     currentPos, currentDir,
                                                                     atraction, acumAtraction, repulsion,
-                                                                    netChildInputSumA, netParentErrorWeightA,
-                                                                    netChildInputSumB, netParentErrorWeightB,
-                                                                    netChildInputSumC, netParentErrorWeightC,
-                                                                    netChildInputSumD, netParentErrorWeightD,
-                                                                    netChildInputSumE, netParentErrorWeightE,
-                                                                    netChildInputSumF, netParentErrorWeightF,
-                                                                    netChildInputSumG, netParentErrorWeightG);
+                                                                    netChildInputSumA, netParentErrorWeightA, netChildInputSumBiasA, netParentErrorBiasA,
+                                                                    netChildInputSumB, netParentErrorWeightB, netChildInputSumBiasB, netParentErrorBiasB,
+                                                                    netChildInputSumC, netParentErrorWeightC, netChildInputSumBiasC, netParentErrorBiasC,
+                                                                    netChildInputSumD, netParentErrorWeightD, netChildInputSumBiasD, netParentErrorBiasD,
+                                                                    netChildInputSumE, netParentErrorWeightE, netChildInputSumBiasE, netParentErrorBiasE,
+                                                                    netChildInputSumF, netParentErrorWeightF, netChildInputSumBiasF, netParentErrorBiasF,
+                                                                    netChildInputSumG, netParentErrorWeightG, netChildInputSumBiasG, netParentErrorBiasG);
                         atraction = calcResponse.atraction;
                         acumAtraction = calcResponse.acumAtraction;
                         repulsion = calcResponse.repulsion;
                         
                         netChildInputSumA = calcResponse.netChildInputSumA;
                         netParentErrorWeightA = calcResponse.netParentErrorWeightA;
+                        netChildInputSumBiasA = calcResponse.netChildInputSumBiasA;
+                        netParentErrorBiasA = calcResponse.netParentErrorBiasA;
                         
                         netChildInputSumB = calcResponse.netChildInputSumB;
                         netParentErrorWeightB = calcResponse.netParentErrorWeightB;
+                        netChildInputSumBiasB = calcResponse.netChildInputSumBiasB;
+                        netParentErrorBiasB = calcResponse.netParentErrorBiasB;
                         
                         netChildInputSumC = calcResponse.netChildInputSumC;
                         netParentErrorWeightC = calcResponse.netParentErrorWeightC;
+                        netChildInputSumBiasC = calcResponse.netChildInputSumBiasC;
+                        netParentErrorBiasC = calcResponse.netParentErrorBiasC;
                         
                         netChildInputSumD = calcResponse.netChildInputSumD;
                         netParentErrorWeightD = calcResponse.netParentErrorWeightD;
+                        netChildInputSumBiasD = calcResponse.netChildInputSumBiasD;
+                        netParentErrorBiasD = calcResponse.netParentErrorBiasD;
                         
                         netChildInputSumE = calcResponse.netChildInputSumE;
                         netParentErrorWeightE = calcResponse.netParentErrorWeightE;
+                        netChildInputSumBiasE = calcResponse.netChildInputSumBiasE;
+                        netParentErrorBiasE = calcResponse.netParentErrorBiasE;
                         
                         netChildInputSumF = calcResponse.netChildInputSumF;
                         netParentErrorWeightF = calcResponse.netParentErrorWeightF;
+                        netChildInputSumBiasF = calcResponse.netChildInputSumBiasF;
+                        netParentErrorBiasF = calcResponse.netParentErrorBiasF;
                         
                         netChildInputSumG = calcResponse.netChildInputSumG;
                         netParentErrorWeightG = calcResponse.netParentErrorWeightG;
+                        netChildInputSumBiasG = calcResponse.netChildInputSumBiasG;
+                        netParentErrorBiasG = calcResponse.netParentErrorBiasG;
                     }
                 }
                 force += (atraction/acumAtraction);
                 force += (repulsion/acumAtraction);
+                
+                float currentBiasNode = dataB[xGeomCurrent].x;
                 
                 ${GraphUtils.efferentNodesStr(efferentStart, efferentNodesCount)}
             }
@@ -286,6 +347,9 @@ export class GraphUtils {
     };
 
     static efferentNodesStr(efferentStart, efferentNodesCount) {
+        /////////////////////////////////////////////////
+        // OUTPUT
+        /////////////////////////////////////////////////
         let str = `
             if(nodeId < afferentNodesCount) {
                 for(float n=0.0; n < 1024.0; n+=1.0) {
@@ -304,74 +368,96 @@ export class GraphUtils {
                     }
                 }
             } else {
-                foutputA = max(0.0, netChildInputSumA); ${/* SIGM= sigm(netChildInputSumA)-0.5 ; TANH=tanh(netChildInputSumA) ; RELU=max(0.0, netChildInputSumA) */''}
-                foutputB = max(0.0, netChildInputSumB);
-                foutputC = max(0.0, netChildInputSumC);
-                foutputD = max(0.0, netChildInputSumD);
-                foutputE = max(0.0, netChildInputSumE);
-                foutputF = max(0.0, netChildInputSumF);
-                foutputG = max(0.0, netChildInputSumG);
+                if(currentBiasNode == 0.0) {                
+                    foutputA = max(0.0, netChildInputSumA); ${/* SIGM= sigm(netChildInputSumA)-0.5 ; TANH=tanh(netChildInputSumA) ; RELU=max(0.0, netChildInputSumA) */''}
+                    foutputB = max(0.0, netChildInputSumB);
+                    foutputC = max(0.0, netChildInputSumC);
+                    foutputD = max(0.0, netChildInputSumD);
+                    foutputE = max(0.0, netChildInputSumE);
+                    foutputF = max(0.0, netChildInputSumF);
+                    foutputG = max(0.0, netChildInputSumG);
+                } else {
+                    foutputA = netChildInputSumA;
+                    foutputB = netChildInputSumB;
+                    foutputC = netChildInputSumC;
+                    foutputD = netChildInputSumD;
+                    foutputE = netChildInputSumE;
+                    foutputF = netChildInputSumF;
+                    foutputG = netChildInputSumG;
+                }
             }`;
 
-
+        /////////////////////////////////////////////////
+        // ERROR
+        /////////////////////////////////////////////////
         str += `
         if(nodeId == `+efferentStart.toFixed(1)+`) {
             netParentErrorWeightA = (efferentNodesA[0] != 0.0) ? netChildInputSumA-efferentNodesA[0] : 0.0;
-            ${/* netLossA = 0.5*netParentErrorWeightA*netParentErrorWeightA; */''}
             netParentErrorWeightB = (efferentNodesB[0] != 0.0) ? netChildInputSumB-efferentNodesB[0] : 0.0;
-            ${/* netLossB = 0.5*netParentErrorWeightB*netParentErrorWeightB; */''}
             netParentErrorWeightC = (efferentNodesC[0] != 0.0) ? netChildInputSumC-efferentNodesC[0] : 0.0;
-            ${/* netLossC = 0.5*netParentErrorWeightC*netParentErrorWeightC; */''}
             netParentErrorWeightD = (efferentNodesD[0] != 0.0) ? netChildInputSumD-efferentNodesD[0] : 0.0;
-            ${/* netLossD = 0.5*netParentErrorWeightD*netParentErrorWeightD; */''}
             netParentErrorWeightE = (efferentNodesE[0] != 0.0) ? netChildInputSumE-efferentNodesE[0] : 0.0;
-            ${/* netLossE = 0.5*netParentErrorWeightE*netParentErrorWeightE; */''}
             netParentErrorWeightF = (efferentNodesF[0] != 0.0) ? netChildInputSumF-efferentNodesF[0] : 0.0;
-            ${/* netLossF = 0.5*netParentErrorWeightF*netParentErrorWeightF; */''}
             netParentErrorWeightG = (efferentNodesG[0] != 0.0) ? netChildInputSumG-efferentNodesG[0] : 0.0;
+            ${/* netLossA = 0.5*netParentErrorWeightA*netParentErrorWeightA; */''}
+            ${/* netLossB = 0.5*netParentErrorWeightB*netParentErrorWeightB; */''}
+            ${/* netLossC = 0.5*netParentErrorWeightC*netParentErrorWeightC; */''}
+            ${/* netLossD = 0.5*netParentErrorWeightD*netParentErrorWeightD; */''}
+            ${/* netLossE = 0.5*netParentErrorWeightE*netParentErrorWeightE; */''}
+            ${/* netLossF = 0.5*netParentErrorWeightF*netParentErrorWeightF; */''}
             ${/* netLossG = 0.5*netParentErrorWeightG*netParentErrorWeightG; */''}
         }`;
         for(let n=(efferentStart+1); n < (efferentStart+efferentNodesCount); n++)
             str += `
             else if(nodeId == `+n.toFixed(1)+`) {
                 netParentErrorWeightA = (efferentNodesA[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumA-efferentNodesA[`+Math.round(n-efferentStart)+`] : 0.0;
-                ${/* netLossA = 0.5*netParentErrorWeightA*netParentErrorWeightA; */''}
                 netParentErrorWeightB = (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumB-efferentNodesB[`+Math.round(n-efferentStart)+`] : 0.0;
-                ${/* netLossB = 0.5*netParentErrorWeightB*netParentErrorWeightB; */''}
                 netParentErrorWeightC = (efferentNodesC[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumC-efferentNodesC[`+Math.round(n-efferentStart)+`] : 0.0;
-                ${/* netLossC = 0.5*netParentErrorWeightC*netParentErrorWeightC; */''}
                 netParentErrorWeightD = (efferentNodesD[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumD-efferentNodesD[`+Math.round(n-efferentStart)+`] : 0.0;
-                ${/* netLossD = 0.5*netParentErrorWeightD*netParentErrorWeightD; */''}
                 netParentErrorWeightE = (efferentNodesE[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumE-efferentNodesE[`+Math.round(n-efferentStart)+`] : 0.0;
-                ${/* netLossE = 0.5*netParentErrorWeightE*netParentErrorWeightE; */''}
                 netParentErrorWeightF = (efferentNodesF[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumF-efferentNodesF[`+Math.round(n-efferentStart)+`] : 0.0;
-                ${/* netLossF = 0.5*netParentErrorWeightF*netParentErrorWeightF; */''}
                 netParentErrorWeightG = (efferentNodesG[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumG-efferentNodesG[`+Math.round(n-efferentStart)+`] : 0.0;
+                ${/* netLossA = 0.5*netParentErrorWeightA*netParentErrorWeightA; */''}
+                ${/* netLossB = 0.5*netParentErrorWeightB*netParentErrorWeightB; */''}
+                ${/* netLossC = 0.5*netParentErrorWeightC*netParentErrorWeightC; */''}
+                ${/* netLossD = 0.5*netParentErrorWeightD*netParentErrorWeightD; */''}
+                ${/* netLossE = 0.5*netParentErrorWeightE*netParentErrorWeightE; */''}
+                ${/* netLossF = 0.5*netParentErrorWeightF*netParentErrorWeightF; */''}
                 ${/* netLossG = 0.5*netParentErrorWeightG*netParentErrorWeightG; */''}
             }`;
 
         str += `
         else {
-            if(foutputA <= 0.0) {
-                netParentErrorWeightA = 0.0;
-            }
-            if(foutputB <= 0.0) {
-                netParentErrorWeightB = 0.0;
-            }
-            if(foutputC <= 0.0) {
-                netParentErrorWeightC = 0.0;
-            }
-            if(foutputD <= 0.0) {
-                netParentErrorWeightD = 0.0;
-            }
-            if(foutputE <= 0.0) {
-                netParentErrorWeightE = 0.0;
-            }
-            if(foutputF <= 0.0) {
-                netParentErrorWeightF = 0.0;
-            }
-            if(foutputG <= 0.0) {
-                netParentErrorWeightG = 0.0;
+            if(currentBiasNode == 0.0) {
+                if(foutputA <= 0.0) {
+                    netParentErrorWeightA = 0.0;
+                }
+                if(foutputB <= 0.0) {
+                    netParentErrorWeightB = 0.0;
+                }
+                if(foutputC <= 0.0) {
+                    netParentErrorWeightC = 0.0;
+                }
+                if(foutputD <= 0.0) {
+                    netParentErrorWeightD = 0.0;
+                }
+                if(foutputE <= 0.0) {
+                    netParentErrorWeightE = 0.0;
+                }
+                if(foutputF <= 0.0) {
+                    netParentErrorWeightF = 0.0;
+                }
+                if(foutputG <= 0.0) {
+                    netParentErrorWeightG = 0.0;
+                }
+            } else {
+                netParentErrorWeightA = netParentErrorBiasA;
+                netParentErrorWeightB = netParentErrorBiasB;
+                netParentErrorWeightC = netParentErrorBiasC;
+                netParentErrorWeightD = netParentErrorBiasD;
+                netParentErrorWeightE = netParentErrorBiasE;
+                netParentErrorWeightF = netParentErrorBiasF;
+                netParentErrorWeightG = netParentErrorBiasG;
             }
         }`;
 

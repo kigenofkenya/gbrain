@@ -298,7 +298,7 @@ export class VFP_NODE {
                     '} else {'+
                         'tex = nodesImg[vVertexUV.xy];'+
                     '}'+
-                    'color = '+GraphUtils.nodesDrawMode(geometryLength)+';\n'+
+                    'color = '+VFP_NODE.nodesDrawMode(geometryLength)+';\n'+
                 '}'+
                 'if(color.a < 0.1) discard;'+
 
@@ -355,6 +355,13 @@ export class VFP_NODE {
         vec3 cr = cross(dirN, vec3(0.0, 1.0, 0.0));
         float currentLineVertexSQRT = abs( currentLineVertex-(vertexCount/2.0) )/(vertexCount/2.0);
         currentLineVertexSQRT = sqrt(1.0-currentLineVertexSQRT);`;
+    }
+
+    static nodesDrawMode(geometryLength) {
+        if(geometryLength === 1)
+            return "vec4(color.rgb, 1.0)";
+        else
+            return "vec4(tex.rgb*color.rgb, tex.a)";
     }
 }
 global.VFP_NODE = VFP_NODE;

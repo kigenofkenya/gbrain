@@ -928,7 +928,7 @@ export class Graph {
         }
 
         // bias neuron
-        let position = [pos[0], pos[1], pos[2]+(numY/2)+nodSep, pos[3]];
+        let position = [pos[0], pos[1], pos[2]+(((numY+3)-(numY/2))*nodSep), pos[3]];
         this.addNeuron(this.currHiddenNeuron.toString(), position, 1);
         arr.push(this.currHiddenNeuron);
         this.currHiddenNeuron++;
@@ -1468,7 +1468,7 @@ export class Graph {
 	* @param {Object} [jsonIn.layoutNodeArgumentData=undefined] - Data for the custom layout
 	* @param {Function} [jsonIn.onmousedown=undefined] - Event when mousedown
 	* @param {Function} [jsonIn.onmouseup=undefined] - Event when mouseup
-	* @param {boolean} [jsonIn.biasNeuron]
+	* @param {int} [jsonIn.biasNeuron]
 	* @returns {String|boolean} - Name of node
 	 */
 	addNode(jsonIn) {
@@ -1496,7 +1496,7 @@ export class Graph {
      * @param {String} [jsonIn.color]
      * @param {int} [jsonIn.nodeId]
      * @param {int} [jsonIn.itemStart]
-     * @param {boolean} [jsonIn.biasNeuron]
+     * @param {int} [jsonIn.biasNeuron]
      * @returns {Object}
      */
     createNode(jsonIn) {
