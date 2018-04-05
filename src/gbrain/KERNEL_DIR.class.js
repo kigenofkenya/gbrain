@@ -30,16 +30,14 @@ export class KERNEL_DIR {
 
                     currentDir = vec3(0.0, 0.0, 0.0);
 
-                    if(enableForceLayout == 1.0) {
-                        idAdjMatrixResponse adjM = idAdjMatrix_ForceLayout(nodeId, currentPos, currentDir, numOfConnections);
-                        currentDir += adjM.force;
+                    idAdjMatrixResponse adjM = idAdjMatrix_ForceLayout(nodeId, currentPos, currentDir, numOfConnections);
+                    currentDir += adjM.force;
 
-                        if(currentTrainLayer == -3.0) {
-                            currentDataB = vec4(currentDataB.x, currentDataB.y, adjM.netFOutputA, adjM.netErrorWeightA);
-                            currentDataF = vec4(adjM.netFOutputB, adjM.netErrorWeightB, adjM.netFOutputC, adjM.netErrorWeightC);
-                            currentDataG = vec4(adjM.netFOutputD, adjM.netErrorWeightD, adjM.netFOutputE, adjM.netErrorWeightE);
-                            currentDataH = vec4(adjM.netFOutputF, adjM.netErrorWeightF, adjM.netFOutputG, adjM.netErrorWeightG);
-                        }
+                    if(currentTrainLayer == -3.0) {
+                        currentDataB = vec4(currentDataB.x, currentDataB.y, adjM.netFOutputA, adjM.netErrorWeightA);
+                        currentDataF = vec4(adjM.netFOutputB, adjM.netErrorWeightB, adjM.netFOutputC, adjM.netErrorWeightC);
+                        currentDataG = vec4(adjM.netFOutputD, adjM.netErrorWeightD, adjM.netFOutputE, adjM.netErrorWeightE);
+                        currentDataH = vec4(adjM.netFOutputF, adjM.netErrorWeightF, adjM.netFOutputG, adjM.netErrorWeightG);
                     }
 
                     ${((customCode !== undefined) ? customCode : '')}

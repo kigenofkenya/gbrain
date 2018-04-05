@@ -12,20 +12,7 @@ export class GraphUtils {
 
     static adjMatrix_ForceLayout_GLSLFunctionString(geometryLength, efferentStart, efferentNodesCount) {
         return ''+
-        `vec3 sphericalColl(vec3 currentDir, vec3 currentDirB, vec3 dirToBN) {
-            vec3 currentDirN = normalize(currentDir);
-            float pPoint = abs(dot(currentDirN, dirToBN));
-            vec3 reflectV = reflect(currentDirN*-1.0, dirToBN);
-
-            vec3 currentDirBN = normalize(currentDirB);
-            float pPointB = abs(dot(currentDirBN, dirToBN));
-
-            vec3 repulsionForce = (reflectV*-1.0)* (((1.0-pPoint)*length(currentDir))+((pPointB)*length(currentDirB)));
-
-            return (repulsionForce.x > 0.0 && repulsionForce.y > 0.0 && repulsionForce.z > 0.0) ? repulsionForce : dirToBN*-0.1;
-        }
-
-        struct CalculationResponse {
+        `struct CalculationResponse {
             vec3 atraction;
             float acumAtraction;
             vec3 repulsion;
@@ -259,7 +246,6 @@ export class GraphUtils {
                         acumAtraction = calcResponse.acumAtraction;
                         repulsion = calcResponse.repulsion;
                         
-                        
                         netChildInputSumA = calcResponse.netChildInputSumA;
                         netParentErrorWeightA = calcResponse.netParentErrorWeightA;
                         
@@ -282,7 +268,9 @@ export class GraphUtils {
                         netParentErrorWeightG = calcResponse.netParentErrorWeightG;
                     }
                 }
-
+                force += (atraction/acumAtraction);
+                force += (repulsion/acumAtraction);
+                
                 ${GraphUtils.efferentNodesStr(efferentStart, efferentNodesCount)}
             }
 

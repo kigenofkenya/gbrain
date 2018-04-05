@@ -47,13 +47,11 @@ var Graph = exports.Graph = function () {
         this._gl = this._project.getActiveStage().getWebGLContext();
         this._utils = new Utils();
 
-        this.MAX_ITEMS_PER_ARRAY = 4294967295 /*4294967295*/; // unsigned int 65535 for limit on indices of 16bit; long unsigned int 4294967295
         this.NODE_IMG_COLUMNS = 8.0;
         this.NODE_IMG_WIDTH = 2048;
 
         this._enableFont = jsonIn && jsonIn.enableFonts === true;
         this._enableHover = false;
-        this._enableAutoLink = true;
         this._enabledForceLayout = false;
         this._MAX_ADJ_MATRIX_WIDTH = 2048;
 
@@ -67,7 +65,6 @@ var Graph = exports.Graph = function () {
 
         this.lineVertexCount = 1;
 
-        this._enableNeuronalNetwork = false;
         this.batch_size = null;
         this.layerCount = 0;
         this.afferentNodesCount = 0;
@@ -89,25 +86,17 @@ var Graph = exports.Graph = function () {
         this._customArgs = {}; // {ARG: {"arg": String, "value": Array<Float>}}
 
 
-        this.arrAdjMatrix = null; // linkBornDate, linkDieDate, linkWeight, columnAsParent
+        this.arrAdjMatrix = null; // null, null, linkWeight, columnAsParent
         this.arrAdjMatrixB = null;
-        this.arrAdjMatrixC = null;
 
         this.currentTrainLayer = -3;
         this._ADJ_MATRIX_WIDTH = null;
-
-        this._initTimestamp = 0;
-        this._currentFrame = 0;
-        this._endTimestamp = Date.now();
-        this._timeFrameIncrement = (this._endTimestamp - this._initTimestamp) / this._animationFrames;
 
         this.readPixel = false;
         this.selectedId = -1;
         this._initialPosDrag = null;
 
         this._onClickNode = null;
-        this._onAnimationStep = null;
-        this._onAnimationEnd = null;
 
         // meshes
         this.mesh_nodes = this._geometryLength === 1 ? new Mesh().loadPoint() : new Mesh().loadQuad(4.0, 4.0);
@@ -125,15 +114,16 @@ var Graph = exports.Graph = function () {
 
         this.FONT_IMG_COLUMNS = 7.0;
 
-        this.disabVal = 0.0;
+        // Nodes
+        // Data: nodeId, acums, null, null
+        // DataB: biasNode, null, netFOutputA, netErrorWeightA (SHARED with LINKS, ARROWS & NODESTEXT)
+
+        // Links
+        // Data: nodeId origin, nodeId target, currentLineVertex, repeatId
 
         // nodes
-        this.arrayNodeData = []; // nodeId, acums, bornDate, dieDate
-        // if(own networkWaitData == this.disabVal)
-        // own has been read. then see networkWaitData of childs, calculate weights & save output in own networkWaitData & networkProcData(for visualization).
-        // else if(own networkWaitData != this.disabVal)
-        // own networkWaitData is being read. then set own networkWaitData to disabVal()
-        this.arrayNodeDataB = []; // bornDate, dieDate, networkWaitData, networkProcData (SHARED with LINKS, ARROWS & NODESTEXT)
+        this.arrayNodeData = [];
+        this.arrayNodeDataB = [];
         this.arrayNodeDataF = [];
         this.arrayNodeDataG = [];
         this.arrayNodeDataH = [];
@@ -162,7 +152,6 @@ var Graph = exports.Graph = function () {
         this.currentArrowId = 0;
 
         /*this.arrayArrowData = [];
-        this.arrayArrowDataC = [];
         this.arrayArrowNodeName = [];
         this.arrayArrowPosXYZW = [];
         this.arrayArrowVertexPos = [];
@@ -217,8 +206,8 @@ var Graph = exports.Graph = function () {
         });
         comp_mouseEvents.onmouseup(function (evt) {
             if (_this.selectedId !== -1) {
-                var _n = _this._nodesById[_this.selectedId];
-                if (_n !== undefined && _n !== null && _n.onmouseup !== undefined && _n.onmouseup !== null) _n.onmouseup(_n, evt);
+                var n = _this._nodesById[_this.selectedId];
+                if (n !== undefined && n !== null && n.onmouseup !== undefined && n.onmouseup !== null) n.onmouseup(n, evt);
             }
             _this.mouseUp();
         });
@@ -282,8 +271,7 @@ var Graph = exports.Graph = function () {
                 "node": new Node(),
                 "componentTransform": new ComponentTransform(),
                 "componentRenderer": new Component_GPU(),
-                "arrayLinkData": [], // nodeId origin, nodeId target, currentLineVertex, repeatId
-                "arrayLinkDataC": [], // linkBornDate, linkDieDate, linkWeight, 0
+                "arrayLinkData": [],
                 "arrayLinkNodeName": [],
                 "arrayLinkPosXYZW": [],
                 "arrayLinkVertexPos": [],
@@ -307,7 +295,6 @@ var Graph = exports.Graph = function () {
                 "componentTransform": new ComponentTransform(),
                 "componentRenderer": new Component_GPU(),
                 "arrayArrowData": [],
-                "arrayArrowDataC": [],
                 "arrayArrowNodeName": [],
                 "arrayArrowPosXYZW": [],
                 "arrayArrowVertexPos": [],
@@ -333,234 +320,6 @@ var Graph = exports.Graph = function () {
          */
         value: function onClickNode(fn) {
             this._onClickNode = fn;
-        }
-    }, {
-        key: "getBornDieTS",
-        value: function getBornDieTS(bornD, dieD) {
-            var _this2 = this;
-
-            var generateRandomBornAndDie = function generateRandomBornAndDie() {
-                var bornDate = _this2._initTimestamp + Math.round(Math.random() * Math.max(0, _this2._animationFrames - 20)) * _this2._timeFrameIncrement;
-                var dieDate = void 0;
-                while (true) {
-                    dieDate = _this2._initTimestamp + Math.round(Math.random() * _this2._animationFrames) * _this2._timeFrameIncrement;
-                    if (dieDate > bornDate) break;
-                }
-                //console.log(bornDate);
-                //console.log(dieDate);
-
-                return { bornDate: bornDate, dieDate: dieDate };
-            };
-
-            var bd = void 0;
-            var dd = void 0;
-            if (bornD != null) {
-                if (bornD.constructor === String) {
-                    if (bornD === "RANDOM") {
-                        var rbdd = generateRandomBornAndDie();
-                        bd = rbdd.bornDate;
-                        dd = rbdd.dieDate;
-                    } else {
-                        bd = Graph.datetimeToTimestamp(bornD);
-                        dd = Graph.datetimeToTimestamp(dieD);
-                    }
-                } else {
-                    bd = bornD;
-                    dd = dieD;
-                }
-            } else {
-                bd = 1.0;
-                dd = 0.0;
-            }
-
-            return { "bornDate": bd, "dieDate": dd };
-        }
-    }, {
-        key: "showTimeline",
-
-
-        /**
-         * @param {HTMLDivElement} target
-         */
-        value: function showTimeline(target) {
-            var _this3 = this;
-
-            var eSlider = document.createElement("input");
-            eSlider.type = "range";
-            eSlider.min = "0";
-            eSlider.max = this._animationFrames.toString();
-            eSlider.step = "1";
-            eSlider.value = "0";
-            eSlider.style.verticalAlign = "middle";
-            eSlider.style.width = "78%";
-
-            target.innerText = "";
-            target.appendChild(eSlider);
-
-            var set_spinner = function set_spinner(e) {
-                var frame = e.value;
-                _this3.setFrame(frame);
-            };
-
-            eSlider.addEventListener("input", set_spinner.bind(this, eSlider));
-        }
-    }, {
-        key: "setTimelineDatetimeRange",
-
-
-        /**
-         * @param {Object} jsonIn
-         * @param {String} jsonIn.initDatetime - date of animation start
-         * @param {String} jsonIn.endDatetime - date of animation end
-         */
-        value: function setTimelineDatetimeRange(jsonIn) {
-            this._initTimestamp = Graph.datetimeToTimestamp(jsonIn.initDatetime);
-            this._endTimestamp = Graph.datetimeToTimestamp(jsonIn.endDatetime);
-
-            this._timeFrameIncrement = (this._endTimestamp - this._initTimestamp) / this._animationFrames;
-        }
-    }, {
-        key: "getTimelineTimestampRangeStart",
-
-
-        /**
-         * @returns {int}
-         */
-        value: function getTimelineTimestampRangeStart() {
-            return this._initTimestamp;
-        }
-    }, {
-        key: "setTimelineDatetimeRangeStart",
-
-
-        /**
-         * @param {String} initDatetime - date of animation start
-         */
-        value: function setTimelineDatetimeRangeStart(initDatetime) {
-            this._initTimestamp = Graph.datetimeToTimestamp(initDatetime);
-
-            this._timeFrameIncrement = (this._endTimestamp - this._initTimestamp) / this._animationFrames;
-        }
-    }, {
-        key: "getTimelineTimestampRangeEnd",
-
-
-        /**
-         * @returns {int}
-         */
-        value: function getTimelineTimestampRangeEnd() {
-            return this._endTimestamp;
-        }
-    }, {
-        key: "setTimelineDatetimeRangeEnd",
-
-
-        /**
-         * @param {String} endDatetime - date of animation end
-         */
-        value: function setTimelineDatetimeRangeEnd(endDatetime) {
-            this._endTimestamp = Graph.datetimeToTimestamp(endDatetime);
-
-            this._timeFrameIncrement = (this._endTimestamp - this._initTimestamp) / this._animationFrames;
-        }
-    }, {
-        key: "getTimelineRangeDates",
-
-
-        /**
-         * @returns {Object}
-         */
-        value: function getTimelineRangeDates() {
-            return { "initDate": this.timestampToDate(this._initTimestamp),
-                "endDate": this.timestampToDate(this._endTimestamp) };
-        }
-    }, {
-        key: "getTimelineFramesLength",
-
-
-        /**
-         * @returns {int}
-         */
-        value: function getTimelineFramesLength() {
-            return this._animationFrames;
-        }
-    }, {
-        key: "setTimelineFramesLength",
-
-
-        /**
-         * @param {int} length - frames length
-         */
-        value: function setTimelineFramesLength(length) {
-            this._animationFrames = length;
-
-            this._timeFrameIncrement = (this._endTimestamp - this._initTimestamp) / this._animationFrames;
-        }
-    }, {
-        key: "setTimelineTimestamp",
-
-
-        /**
-         * @param {int} ts
-         */
-        value: function setTimelineTimestamp(ts) {
-            this._currentFrame = Math.round((ts - this._initTimestamp) / this._timeFrameIncrement);
-        }
-    }, {
-        key: "setFrame",
-
-
-        /**
-         * @param {int} frame
-         */
-        value: function setFrame(frame) {
-            this._currentFrame = frame;
-        }
-    }, {
-        key: "getFrame",
-
-
-        /**
-         * @returns {int}
-         */
-        value: function getFrame(frame) {
-            return this._currentFrame;
-        }
-    }, {
-        key: "playTimeline",
-
-
-        /**
-         * @param {bool} [loop=false]
-         */
-        value: function playTimeline(loop) {
-            this._playAnimation = true;
-            if (loop !== undefined) this._loop = loop;
-        }
-    }, {
-        key: "pauseTimeline",
-        value: function pauseTimeline() {
-            this._playAnimation = false;
-        }
-    }, {
-        key: "onAnimationStep",
-
-
-        /**
-         * @param {Function} fn
-         */
-        value: function onAnimationStep(fn) {
-            this._onAnimationStep = fn;
-        }
-    }, {
-        key: "onAnimationEnd",
-
-
-        /**
-         * @param {Function} fn
-         */
-        value: function onAnimationEnd(fn) {
-            this._onAnimationEnd = fn;
         }
     }, {
         key: "getNodesCount",
@@ -633,16 +392,6 @@ var Graph = exports.Graph = function () {
             this.comp_renderer_nodes.gpufG.enableGraphic(1);
         }
     }, {
-        key: "enableAutoLink",
-        value: function enableAutoLink() {
-            this._enableAutoLink = true;
-        }
-    }, {
-        key: "disableAutoLink",
-        value: function disableAutoLink() {
-            this._enableAutoLink = false;
-        }
-    }, {
         key: "only2d",
 
 
@@ -661,234 +410,6 @@ var Graph = exports.Graph = function () {
          */
         value: function setNodeMesh(mesh) {
             this.mesh_nodes = mesh;
-        }
-    }, {
-        key: "exportFile",
-        value: function exportFile() {
-            var data = "[";
-            var sep = "";
-            for (var key in this._nodesByName) {
-                data += sep + JSON.stringify(this._nodesByName[key]);
-                sep = ",";
-                console.log(this._nodesByName[key]);
-            }
-
-            data += "]|[";
-            sep = "";
-            for (var _key in this._links) {
-                data += sep + JSON.stringify(this._links[_key]);
-                sep = ",";
-                console.log(this._links[_key]);
-            }
-
-            data += "]";
-
-            console.log(data);
-        }
-    }, {
-        key: "importFile",
-        value: function importFile(data) {
-            var expl = data.split("|");
-            var nodes = JSON.parse(expl[0]);
-            var links = JSON.parse(expl[1]);
-
-            for (var key in nodes) {
-                var node = this.addNode({
-                    "name": nodes[key].name,
-                    "data": nodes[key].name,
-                    "label": nodes[key].label,
-                    "position": nodes[key].pos,
-                    "color": Math.floor(n % 2) === 0.0 ? "../_RESOURCES/lena_128x128.jpg" : "../_RESOURCES/cartman08.jpg",
-                    "layoutNodeArgumentData": {
-                        // dir
-                        "ndirect": [0.0, 0.0, 0.0, 1.0],
-                        // pp
-                        "particlePolarity": 0.0,
-                        // destination
-                        "dest": [0.0, 0.0, 0.0, 0.0],
-                        // lifeDistance
-                        "initPos": nodes[key].pos, "initDir": [0.0, 0.0, 0.0, 0.0],
-                        // nodeColor
-                        "nodeColor": [Math.random(), Math.random(), Math.random(), 1.0],
-                        // lock
-                        "nodeLock": 0.0 },
-                    "onmouseup": function onmouseup(nodeData) {} });
-            }
-
-            for (var _key2 in links) {
-                var A = links[_key2].origin_nodeName;
-                var B = links[_key2].target_nodeName;
-
-                this.addLink({ "origin": A,
-                    "target": B,
-                    "directed": true });
-            }
-        }
-    }, {
-        key: "loadRBFromFile",
-
-
-        /**
-         * @param {String} fileurl
-         * @param {Function} [onload=undefined]
-         * @param {bool} [generateBornAndDieDates=false]
-         * @param {bool} [randomLinkWeights=false]
-         */
-        value: function loadRBFromFile(fileurl, onload, generateBornAndDieDates, randomLinkWeights) {
-            var _this4 = this;
-
-            var req = new XMLHttpRequest();
-            req.open("GET", fileurl, true);
-            req.addEventListener("load", function (evt) {
-                console.log("RB file Loaded");
-                _this4.loadRBFromStr({ "data": evt.target.responseText,
-                    "generateBornAndDieDates": generateBornAndDieDates,
-                    "randomLinkWeights": randomLinkWeights });
-
-                if (onload !== undefined && onload !== null) onload();
-            });
-
-            req.addEventListener("error", function (evt) {
-                console.log(evt);
-            });
-
-            req.send(null);
-        }
-    }, {
-        key: "loadRBFromStr",
-
-
-        /**
-         * @param {Object} jsonIn
-         * @param {String} jsonIn.data
-         * @param {bool} [jsonIn.generateBornAndDieDates=false] -
-         * @param {bool} [jsonIn.randomLinkWeights=false] -
-         */
-        value: function loadRBFromStr(jsonIn) {
-            var _sourceText = jsonIn.data;
-            var lines = _sourceText.split("\r\n");
-            if (lines.length === 1) lines = _sourceText.split("\n");
-
-            //if(lines[0].match(/OBJ/gim) == null) {alert('Not OBJ file');	return;}
-            var line0 = lines[0].replace(/(\s|\t)+/gi, ' ').trim().split(" ");
-            var title = line0[0] !== undefined && line0[0] !== null ? line0[0] : null; // Title
-            var key = line0[1] !== undefined && line0[1] !== null ? line0[1] : null; // Key
-            console.log(line0);
-
-            var line1 = lines[1].replace(/(\s|\t)+/gi, ' ').trim().split(" ");
-            var tLines = line1[0] !== undefined && line1[0] !== null ? parseInt(line1[0]) : null; // Total number of lines excluding header (TOTCRD)
-            var tLinesPointers = line1[1] !== undefined && line1[1] !== null ? parseInt(line1[1]) : null; // Number of lines for pointers (PTRCRD)
-            var tLinesRowIndices = line1[2] !== undefined && line1[2] !== null ? parseInt(line1[2]) : null; // Number of lines for row (or letiable) indices (INDCRD)
-            var tLinesValues = line1[3] !== undefined && line1[3] !== null ? parseInt(line1[3]) : null; // Number of lines for numerical values (VALCRD)
-            var tLinesRH = line1[4] !== undefined && line1[4] !== null ? parseInt(line1[4]) : null; // Number of lines for right-hand sides (RHSCRD)
-            console.log(line1);
-
-            var line2 = lines[2].replace(/(\s|\t)+/gi, ' ').trim().split(" ");
-            var matType = line2[0] !== undefined && line2[0] !== null ? line2[0] : null; // Matrix type (see below) (MXTYPE)
-            var rowCount = line2[1] !== undefined && line2[1] !== null ? parseInt(line2[1]) : null; // Number of rows (or variables) (NROW)
-            var colCount = line2[2] !== undefined && line2[2] !== null ? parseInt(line2[2]) : null; // Number of columns (or elements) (NCOL)
-            var rowIndCount = line2[3] !== undefined && line2[3] !== null ? parseInt(line2[3]) : null; // Number of row (or variable) indices (NNZERO)		(equal to number of entries for assembled matrices)
-            var matEntCount = line2[4] !== undefined && line2[4] !== null ? parseInt(line2[4]) : null; // Number of elemental matrix entries (NELTVL)		(zero in the case of assembled matrices)
-            console.log(line2);
-
-            var line3 = lines[3].replace(/(\s|\t)+/gi, ' ').trim().split(" ");
-            var pointerFormat = line3[0] !== undefined && line3[0] !== null ? line3[0] : null; // Format for pointers (PTRFMT)
-            var rowIndFormat = line3[1] !== undefined && line3[1] !== null ? line3[1] : null; // Format for row (or variable) indices (INDFMT)
-            var valuesFormat = line3[2] !== undefined && line3[2] !== null ? line3[2] : null; // Format for numerical values of coefficient matrix (VALFMT)
-            var RHFormat = line3[3] !== undefined && line3[3] !== null ? line3[3] : null; // Format for numerical values of right-hand sides (RHSFMT)
-            console.log(line3);
-
-            var offs = 1000 / 2;
-            for (var _n2 = 0; _n2 < rowCount; _n2++) {
-                var pos = [-(offs / 2) + Math.random() * offs, -(offs / 2) + Math.random() * offs, -(offs / 2) + Math.random() * offs, 1.0];
-
-                var bd = jsonIn.generateBornAndDieDates !== undefined && jsonIn.generateBornAndDieDates !== null && jsonIn.generateBornAndDieDates === true ? { "bornDate": "RANDOM", "dieDate": "RANDOM" } : { "bornDate": 1.0, "dieDate": 0.0 };
-
-                var node = this.addNode({
-                    "name": _n2.toString(),
-                    "data": _n2.toString(),
-                    "label": _n2.toString(),
-                    "position": pos,
-                    "color": _resources.Resources.imgWhite(),
-                    "bornDate": bd.bornDate,
-                    "dieDate": bd.dieDate,
-                    "layoutNodeArgumentData": {
-                        // dir
-                        "ndirect": [0.0, 0.0, 0.0, 1.0],
-                        // pp
-                        "particlePolarity": 0.0,
-                        // destination
-                        "dest": [0.0, 0.0, 0.0, 0.0],
-                        // lifeDistance
-                        "initPos": pos, "initDir": [0.0, 0.0, 0.0, 0.0],
-                        // nodeColor
-                        "nodeColor": [1.0, 1.0, 1.0, 1.0],
-                        // lock
-                        "nodeLock": 0.0 },
-                    "onmouseup": function onmouseup(nodeData) {} });
-            }
-
-            var startValues = 4;
-            var str = "";
-            for (var _n3 = startValues; _n3 < startValues + tLinesPointers; _n3++) {
-                str += lines[_n3];
-            }
-            //console.log(str);
-            var pointers = str.replace(/(\s|\t)+/gi, ' ').trim().split(" ");
-            console.log(pointers);
-
-            str = "";
-            for (var _n4 = startValues + tLinesPointers; _n4 < startValues + tLinesPointers + tLinesRowIndices; _n4++) {
-                str += lines[_n4];
-            }
-            //console.log(str);
-            var rowIndices = str.replace(/(\s|\t)+/gi, ' ').trim().split(" ");
-            console.log(rowIndices);
-
-            var yy = 0;
-            for (var _n5 = 0, fn = pointers.length; _n5 < fn; _n5++) {
-                var pointer = parseInt(pointers[_n5]) - 1;
-                var nextPointer = parseInt(pointers[_n5 + 1]) - 1;
-
-                for (var nb = 0, fnb = nextPointer - pointer; nb < fnb; nb++) {
-                    var xx = parseInt(rowIndices[pointer + nb]) - 1;
-
-                    var _bd = jsonIn.generateBornAndDieDates !== undefined && jsonIn.generateBornAndDieDates !== null && jsonIn.generateBornAndDieDates === true ? { "bornDate": "RANDOM", "dieDate": "RANDOM" } : { "bornDate": 1.0, "dieDate": 0.0 };
-                    var w = jsonIn.randomLinkWeights !== undefined && jsonIn.randomLinkWeights !== null && jsonIn.randomLinkWeights === true ? "RANDOM" : null;
-
-                    this.addLink({ "origin": xx.toString(),
-                        "target": yy.toString(),
-                        "directed": true,
-                        "bornDate": _bd.bornDate,
-                        "dieDate": _bd.dieDate,
-                        "weight": w });
-                }
-
-                yy++;
-            }
-        }
-    }, {
-        key: "clear",
-        value: function clear() {
-            var removeBuffers = function removeBuffers(comp) {
-                var args = comp.gpufG.getAllArgs();
-                for (var key in args) {
-                    if (args[key] instanceof WebCLGLBuffer === true && key !== "RGB") args[key].remove();
-                }
-            };
-            removeBuffers(this.comp_renderer_nodes);
-            for (var na = 0; na < this.linksObj.length; na++) {
-                removeBuffers(this.linksObj[na].componentRenderer);
-            }for (var _na = 0; _na < this.arrowsObj.length; _na++) {
-                removeBuffers(this.arrowsObj[_na].componentRenderer);
-            }if (this._enableFont === true) removeBuffers(this.comp_renderer_nodesText);
-
-            this._project.getActiveStage().removeNode(this.nodes);
-            for (var _na2 = 0; _na2 < this.linksObj.length; _na2++) {
-                this._project.getActiveStage().removeNode(this.linksObj[_na2].node);
-            }for (var _na3 = 0; _na3 < this.arrowsObj.length; _na3++) {
-                this._project.getActiveStage().removeNode(this.arrowsObj[_na3].node);
-            }this._project.getActiveStage().removeNode(this.nodesText);
         }
     }, {
         key: "applyLayout",
@@ -911,8 +432,8 @@ var Graph = exports.Graph = function () {
             this.layout = jsonIn;
             // Create custom user arrays args
             var createCustomArgsArrays = function createCustomArgsArrays(obj, arr) {
-                for (var _n6 = 0, fn = arr.length; _n6 < fn; _n6++) {
-                    obj[arr[_n6].trim().split(" ")[1]] = { "arg": arr[_n6].trim(),
+                for (var n = 0, fn = arr.length; n < fn; n++) {
+                    obj[arr[n].trim().split(" ")[1]] = { "arg": arr[n].trim(),
                         "nodes_array_value": [],
                         "links_array_value": [],
                         "arrows_array_value": [],
@@ -932,7 +453,7 @@ var Graph = exports.Graph = function () {
     }, {
         key: "createWebGLBuffers",
         value: function createWebGLBuffers() {
-            var _this5 = this;
+            var _this2 = this;
 
             var varDef_VFPNode = {
                 'float4* posXYZW': function float4PosXYZW() {
@@ -953,9 +474,6 @@ var Graph = exports.Graph = function () {
                 "float4*attr data": function float4AttrData() {
                     return null;
                 }, // in nodes, nodesText, links & arrows
-                "float4*attr dataC": function float4AttrDataC() {
-                    return null;
-                }, // in links & arrows
                 'float4*attr nodeVertexPos': function float4AttrNodeVertexPos() {
                     return null;
                 },
@@ -980,16 +498,10 @@ var Graph = exports.Graph = function () {
                 "float4* adjacencyMatrixB": function float4AdjacencyMatrixB() {
                     return null;
                 },
-                "float4* adjacencyMatrixC": function float4AdjacencyMatrixC() {
-                    return null;
-                },
                 "float widthAdjMatrix": function floatWidthAdjMatrix() {
                     return null;
                 },
                 'float nodesCount': function floatNodesCount() {
-                    return null;
-                },
-                "float currentTimestamp": function floatCurrentTimestamp() {
                     return null;
                 },
                 'mat4 PMatrix': function mat4PMatrix() {
@@ -1032,12 +544,6 @@ var Graph = exports.Graph = function () {
                     return null;
                 },
                 "float enableForceLayout": function floatEnableForceLayout() {
-                    return null;
-                },
-                'float enableForceLayoutCollision': function floatEnableForceLayoutCollision() {
-                    return null;
-                },
-                'float enableNeuronalNetwork': function floatEnableNeuronalNetwork() {
                     return null;
                 },
                 'float afferentNodesCount': function floatAfferentNodesCount() {
@@ -1120,16 +626,16 @@ var Graph = exports.Graph = function () {
             };
 
             if (this.layout.argsDirection !== undefined && this.layout.argsDirection !== null) {
-                for (var _n7 = 0; _n7 < this.layout.argsDirection.length; _n7++) {
-                    varDef_VFPNode[this.layout.argsDirection[_n7]] = function () {
+                for (var n = 0; n < this.layout.argsDirection.length; n++) {
+                    varDef_VFPNode[this.layout.argsDirection[n]] = function () {
                         return null;
                     };
                 }
             }
 
             if (this.layout.argsObject !== undefined && this.layout.argsObject !== null) {
-                for (var _n8 = 0; _n8 < this.layout.argsObject.length; _n8++) {
-                    varDef_VFPNode[this.layout.argsObject[_n8]] = function () {
+                for (var _n = 0; _n < this.layout.argsObject.length; _n++) {
+                    varDef_VFPNode[this.layout.argsObject[_n]] = function () {
                         return null;
                     };
                 }
@@ -1183,8 +689,8 @@ var Graph = exports.Graph = function () {
             ///////////////////////////////////////////////////////////////////////////////////////////
             //                          ARROWS
             ///////////////////////////////////////////////////////////////////////////////////////////
-            for (var _na4 = 0; _na4 < this.arrowsObj.length; _na4++) {
-                this.arrowsObj[_na4].componentRenderer.setGPUFor(this.arrowsObj[_na4].componentRenderer.gl, Object.create(varDef_VFPNode), { "type": "GRAPHIC",
+            for (var _na = 0; _na < this.arrowsObj.length; _na++) {
+                this.arrowsObj[_na].componentRenderer.setGPUFor(this.arrowsObj[_na].componentRenderer.gl, Object.create(varDef_VFPNode), { "type": "GRAPHIC",
                     "name": "ARROWS_VFP_NODE",
                     "viewSource": false,
                     "config": _VFP_NODE.VFP_NODE.getSrc(this.layout.codeObject, this._geometryLength),
@@ -1194,21 +700,18 @@ var Graph = exports.Graph = function () {
                     "blendEquation": Constants.BLENDING_EQUATION_TYPES.FUNC_ADD,
                     "blendSrcMode": Constants.BLENDING_MODES.SRC_ALPHA,
                     "blendDstMode": Constants.BLENDING_MODES.ONE_MINUS_SRC_ALPHA });
-                this.arrowsObj[_na4].componentRenderer.getComponentBufferArg("RGB", this._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.GPU));
+                this.arrowsObj[_na].componentRenderer.getComponentBufferArg("RGB", this._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.GPU));
             }
             ///////////////////////////////////////////////////////////////////////////////////////////
             //                          NODES
             ///////////////////////////////////////////////////////////////////////////////////////////
-            // NODES= nodeId, acums, bornDate, dieDate // LINKS & ARROWS= nodeId origin, nodeId target, currentLineVertex, repeatId
-            // bornDate, dieDate, 0.0, 0.0 (NODES share TO LINKS & ARROWS)
-
             var nodesVarDef = Object.create(varDef_VFPNode);
             for (var key in varDef_NodesKernel) {
                 nodesVarDef[key] = varDef_NodesKernel[key];
             }this.comp_renderer_nodes.setGPUFor(this.comp_renderer_nodes.gl, nodesVarDef, { "type": "KERNEL",
                 "name": "NODES_KERNEL_DIR",
                 "viewSource": false,
-                "config": _KERNEL_DIR.KERNEL_DIR.getSrc(this.layout.codeDirection, this._geometryLength, this.currentNodeId - this.efferentNodesCount, this.efferentNodesCount, this._enableNeuronalNetwork),
+                "config": _KERNEL_DIR.KERNEL_DIR.getSrc(this.layout.codeDirection, this._geometryLength, this.currentNodeId - this.efferentNodesCount, this.efferentNodesCount),
                 "drawMode": this._geometryLength === 1 ? 0 : 4,
                 "depthTest": true,
                 "blend": false,
@@ -1247,66 +750,18 @@ var Graph = exports.Graph = function () {
 
             // KERNEL_DIR
             this.comp_renderer_nodes.gpufG.onPreProcessKernel(0, function () {
-                var currentTimestamp = _this5._initTimestamp + _this5._currentFrame * _this5._timeFrameIncrement;
-                _this5.comp_renderer_nodes.setArg("currentTimestamp", function (ts) {
-                    return ts;
-                }.bind(_this5, currentTimestamp));
-                for (var _na5 = 0; _na5 < _this5.linksObj.length; _na5++) {
-                    _this5.linksObj[_na5].componentRenderer.setArg("currentTimestamp", function (ts) {
-                        return ts;
-                    }.bind(_this5, currentTimestamp));
-                }for (var _na6 = 0; _na6 < _this5.arrowsObj.length; _na6++) {
-                    _this5.arrowsObj[_na6].componentRenderer.setArg("currentTimestamp", function (ts) {
-                        return ts;
-                    }.bind(_this5, currentTimestamp));
-                }if (_this5._playAnimation === true) {
-                    _this5._currentFrame++;
-                    if (_this5._onAnimationStep !== undefined && _this5._onAnimationStep !== null) _this5._onAnimationStep(_this5._currentFrame);
-
-                    if (_this5._currentFrame === _this5._animationFrames) {
-                        _this5._currentFrame = 0;
-                        if (_this5._loop === false) {
-                            _this5.pauseTimeline();
-                            if (_this5._onAnimationEnd !== undefined && _this5._onAnimationEnd !== null) _this5._onAnimationEnd();
-                        }
-                    }
-                    //console.log(currentTimestamp+"  "+this._currentFrame);
-                }
-
-                _this5.comp_renderer_nodes.setArg("enableNeuronalNetwork", function () {
-                    return _this5._enableNeuronalNetwork;
-                });
-                for (var _na7 = 0; _na7 < _this5.linksObj.length; _na7++) {
-                    _this5.linksObj[_na7].componentRenderer.setArg("enableNeuronalNetwork", function () {
-                        return _this5._enableNeuronalNetwork;
-                    });
-                }for (var _na8 = 0; _na8 < _this5.arrowsObj.length; _na8++) {
-                    _this5.arrowsObj[_na8].componentRenderer.setArg("enableNeuronalNetwork", function () {
-                        return _this5._enableNeuronalNetwork;
-                    });
-                }_this5.comp_renderer_nodes.setArg("only2d", function () {
-                    return _this5._only2d === true ? 1.0 : 0.0;
+                _this2.comp_renderer_nodes.setArg("only2d", function () {
+                    return _this2._only2d === true ? 1.0 : 0.0;
                 });
             });
-            this.comp_renderer_nodes.gpufG.onPostProcessKernel(0, function () {});
 
             // KERNEL_ADJMATRIX_UPDATE
-            this.comp_renderer_nodes.gpufG.onPreProcessKernel(1, function () {});
-            this.comp_renderer_nodes.gpufG.onPostProcessKernel(1, function () {});
             this.comp_renderer_nodes.gpufG.disableKernel(1);
 
-            // VFP_NODE
-            this.comp_renderer_nodes.gpufG.onPreProcessGraphic(0, function () {});
-            this.comp_renderer_nodes.gpufG.onPostProcessGraphic(0, function () {});
-
             // VFP_NODEPICKDRAG
-            this.comp_renderer_nodes.gpufG.onPreProcessGraphic(1, function () {
-                //this.comp_renderer_nodes.gl.clear(this.comp_renderer_nodes.gl.COLOR_BUFFER_BIT | this.comp_renderer_nodes.gl.DEPTH_BUFFER_BIT);
-            });
             this.comp_renderer_nodes.gpufG.onPostProcessGraphic(1, function () {
-                _this5.procSelectedOrHover();
+                _this2.procSelectedOrHover();
             });
-
             this.comp_renderer_nodes.gpufG.disableGraphic(1);
 
             ///////////////////////////////////////////////////////////////////////////////////////////
@@ -1350,8 +805,8 @@ var Graph = exports.Graph = function () {
                 this.linksObj[na].componentRenderer.setArg("enableDrag", function () {
                     return 0;
                 });
-            }for (var _na9 = 0; _na9 < this.arrowsObj.length; _na9++) {
-                this.arrowsObj[_na9].componentRenderer.setArg("enableDrag", function () {
+            }for (var _na2 = 0; _na2 < this.arrowsObj.length; _na2++) {
+                this.arrowsObj[_na2].componentRenderer.setArg("enableDrag", function () {
                     return 0;
                 });
             }if (this._enableFont === true) this.comp_renderer_nodesText.setArg("enableDrag", function () {
@@ -1362,12 +817,12 @@ var Graph = exports.Graph = function () {
                 this.comp_renderer_nodes.setArg("idToDrag", function () {
                     return -1;
                 });
-                for (var _na10 = 0; _na10 < this.linksObj.length; _na10++) {
-                    this.linksObj[_na10].componentRenderer.setArg("idToDrag", function () {
+                for (var _na3 = 0; _na3 < this.linksObj.length; _na3++) {
+                    this.linksObj[_na3].componentRenderer.setArg("idToDrag", function () {
                         return -1;
                     });
-                }for (var _na11 = 0; _na11 < this.arrowsObj.length; _na11++) {
-                    this.arrowsObj[_na11].componentRenderer.setArg("idToDrag", function () {
+                }for (var _na4 = 0; _na4 < this.arrowsObj.length; _na4++) {
+                    this.arrowsObj[_na4].componentRenderer.setArg("idToDrag", function () {
                         return -1;
                     });
                 }if (this._enableFont === true) this.comp_renderer_nodesText.setArg("idToDrag", function () {
@@ -1476,8 +931,8 @@ var Graph = exports.Graph = function () {
                 this.linksObj[na].componentRenderer.setArg("idToHover", function () {
                     return selectedId;
                 });
-            }for (var _na12 = 0; _na12 < this.arrowsObj.length; _na12++) {
-                this.arrowsObj[_na12].componentRenderer.setArg("idToHover", function () {
+            }for (var _na5 = 0; _na5 < this.arrowsObj.length; _na5++) {
+                this.arrowsObj[_na5].componentRenderer.setArg("idToHover", function () {
                     return selectedId;
                 });
             }if (this._enableFont === true) {
@@ -1495,7 +950,7 @@ var Graph = exports.Graph = function () {
          * @param {StormV3} dir
          */
         value: function enableDrag(selectedId, dir) {
-            var _this6 = this;
+            var _this3 = this;
 
             var comp_projection = this._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.PROJECTION);
             var finalPos = this._initialPosDrag.add(dir.x(comp_projection.getFov() * 2.0 / this._sce.getCanvas().width));
@@ -1516,13 +971,13 @@ var Graph = exports.Graph = function () {
                 return finalPos.e[2];
             });
             this.comp_renderer_nodes.setArg("initialPosX", function () {
-                return _this6._initialPosDrag.e[0];
+                return _this3._initialPosDrag.e[0];
             });
             this.comp_renderer_nodes.setArg("initialPosY", function () {
-                return _this6._initialPosDrag.e[1];
+                return _this3._initialPosDrag.e[1];
             });
             this.comp_renderer_nodes.setArg("initialPosZ", function () {
-                return _this6._initialPosDrag.e[2];
+                return _this3._initialPosDrag.e[2];
             });
 
             for (var na = 0; na < this.linksObj.length; na++) {
@@ -1542,40 +997,40 @@ var Graph = exports.Graph = function () {
                     return finalPos.e[2];
                 });
                 this.linksObj[na].componentRenderer.setArg("initialPosX", function () {
-                    return _this6._initialPosDrag.e[0];
+                    return _this3._initialPosDrag.e[0];
                 });
                 this.linksObj[na].componentRenderer.setArg("initialPosY", function () {
-                    return _this6._initialPosDrag.e[1];
+                    return _this3._initialPosDrag.e[1];
                 });
                 this.linksObj[na].componentRenderer.setArg("initialPosZ", function () {
-                    return _this6._initialPosDrag.e[2];
+                    return _this3._initialPosDrag.e[2];
                 });
             }
 
-            for (var _na13 = 0; _na13 < this.arrowsObj.length; _na13++) {
-                this.arrowsObj[_na13].componentRenderer.setArg("enableDrag", function () {
+            for (var _na6 = 0; _na6 < this.arrowsObj.length; _na6++) {
+                this.arrowsObj[_na6].componentRenderer.setArg("enableDrag", function () {
                     return 1;
                 });
-                this.arrowsObj[_na13].componentRenderer.setArg("idToDrag", function () {
+                this.arrowsObj[_na6].componentRenderer.setArg("idToDrag", function () {
                     return selectedId;
                 });
-                this.arrowsObj[_na13].componentRenderer.setArg("MouseDragTranslationX", function () {
+                this.arrowsObj[_na6].componentRenderer.setArg("MouseDragTranslationX", function () {
                     return finalPos.e[0];
                 });
-                this.arrowsObj[_na13].componentRenderer.setArg("MouseDragTranslationY", function () {
+                this.arrowsObj[_na6].componentRenderer.setArg("MouseDragTranslationY", function () {
                     return finalPos.e[1];
                 });
-                this.arrowsObj[_na13].componentRenderer.setArg("MouseDragTranslationZ", function () {
+                this.arrowsObj[_na6].componentRenderer.setArg("MouseDragTranslationZ", function () {
                     return finalPos.e[2];
                 });
-                this.arrowsObj[_na13].componentRenderer.setArg("initialPosX", function () {
-                    return _this6._initialPosDrag.e[0];
+                this.arrowsObj[_na6].componentRenderer.setArg("initialPosX", function () {
+                    return _this3._initialPosDrag.e[0];
                 });
-                this.arrowsObj[_na13].componentRenderer.setArg("initialPosY", function () {
-                    return _this6._initialPosDrag.e[1];
+                this.arrowsObj[_na6].componentRenderer.setArg("initialPosY", function () {
+                    return _this3._initialPosDrag.e[1];
                 });
-                this.arrowsObj[_na13].componentRenderer.setArg("initialPosZ", function () {
-                    return _this6._initialPosDrag.e[2];
+                this.arrowsObj[_na6].componentRenderer.setArg("initialPosZ", function () {
+                    return _this3._initialPosDrag.e[2];
                 });
             }
 
@@ -1596,13 +1051,13 @@ var Graph = exports.Graph = function () {
                     return finalPos.e[2];
                 });
                 this.comp_renderer_nodesText.setArg("initialPosX", function () {
-                    return _this6._initialPosDrag.e[0];
+                    return _this3._initialPosDrag.e[0];
                 });
                 this.comp_renderer_nodesText.setArg("initialPosY", function () {
-                    return _this6._initialPosDrag.e[1];
+                    return _this3._initialPosDrag.e[1];
                 });
                 this.comp_renderer_nodesText.setArg("initialPosZ", function () {
-                    return _this6._initialPosDrag.e[2];
+                    return _this3._initialPosDrag.e[2];
                 });
             }
         }
@@ -1648,20 +1103,20 @@ var Graph = exports.Graph = function () {
                 });
             }
 
-            for (var _na14 = 0; _na14 < this.arrowsObj.length; _na14++) {
-                this.arrowsObj[_na14].componentRenderer.setArg("enableDrag", function () {
+            for (var _na7 = 0; _na7 < this.arrowsObj.length; _na7++) {
+                this.arrowsObj[_na7].componentRenderer.setArg("enableDrag", function () {
                     return 0;
                 });
-                this.arrowsObj[_na14].componentRenderer.setArg("idToDrag", function () {
+                this.arrowsObj[_na7].componentRenderer.setArg("idToDrag", function () {
                     return 0;
                 });
-                this.arrowsObj[_na14].componentRenderer.setArg("MouseDragTranslationX", function () {
+                this.arrowsObj[_na7].componentRenderer.setArg("MouseDragTranslationX", function () {
                     return 0;
                 });
-                this.arrowsObj[_na14].componentRenderer.setArg("MouseDragTranslationY", function () {
+                this.arrowsObj[_na7].componentRenderer.setArg("MouseDragTranslationY", function () {
                     return 0;
                 });
-                this.arrowsObj[_na14].componentRenderer.setArg("MouseDragTranslationZ", function () {
+                this.arrowsObj[_na7].componentRenderer.setArg("MouseDragTranslationZ", function () {
                     return 0;
                 });
             }
@@ -1687,11 +1142,6 @@ var Graph = exports.Graph = function () {
     }, {
         key: "enableNeuronalNetwork",
         value: function enableNeuronalNetwork() {
-            this._enableNeuronalNetwork = true;
-
-            this.disableAutoLink();
-
-            // APPLY THIS LAYOUT
             this.applyLayout({
                 // DIRECTION
                 "argsDirection":
@@ -1718,19 +1168,15 @@ var Graph = exports.Graph = function () {
             });
         }
     }, {
-        key: "disableNeuronalNetwork",
-        value: function disableNeuronalNetwork() {
-            this._enableNeuronalNetwork = false;
-        }
-    }, {
         key: "addNeuron",
 
 
         /**
          * @param {String} neuronName
          * @param {Array<number>} [destination=[0.0, 0.0, 0.0, 1.0]]
+         * @param {int} [biasNeuron]
          */
-        value: function addNeuron(neuronName, destination) {
+        value: function addNeuron(neuronName, destination, biasNeuron) {
             var offs = 1000;
             var pos = [-(offs / 2) + Math.random() * offs, -(offs / 2) + Math.random() * offs, -(offs / 2) + Math.random() * offs, 1.0];
             var dest = destination !== undefined && destination !== null ? destination : [0.0, 0.0, 0.0, 1.0];
@@ -1747,7 +1193,8 @@ var Graph = exports.Graph = function () {
                     "enableDestination": enableDest,
                     "dest": dest
                 },
-                "onmouseup": function onmouseup(nodeData) {} });
+                "onmouseup": function onmouseup(nodeData) {},
+                "biasNeuron": biasNeuron !== undefined && biasNeuron !== null ? biasNeuron : 0.0 });
         }
     }, {
         key: "addAfferentNeuron",
@@ -1779,13 +1226,19 @@ var Graph = exports.Graph = function () {
             var arr = [];
             for (var x = 0; x < numX; x++) {
                 for (var y = 0; y < numY; y++) {
-                    var position = [pos[0] + (x - numX / 2) * nodSep, pos[1], pos[2] + (y - numY / 2) * nodSep, pos[3]];
+                    var _position = [pos[0] + (x - numX / 2) * nodSep, pos[1], pos[2] + (y - numY / 2) * nodSep, pos[3]];
 
-                    this.addNeuron(this.currHiddenNeuron.toString(), position);
+                    this.addNeuron(this.currHiddenNeuron.toString(), _position);
                     arr.push(this.currHiddenNeuron);
                     this.currHiddenNeuron++;
                 }
             }
+
+            // bias neuron
+            var position = [pos[0], pos[1], pos[2] + numY / 2 + nodSep, pos[3]];
+            this.addNeuron(this.currHiddenNeuron.toString(), position, 1);
+            arr.push(this.currHiddenNeuron);
+            this.currHiddenNeuron++;
 
             return arr;
         }
@@ -1866,27 +1319,28 @@ var Graph = exports.Graph = function () {
          * @param {int} jsonIn.layerNum
          */
         value: function addSinapsis(jsonIn) {
-            var _this7 = this;
+            var _this4 = this;
 
             var gaussRandom = function gaussRandom() {
-                if (_this7.return_v === true) {
-                    _this7.return_v = false;
-                    return _this7.v_val;
+                if (_this4.return_v === true) {
+                    _this4.return_v = false;
+                    return _this4.v_val;
                 }
                 var u = 2 * Math.random() - 1;
                 var v = 2 * Math.random() - 1;
                 var r = u * u + v * v;
                 if (r === 0 || r > 1) return gaussRandom();
                 var c = Math.sqrt(-2 * Math.log(r) / r);
-                _this7.v_val = v * c; // cache this
-                _this7.return_v = true;
+                _this4.v_val = v * c; // cache this
+                _this4.return_v = true;
                 return u * c;
             };
             var randn = function randn(mu, std) {
                 return mu + gaussRandom() * std;
             };
 
-            var scale = Math.sqrt(1.0 / 50);
+            var scale = Math.sqrt(1.0 / 50); // TODO
+
 
             var _activationFunc = jsonIn.activationFunc !== undefined && jsonIn.activationFunc !== null ? jsonIn.activationFunc : 1.0;
             var _weight = jsonIn.weight !== undefined && jsonIn.weight !== null ? jsonIn.weight : randn(0.0, scale);
@@ -1916,9 +1370,9 @@ var Graph = exports.Graph = function () {
          * @param {int} jsonIn.layerNum
          */
         value: function connectNeuronWithNeuronLayer(jsonIn) {
-            for (var _n9 = 0; _n9 < jsonIn.neuronLayer.length; _n9++) {
+            for (var n = 0; n < jsonIn.neuronLayer.length; n++) {
                 this.addSinapsis({ "neuronNameA": jsonIn.neuron.toString(),
-                    "neuronNameB": jsonIn.neuronLayer[_n9].toString(),
+                    "neuronNameB": jsonIn.neuronLayer[n].toString(),
                     "activationFunc": jsonIn.activationFunc,
                     "weight": jsonIn.weight,
                     "multiplier": jsonIn.multiplier,
@@ -1936,8 +1390,8 @@ var Graph = exports.Graph = function () {
          * @param {int} jsonIn.layerNum
          */
         value: function connectNeuronLayerWithNeuron(jsonIn) {
-            for (var _n10 = 0; _n10 < jsonIn.neuronLayer.length; _n10++) {
-                this.addSinapsis({ "neuronNameA": jsonIn.neuronLayer[_n10].toString(),
+            for (var n = 0; n < jsonIn.neuronLayer.length; n++) {
+                this.addSinapsis({ "neuronNameA": jsonIn.neuronLayer[n].toString(),
                     "neuronNameB": jsonIn.neuron,
                     "activationFunc": 1.0,
                     "layerNum": jsonIn.layerNum });
@@ -1954,8 +1408,8 @@ var Graph = exports.Graph = function () {
          * @param {int} jsonIn.layerNum
          */
         value: function connectNeuronLayerWithNeuronLayer(jsonIn) {
-            for (var _n11 = 0; _n11 < jsonIn.neuronLayerOrigin.length; _n11++) {
-                var neuronOrigin = jsonIn.neuronLayerOrigin[_n11];
+            for (var n = 0; n < jsonIn.neuronLayerOrigin.length; n++) {
+                var neuronOrigin = jsonIn.neuronLayerOrigin[n];
                 this.connectNeuronWithNeuronLayer({ "neuron": neuronOrigin.toString(),
                     "neuronLayer": jsonIn.neuronLayerTarget,
                     "layerNum": jsonIn.layerNum });
@@ -1971,26 +1425,26 @@ var Graph = exports.Graph = function () {
          * @param {Function} jsonIn.onAction
          */
         value: function forward(jsonIn) {
-            var _this8 = this;
+            var _this5 = this;
 
             this.onAction = jsonIn.onAction;
 
             var state = jsonIn.state.slice(0);
             var length = jsonIn.state.length;
-            for (var _n12 = length; _n12 < this.afferentNodesCount; _n12++) {
-                state[_n12] = 0.0;
+            for (var n = length; n < this.afferentNodesCount; n++) {
+                state[n] = 0.0;
             }var lett = ["A", "B", "C", "D", "E", "F", "G"];
             var currLett = 0;
 
             var _loop = function _loop(i, j) {
-                _this8.comp_renderer_nodes.setArg("afferentNodes" + lett[currLett++], function () {
-                    return state.slice(i, i + _this8.afferentNodesCount);
+                _this5.comp_renderer_nodes.setArg("afferentNodes" + lett[currLett++], function () {
+                    return state.slice(i, i + _this5.afferentNodesCount);
                 });
             };
 
             for (var i = 0, j = state.length; i < j; i += this.afferentNodesCount) {
                 _loop(i, j);
-            }for (var _n13 = 0; _n13 < this.layerCount; _n13++) {
+            }for (var _n2 = 0; _n2 < this.layerCount; _n2++) {
                 this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
             }this._sce.getLoadedProject().getActiveStage().tick();
 
@@ -1998,7 +1452,7 @@ var Graph = exports.Graph = function () {
                 var loc = [["dataB", 2], ["dataF", 0], ["dataF", 2], ["dataG", 0], ["dataG", 2], ["dataH", 0], ["dataH", 2]];
                 var o = [[]];
                 var currO = 0;
-                for (var _n14 = 0; _n14 < this.efferentNodesCount * this.batch_size; _n14++) {
+                for (var _n3 = 0; _n3 < this.efferentNodesCount * this.batch_size; _n3++) {
                     if (o[currO].length === this.efferentNodesCount) {
                         o.push([]);
                         currO++;
@@ -2021,26 +1475,26 @@ var Graph = exports.Graph = function () {
          * @param {Function} jsonIn.onTrained
          */
         value: function train(jsonIn) {
-            var _this9 = this;
+            var _this6 = this;
 
             this.onTrained = jsonIn.onTrained;
 
             var reward = jsonIn.arrReward.slice(0);
             var length = jsonIn.arrReward.length;
-            for (var _n15 = length; _n15 < this.efferentNodesCount * this.batch_size; _n15++) {
-                reward[_n15] = 0.0;
+            for (var n = length; n < this.efferentNodesCount * this.batch_size; n++) {
+                reward[n] = 0.0;
             }var lett = ["A", "B", "C", "D", "E", "F", "G"];
             var currLett = 0;
 
             var _loop2 = function _loop2(i, j) {
-                _this9.comp_renderer_nodes.setArg("efferentNodes" + lett[currLett++], function () {
-                    return reward.slice(i, i + _this9.efferentNodesCount);
+                _this6.comp_renderer_nodes.setArg("efferentNodes" + lett[currLett++], function () {
+                    return reward.slice(i, i + _this6.efferentNodesCount);
                 });
             };
 
             for (var i = 0, j = reward.length; i < j; i += this.efferentNodesCount) {
                 _loop2(i, j);
-            }for (var _n16 = 0; _n16 < this.layerCount - 1; _n16++) {
+            }for (var _n4 = 0; _n4 < this.layerCount - 1; _n4++) {
                 this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
             } //this.comp_renderer_nodes.gpufG.disableKernel(0);
             this.comp_renderer_nodes.gpufG.enableKernel(1);
@@ -2058,7 +1512,7 @@ var Graph = exports.Graph = function () {
 
             if (this.onTrained !== null) {
                 var o = [];
-                for (var _n17 = 0; _n17 < this.efferentNodesCount; _n17++) {
+                for (var _n5 = 0; _n5 < this.efferentNodesCount; _n5++) {
                     /*let u = this.getNeuronOutput(this.efferentNeuron[n]);
                     if(isNaN(u[2]) === true || isNaN(u[3]) === true)
                         debugger;
@@ -2096,8 +1550,8 @@ var Graph = exports.Graph = function () {
                 this.linksObj[na].componentRenderer.setArg(jsonIn.argName, function () {
                     return jsonIn.value;
                 });
-            }for (var _na15 = 0; _na15 < this.arrowsObj.length; _na15++) {
-                this.arrowsObj[_na15].componentRenderer.setArg(jsonIn.argName, function () {
+            }for (var _na8 = 0; _na8 < this.arrowsObj.length; _na8++) {
+                this.arrowsObj[_na8].componentRenderer.setArg(jsonIn.argName, function () {
                     return jsonIn.value;
                 });
             }if (this._enableFont === true) this.comp_renderer_nodesText.setArg(jsonIn.argName, function () {
@@ -2119,14 +1573,14 @@ var Graph = exports.Graph = function () {
             var expl = this._customArgs[jsonIn.argName].arg.split("*");
             var type = expl[0]; // float or float4
 
-            for (var _n18 = 0; _n18 < this.arrayNodeData.length / 4; _n18++) {
-                if (jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrayNodeData[_n18 * 4] === node.nodeId) {
+            for (var n = 0; n < this.arrayNodeData.length / 4; n++) {
+                if (jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrayNodeData[n * 4] === node.nodeId) {
                     var ca = this._customArgs[jsonIn.argName]["nodes_array_value"];
                     if (type === "float") {
-                        var id = _n18;
+                        var id = n;
                         if (ca[id] !== undefined && ca[id] !== null) return ca[id];
                     } else {
-                        var _id = _n18 * 4;
+                        var _id = n * 4;
                         if (ca[_id] !== undefined && ca[_id] !== null) return [ca[_id], ca[_id + 1], ca[_id + 2], ca[_id + 3]];
                     }
                 }
@@ -2144,7 +1598,7 @@ var Graph = exports.Graph = function () {
          * @param {boolean} jsonIn.update
          */
         value: function setLayoutNodeArgumentData(jsonIn) {
-            var _this10 = this;
+            var _this7 = this;
 
             var node = this._nodesByName[jsonIn.nodeName];
             var expl = this._customArgs[jsonIn.argName].arg.split("*");
@@ -2159,71 +1613,71 @@ var Graph = exports.Graph = function () {
              */
             var setVal = function setVal(type, argName, targetArray, n, value) {
                 if (type === "float") {
-                    _this10._customArgs[argName][targetArray][n] = value;
+                    _this7._customArgs[argName][targetArray][n] = value;
                 } else {
                     var id = n * 4;
-                    _this10._customArgs[argName][targetArray][id] = value[0];
-                    _this10._customArgs[argName][targetArray][id + 1] = value[1];
-                    _this10._customArgs[argName][targetArray][id + 2] = value[2];
-                    _this10._customArgs[argName][targetArray][id + 3] = value[3];
+                    _this7._customArgs[argName][targetArray][id] = value[0];
+                    _this7._customArgs[argName][targetArray][id + 1] = value[1];
+                    _this7._customArgs[argName][targetArray][id + 2] = value[2];
+                    _this7._customArgs[argName][targetArray][id + 3] = value[3];
                 }
             };
 
             // nodes id
-            for (var _n19 = 0; _n19 < this.arrayNodeData.length / 4; _n19++) {
-                if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrayNodeData[_n19 * 4] === node.nodeId) setVal(type, jsonIn.argName, "nodes_array_value", _n19, jsonIn.value);else {
-                    var id = type === "float" ? _n19 : _n19 * 4;
+            for (var n = 0; n < this.arrayNodeData.length / 4; n++) {
+                if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrayNodeData[n * 4] === node.nodeId) setVal(type, jsonIn.argName, "nodes_array_value", n, jsonIn.value);else {
+                    var id = type === "float" ? n : n * 4;
                     if (this._customArgs[jsonIn.argName]["nodes_array_value"][id] === undefined && this._customArgs[jsonIn.argName]["nodes_array_value"][id] === null && jsonIn.update === false) {
-                        if (type === "float") setVal(type, jsonIn.argName, "nodes_array_value", _n19, 0.0);else setVal(type, jsonIn.argName, "nodes_array_value", _n19, [0.0, 0.0, 0.0, 0.0]);
+                        if (type === "float") setVal(type, jsonIn.argName, "nodes_array_value", n, 0.0);else setVal(type, jsonIn.argName, "nodes_array_value", n, [0.0, 0.0, 0.0, 0.0]);
                     }
                 }
             }
             this.comp_renderer_nodes.setArg(jsonIn.argName, function () {
-                return _this10._customArgs[jsonIn.argName].nodes_array_value;
+                return _this7._customArgs[jsonIn.argName].nodes_array_value;
             });
 
             // link id
             for (var na = 0; na < this.linksObj.length; na++) {
-                for (var _n20 = 0; _n20 < this.linksObj[na].arrayLinkData.length / 4; _n20++) {
-                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.linksObj[na].arrayLinkData[_n20 * 4] === node.nodeId) setVal(type, jsonIn.argName, "links_array_value", _n20, jsonIn.value);else {
-                        var _id2 = type === "float" ? _n20 : _n20 * 4;
+                for (var _n6 = 0; _n6 < this.linksObj[na].arrayLinkData.length / 4; _n6++) {
+                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.linksObj[na].arrayLinkData[_n6 * 4] === node.nodeId) setVal(type, jsonIn.argName, "links_array_value", _n6, jsonIn.value);else {
+                        var _id2 = type === "float" ? _n6 : _n6 * 4;
                         if (this._customArgs[jsonIn.argName]["links_array_value"][_id2] === undefined && this._customArgs[jsonIn.argName]["links_array_value"][_id2] === null && jsonIn.update === false) {
-                            if (type === "float") setVal(type, jsonIn.argName, "links_array_value", _n20, 0.0);else setVal(type, jsonIn.argName, "links_array_value", _n20, [0.0, 0.0, 0.0, 0.0]);
+                            if (type === "float") setVal(type, jsonIn.argName, "links_array_value", _n6, 0.0);else setVal(type, jsonIn.argName, "links_array_value", _n6, [0.0, 0.0, 0.0, 0.0]);
                         }
                     }
                 }
                 this.linksObj[na].componentRenderer.setArg(jsonIn.argName, function () {
-                    return _this10._customArgs[jsonIn.argName].links_array_value;
+                    return _this7._customArgs[jsonIn.argName].links_array_value;
                 });
             }
 
             // arrow id
-            for (var _na16 = 0; _na16 < this.arrowsObj.length; _na16++) {
-                for (var _n21 = 0; _n21 < this.arrowsObj[_na16].arrayArrowData.length / 4; _n21++) {
-                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrowsObj[_na16].arrayArrowData[_n21 * 4] === node.nodeId) setVal(type, jsonIn.argName, "arrows_array_value", _n21, jsonIn.value);else {
-                        var _id3 = type === "float" ? _n21 : _n21 * 4;
+            for (var _na9 = 0; _na9 < this.arrowsObj.length; _na9++) {
+                for (var _n7 = 0; _n7 < this.arrowsObj[_na9].arrayArrowData.length / 4; _n7++) {
+                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrowsObj[_na9].arrayArrowData[_n7 * 4] === node.nodeId) setVal(type, jsonIn.argName, "arrows_array_value", _n7, jsonIn.value);else {
+                        var _id3 = type === "float" ? _n7 : _n7 * 4;
                         if (this._customArgs[jsonIn.argName]["arrows_array_value"][_id3] === undefined && this._customArgs[jsonIn.argName]["arrows_array_value"][_id3] === null && jsonIn.update === false) {
-                            if (type === "float") setVal(type, jsonIn.argName, "arrows_array_value", _n21, 0.0);else setVal(type, jsonIn.argName, "arrows_array_value", _n21, [0.0, 0.0, 0.0, 0.0]);
+                            if (type === "float") setVal(type, jsonIn.argName, "arrows_array_value", _n7, 0.0);else setVal(type, jsonIn.argName, "arrows_array_value", _n7, [0.0, 0.0, 0.0, 0.0]);
                         }
                     }
                 }
-                this.arrowsObj[_na16].componentRenderer.setArg(jsonIn.argName, function () {
-                    return _this10._customArgs[jsonIn.argName].arrows_array_value;
+                this.arrowsObj[_na9].componentRenderer.setArg(jsonIn.argName, function () {
+                    return _this7._customArgs[jsonIn.argName].arrows_array_value;
                 });
             }
 
             if (this._enableFont === true) {
                 // nodeText id
-                for (var _n22 = 0; _n22 < this.arrayNodeTextData.length / 4; _n22++) {
-                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrayNodeTextData[_n22 * 4] === node.nodeId) setVal(type, jsonIn.argName, "nodestext_array_value", _n22, jsonIn.value);else {
-                        var _id4 = type === "float" ? _n22 : _n22 * 4;
+                for (var _n8 = 0; _n8 < this.arrayNodeTextData.length / 4; _n8++) {
+                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrayNodeTextData[_n8 * 4] === node.nodeId) setVal(type, jsonIn.argName, "nodestext_array_value", _n8, jsonIn.value);else {
+                        var _id4 = type === "float" ? _n8 : _n8 * 4;
                         if (this._customArgs[jsonIn.argName]["nodestext_array_value"][_id4] === undefined && this._customArgs[jsonIn.argName]["nodestext_array_value"][_id4] === null && jsonIn.update === false) {
-                            if (type === "float") setVal(type, jsonIn.argName, "nodestext_array_value", _n22, 0.0);else setVal(type, jsonIn.argName, "nodestext_array_value", _n22, [0.0, 0.0, 0.0, 0.0]);
+                            if (type === "float") setVal(type, jsonIn.argName, "nodestext_array_value", _n8, 0.0);else setVal(type, jsonIn.argName, "nodestext_array_value", _n8, [0.0, 0.0, 0.0, 0.0]);
                         }
                     }
                 }
                 this.comp_renderer_nodesText.setArg(jsonIn.argName, function () {
-                    return _this10._customArgs[jsonIn.argName].nodestext_array_value;
+                    return _this7._customArgs[jsonIn.argName].nodestext_array_value;
                 });
             }
         }
@@ -2237,7 +1691,7 @@ var Graph = exports.Graph = function () {
          * @param {Array<number>} jsonIn.value [number] or [number, number, number, number]
          */
         value: function setLayoutNodeArgumentArrayData(jsonIn) {
-            var _this11 = this;
+            var _this8 = this;
 
             var expl = this._customArgs[jsonIn.argName].arg.split("*");
             var type = expl[0]; // float or float4
@@ -2249,9 +1703,9 @@ var Graph = exports.Graph = function () {
                 z = 0,
                 w = 0;
             this._customArgs[jsonIn.argName].nodes_array_value = [];
-            for (var _n23 = 0; _n23 < this.arrayNodeData.length / 4; _n23++) {
-                if (currentId !== this.arrayNodeData[_n23 * 4]) {
-                    currentId = this.arrayNodeData[_n23 * 4];
+            for (var n = 0; n < this.arrayNodeData.length / 4; n++) {
+                if (currentId !== this.arrayNodeData[n * 4]) {
+                    currentId = this.arrayNodeData[n * 4];
 
                     if (type === "float") {
                         x = jsonIn.value[currentId];
@@ -2268,14 +1722,14 @@ var Graph = exports.Graph = function () {
                 }
             }
             this.comp_renderer_nodes.setArg(jsonIn.argName, function () {
-                return _this11._customArgs[jsonIn.argName].nodes_array_value;
+                return _this8._customArgs[jsonIn.argName].nodes_array_value;
             });
 
             // links
             this._customArgs[jsonIn.argName].links_array_value = [];
             for (var na = 0; na < this.linksObj.length; na++) {
-                for (var _n24 = 0; _n24 < this.linksObj[na].arrayLinkNodeName.length; _n24++) {
-                    var currentLinkNodeName = this.linksObj[na].arrayLinkNodeName[_n24];
+                for (var _n9 = 0; _n9 < this.linksObj[na].arrayLinkNodeName.length; _n9++) {
+                    var currentLinkNodeName = this.linksObj[na].arrayLinkNodeName[_n9];
                     var nodeNameItemStart = this._nodesByName[currentLinkNodeName].itemStart;
 
                     if (type === "float") {
@@ -2285,15 +1739,15 @@ var Graph = exports.Graph = function () {
                     }
                 }
                 this.linksObj[na].componentRenderer.setArg(jsonIn.argName, function () {
-                    return _this11._customArgs[jsonIn.argName].links_array_value;
+                    return _this8._customArgs[jsonIn.argName].links_array_value;
                 });
             }
 
             // arrows
             this._customArgs[jsonIn.argName].arrows_array_value = [];
-            for (var _na17 = 0; _na17 < this.arrowsObj.length; _na17++) {
-                for (var _n25 = 0; _n25 < this.arrowsObj[_na17].arrayArrowNodeName.length; _n25++) {
-                    var currentArrowNodeName = this.arrowsObj[_na17].arrayArrowNodeName[_n25];
+            for (var _na10 = 0; _na10 < this.arrowsObj.length; _na10++) {
+                for (var _n10 = 0; _n10 < this.arrowsObj[_na10].arrayArrowNodeName.length; _n10++) {
+                    var currentArrowNodeName = this.arrowsObj[_na10].arrayArrowNodeName[_n10];
                     var _nodeNameItemStart = this._nodesByName[currentArrowNodeName].itemStart;
 
                     if (type === "float") {
@@ -2302,16 +1756,16 @@ var Graph = exports.Graph = function () {
                         this._customArgs[jsonIn.argName].arrows_array_value.push(this._customArgs[jsonIn.argName].nodes_array_value[_nodeNameItemStart * 4], this._customArgs[jsonIn.argName].nodes_array_value[_nodeNameItemStart * 4 + 1], this._customArgs[jsonIn.argName].nodes_array_value[_nodeNameItemStart * 4 + 2], this._customArgs[jsonIn.argName].nodes_array_value[_nodeNameItemStart * 4 + 3]);
                     }
                 }
-                this.arrowsObj[_na17].componentRenderer.setArg(jsonIn.argName, function () {
-                    return _this11._customArgs[jsonIn.argName].arrows_array_value;
+                this.arrowsObj[_na10].componentRenderer.setArg(jsonIn.argName, function () {
+                    return _this8._customArgs[jsonIn.argName].arrows_array_value;
                 });
             }
 
             // nodestext
             if (this._enableFont === true) {
                 this._customArgs[jsonIn.argName].nodestext_array_value = [];
-                for (var _n26 = 0; _n26 < this.arrayNodeTextNodeName.length; _n26++) {
-                    var currentNodeTextNodeName = this.arrayNodeTextNodeName[_n26];
+                for (var _n11 = 0; _n11 < this.arrayNodeTextNodeName.length; _n11++) {
+                    var currentNodeTextNodeName = this.arrayNodeTextNodeName[_n11];
                     var _nodeNameItemStart2 = this._nodesByName[currentNodeTextNodeName].itemStart;
 
                     if (type === "float") {
@@ -2321,7 +1775,7 @@ var Graph = exports.Graph = function () {
                     }
                 }
                 this.comp_renderer_nodesText.setArg(jsonIn.argName, function () {
-                    return _this11._customArgs[jsonIn.argName].nodestext_array_value;
+                    return _this8._customArgs[jsonIn.argName].nodestext_array_value;
                 });
             }
         }
@@ -2342,11 +1796,10 @@ var Graph = exports.Graph = function () {
         * @param {String} [jsonIn.data=""] - Custom data associated to this node
         * @param {Array<number>} [jsonIn.position=new Array(Math.Random(), Math.Random(), Math.Random(), 1.0)] - Position of node
         * @param {String} [jsonIn.color=undefined] - URL of image
-           * @param {number|String|Date} [jsonIn.bornDate=undefined] - Float timestamp, "RANDOM" or "24-Nov-2009 17:57:35"
-           * @param {number|String|Date} [jsonIn.dieDate=undefined] - Float timestamp, "RANDOM" or "24-Nov-2009 17:57:35"
         * @param {Object} [jsonIn.layoutNodeArgumentData=undefined] - Data for the custom layout
         * @param {Function} [jsonIn.onmousedown=undefined] - Event when mousedown
         * @param {Function} [jsonIn.onmouseup=undefined] - Event when mouseup
+        * @param {boolean} [jsonIn.biasNeuron]
         * @returns {String|boolean} - Name of node
          */
         value: function addNode(jsonIn) {
@@ -2376,6 +1829,7 @@ var Graph = exports.Graph = function () {
          * @param {String} [jsonIn.color]
          * @param {int} [jsonIn.nodeId]
          * @param {int} [jsonIn.itemStart]
+         * @param {boolean} [jsonIn.biasNeuron]
          * @returns {Object}
          */
         value: function createNode(jsonIn) {
@@ -2397,12 +1851,11 @@ var Graph = exports.Graph = function () {
                 }
                 nodeImgId = this.objNodeImages[color];
             }
-            for (var _n27 = 0; _n27 < this.mesh_nodes.vertexArray.length / 4; _n27++) {
-                var idxVertex = _n27 * 4;
+            for (var n = 0; n < this.mesh_nodes.vertexArray.length / 4; n++) {
+                var idxVertex = n * 4;
 
-                var ts = this.getBornDieTS(jsonIn.bornDate, jsonIn.dieDate);
-                this.arrayNodeData.push(this.currentNodeId, 0.0, ts.bornDate, ts.dieDate);
-                this.arrayNodeDataB.push(ts.bornDate, ts.dieDate, 0.0, 0.0);
+                this.arrayNodeData.push(this.currentNodeId, 0.0, 0.0, 0.0);
+                this.arrayNodeDataB.push(jsonIn.biasNeuron, 0.0, 0.0, 0.0);
                 this.arrayNodeDataF.push(0.0, 0.0, 0.0, 0.0);
                 this.arrayNodeDataG.push(0.0, 0.0, 0.0, 0.0);
                 this.arrayNodeDataH.push(0.0, 0.0, 0.0, 0.0);
@@ -2430,8 +1883,8 @@ var Graph = exports.Graph = function () {
             }
 
             var maxNodeIndexId = 0;
-            for (var _n28 = 0; _n28 < this.mesh_nodes.indexArray.length; _n28++) {
-                var idxIndex = _n28;
+            for (var _n12 = 0; _n12 < this.mesh_nodes.indexArray.length; _n12++) {
+                var idxIndex = _n12;
 
                 this.arrayNodeIndices.push(this.startIndexId + this.mesh_nodes.indexArray[idxIndex]);
 
@@ -2449,7 +1902,7 @@ var Graph = exports.Graph = function () {
             var getLetterId = function getLetterId(letter) {
                 var obj = { "A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6,
                     "H": 7, "I": 8, "J": 9, "K": 10, "L": 11, "M": 12, "N": 13,
-                    "Ñ": 14, "O": 15, "P": 16, "Q": 17, "R": 18, "S": 19, "T": 20,
+                    "#": 14, "O": 15, "P": 16, "Q": 17, "R": 18, "S": 19, "T": 20,
                     "U": 21, "V": 22, "W": 23, "X": 24, "Y": 25, "Z": 26, " ": 27,
                     "0": 28, "1": 29, "2": 30, "3": 31, "4": 32, "5": 33, "6": 34,
                     "7": 35, "8": 36, "9": 37
@@ -2462,8 +1915,8 @@ var Graph = exports.Graph = function () {
                 if (jsonIn.label !== undefined && jsonIn.label !== null && jsonIn.label[i] !== undefined && jsonIn.label[i] !== null) letterId = getLetterId(jsonIn.label[i].toUpperCase());
                 if (letterId === null) letterId = getLetterId(" ");
 
-                for (var _n29 = 0; _n29 < this.mesh_nodesText.vertexArray.length / 4; _n29++) {
-                    var idxVertex = _n29 * 4;
+                for (var n = 0; n < this.mesh_nodesText.vertexArray.length / 4; n++) {
+                    var idxVertex = n * 4;
 
                     this.arrayNodeTextData.push(jsonIn.nodeId, 0.0, 0.0, 0.0);
                     this.arrayNodeTextPosXYZW.push(0.0, 0.0, 0.0, 1.0);
@@ -2494,8 +1947,8 @@ var Graph = exports.Graph = function () {
             }
             var maxNodeIndexId = 0;
             for (var _i = 0; _i < this.nodesTextPlanes; _i++) {
-                for (var _n30 = 0; _n30 < this.mesh_nodesText.indexArray.length; _n30++) {
-                    var idxIndex = _n30;
+                for (var _n13 = 0; _n13 < this.mesh_nodesText.indexArray.length; _n13++) {
+                    var idxIndex = _n13;
 
                     var b = _i * 4; // 4 = indices length of quad (0, 1, 2, 0, 2, 3)
                     var ii = this.mesh_nodesText.indexArray[idxIndex] + b;
@@ -2525,20 +1978,20 @@ var Graph = exports.Graph = function () {
     }, {
         key: "generateNodesImage",
         value: function generateNodesImage() {
-            var _this12 = this;
+            var _this9 = this;
 
             if (this.nodesImgMaskLoaded === false) {
                 this.nodesImgMask = new Image();
                 this.nodesImgMask.onload = function () {
-                    _this12.nodesImgMaskLoaded = true;
-                    _this12.generateNodesImage();
+                    _this9.nodesImgMaskLoaded = true;
+                    _this9.generateNodesImage();
                 };
                 this.nodesImgMask.src = _resources.Resources.nodesImgMask();
             } else if (this.nodesImgCrosshairLoaded === false) {
                 this.nodesImgCrosshair = new Image();
                 this.nodesImgCrosshair.onload = function () {
-                    _this12.nodesImgCrosshairLoaded = true;
-                    _this12.generateNodesImage();
+                    _this9.nodesImgCrosshairLoaded = true;
+                    _this9.generateNodesImage();
                 };
                 this.nodesImgCrosshair.src = _resources.Resources.nodesImgCrosshair();
             } else {
@@ -2549,10 +2002,10 @@ var Graph = exports.Graph = function () {
                     "nodesImgMask": this.nodesImgMask,
                     "nodesImgCrosshair": this.nodesImgCrosshair,
                     "onend": function onend(jsonIn) {
-                        _this12.comp_renderer_nodes.setArg("nodesImg", function () {
+                        _this9.comp_renderer_nodes.setArg("nodesImg", function () {
                             return jsonIn.nodesImg;
                         });
-                        _this12.comp_renderer_nodes.setArg("nodesImgCrosshair", function () {
+                        _this9.comp_renderer_nodes.setArg("nodesImgCrosshair", function () {
                             return jsonIn.nodesImgCrosshair;
                         });
                     } });
@@ -2578,9 +2031,6 @@ var Graph = exports.Graph = function () {
          * @param {number} [jsonIn.linkMultiplier=1.0]
          * @param {number} [jsonIn.layerNum]
          * @param {boolean} [jsonIn.showArrow]
-         * @param {number|String|Date} [jsonIn.bornDate=undefined] - Float timestamp, "RANDOM" or "24-Nov-2009 17:57:35"
-         * @param {number|String|Date} [jsonIn.dieDate=undefined] - Float timestamp, "RANDOM" or "24-Nov-2009 17:57:35"
-         *
          * @param {String} [jsonIn.origin_nodeName] - NodeName Origin for this link
          * @param {String} [jsonIn.target_nodeName] - NodeName Target for this link
          * @param {int} [jsonIn.origin_nodeId]
@@ -2604,7 +2054,7 @@ var Graph = exports.Graph = function () {
                 pass = false;
             }
 
-            if (jsonIn.origin === jsonIn.target && this._enableAutoLink === false) {
+            if (jsonIn.origin === jsonIn.target) {
                 console.log("%cDiscarting autolink " + jsonIn.origin + "->" + jsonIn.target, "color:orange");
                 pass = false;
             }
@@ -2620,10 +2070,6 @@ var Graph = exports.Graph = function () {
                 jsonIn.target_itemStart = this._nodesByName[jsonIn.target].itemStart;
                 jsonIn.origin_layoutNodeArgumentData = this._nodesByName[jsonIn.origin].layoutNodeArgumentData;
                 jsonIn.target_layoutNodeArgumentData = this._nodesByName[jsonIn.target].layoutNodeArgumentData;
-
-                var ts = this.getBornDieTS(jsonIn.bornDate, jsonIn.dieDate);
-                jsonIn.bornDate = ts.bornDate;
-                jsonIn.dieDate = ts.dieDate;
 
                 jsonIn.activationFunc = jsonIn.activationFunc !== undefined && jsonIn.activationFunc !== null ? jsonIn.activationFunc : 1.0;
                 jsonIn.weight = jsonIn.weight !== undefined && jsonIn.weight !== null && jsonIn.weight.constructor === String ? Math.random() : jsonIn.weight || 1.0;
@@ -2646,19 +2092,6 @@ var Graph = exports.Graph = function () {
 
                 // ADD LINK TO ARRAY LINKS
                 this._links[jsonIn.origin + "->" + jsonIn.target + "_" + repeatId] = jsonIn;
-                //console.log("link "+jsonIn.origin+"->"+jsonIn.target);
-
-
-                // UPDATE arrayNodeData
-                for (var _n31 = 0; _n31 < this.arrayNodeData.length / 4; _n31++) {
-                    var id = _n31 * 4;
-                    if (this.arrayNodeData[id] === this._nodesByName[jsonIn.origin].nodeId) {
-                        this.arrayNodeData[id + 1] = this.arrayNodeData[id + 1] + 1.0;
-                    }
-                    if (this.arrayNodeData[id] === this._nodesByName[jsonIn.target].nodeId) {
-                        this.arrayNodeData[id + 1] = this.arrayNodeData[id + 1] + 1.0;
-                    }
-                }
             }
         }
     }, {
@@ -2679,18 +2112,15 @@ var Graph = exports.Graph = function () {
          * @param {int} [jsonIn.linkId]
          * @param {boolean} [jsonIn.directed=false]
          * @param {number} [jsonIn.weight=1.0] - Float weight or "RANDOM"
-         * @param {number|String|Date} [jsonIn.bornDate=undefined] - Float timestamp, "RANDOM" or "24-Nov-2009 17:57:35"
-         * @param {number|String|Date} [jsonIn.dieDate=undefined] - Float timestamp, "RANDOM" or "24-Nov-2009 17:57:35"
          * @returns {Object}
          */
         value: function createLink(jsonIn) {
             if (this.currentLinkId % 60000 === 0) this.createLinksObjItem();
 
-            for (var _n32 = 0; _n32 < this.lineVertexCount * 2; _n32++) {
-                this.linksObj[this.currentLinksObjItem].arrayLinkData.push(jsonIn.origin_nodeId, jsonIn.target_nodeId, Math.ceil(_n32 / 2), jsonIn.repeatId);
-                this.linksObj[this.currentLinksObjItem].arrayLinkDataC.push(jsonIn.bornDate, jsonIn.dieDate, jsonIn.weight, 0.0);
+            for (var n = 0; n < this.lineVertexCount * 2; n++) {
+                this.linksObj[this.currentLinksObjItem].arrayLinkData.push(jsonIn.origin_nodeId, jsonIn.target_nodeId, Math.ceil(n / 2), jsonIn.repeatId);
 
-                if (Math.ceil(_n32 / 2) !== this.lineVertexCount - 1) {
+                if (Math.ceil(n / 2) !== this.lineVertexCount - 1) {
                     this.linksObj[this.currentLinksObjItem].arrayLinkNodeName.push(jsonIn.origin_nodeName);
                 } else {
                     this.linksObj[this.currentLinksObjItem].arrayLinkNodeName.push(jsonIn.target_nodeName);
@@ -2711,7 +2141,7 @@ var Graph = exports.Graph = function () {
                 }
             }
 
-            for (var _n33 = 0; _n33 < this.lineVertexCount * 2; _n33++) {
+            for (var _n14 = 0; _n14 < this.lineVertexCount * 2; _n14++) {
                 this.linksObj[this.currentLinksObjItem].arrayLinkIndices.push(this.linksObj[this.currentLinksObjItem].startIndexId_link++);
             }this.currentLinkId += 2; // augment link id
 
@@ -2733,7 +2163,7 @@ var Graph = exports.Graph = function () {
          * @param {int} jsonIn.target_itemStart
          * @param {int} jsonIn.origin_layoutNodeArgumentData
          * @param {int} jsonIn.target_layoutNodeArgumentData
-         * @param {bool} [jsonIn.directed=false]
+         * @param {boolean} [jsonIn.directed=false]
          * @param {Mesh} [jsonIn.node] - Node with the mesh for the node
          * @returns {int}
          */
@@ -2745,8 +2175,8 @@ var Graph = exports.Graph = function () {
             var oppositeId = 0;
 
             for (var o = 0; o < 2; o++) {
-                for (var _n34 = 0; _n34 < this.mesh_arrows.vertexArray.length / 4; _n34++) {
-                    var idxVertex = _n34 * 4;
+                for (var n = 0; n < this.mesh_arrows.vertexArray.length / 4; n++) {
+                    var idxVertex = n * 4;
                     if (o === 0) oppositeId = this.arrowsObj[this.currentArrowsObjItem].arrowArrayItemStart;
 
                     this.arrowsObj[this.currentArrowsObjItem].arrayArrowPosXYZW.push(0.0, 0.0, 0.0, 1.0);
@@ -2755,7 +2185,6 @@ var Graph = exports.Graph = function () {
                     this.arrowsObj[this.currentArrowsObjItem].arrayArrowVertexTexture.push(this.mesh_arrows.textureArray[idxVertex], this.mesh_arrows.textureArray[idxVertex + 1], this.mesh_arrows.textureArray[idxVertex + 2], 1.0);
                     if (o === 0) {
                         this.arrowsObj[this.currentArrowsObjItem].arrayArrowData.push(jsonIn.origin_nodeId, jsonIn.target_nodeId, 0.0, jsonIn.repeatId);
-                        this.arrowsObj[this.currentArrowsObjItem].arrayArrowDataC.push(jsonIn.bornDate, jsonIn.dieDate, 0.0, 0.0);
                         this.arrowsObj[this.currentArrowsObjItem].arrayArrowNodeName.push(jsonIn.origin_nodeName);
                         if (jsonIn.origin_layoutNodeArgumentData !== undefined && jsonIn.origin_layoutNodeArgumentData !== null) {
                             for (var argNameKey in this._customArgs) {
@@ -2770,7 +2199,6 @@ var Graph = exports.Graph = function () {
                         }
                     } else {
                         this.arrowsObj[this.currentArrowsObjItem].arrayArrowData.push(jsonIn.target_nodeId, jsonIn.origin_nodeId, 1.0, jsonIn.repeatId);
-                        this.arrowsObj[this.currentArrowsObjItem].arrayArrowDataC.push(jsonIn.bornDate, jsonIn.dieDate, 0.0, 0.0);
                         this.arrowsObj[this.currentArrowsObjItem].arrayArrowNodeName.push(jsonIn.target_nodeName);
                         if (jsonIn.target_layoutNodeArgumentData !== undefined && jsonIn.target_layoutNodeArgumentData !== null) {
                             for (var _argNameKey in this._customArgs) {
@@ -2789,8 +2217,8 @@ var Graph = exports.Graph = function () {
                 }
 
                 var maxArrowIndexId = 0;
-                for (var _n35 = 0; _n35 < this.mesh_arrows.indexArray.length; _n35++) {
-                    var idxIndex = _n35;
+                for (var _n15 = 0; _n15 < this.mesh_arrows.indexArray.length; _n15++) {
+                    var idxIndex = _n15;
 
                     this.arrowsObj[this.currentArrowsObjItem].arrayArrowIndices.push(this.arrowsObj[this.currentArrowsObjItem].startIndexId_arrow + this.mesh_arrows.indexArray[idxIndex]);
 
@@ -2814,175 +2242,167 @@ var Graph = exports.Graph = function () {
         //╚██████╔╝██║     ██████╔╝██║  ██║   ██║   ███████╗    ██║ ╚████║╚██████╔╝██████╔╝███████╗███████║
         // ╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝    ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚══════╝╚══════╝
         value: function updateNodes() {
-            var _this13 = this;
+            var _this10 = this;
 
             console.log(this.currentNodeId + " nodes");
 
-            this._ADJ_MATRIX_WIDTH = this._MAX_ADJ_MATRIX_WIDTH;
+            this._ADJ_MATRIX_WIDTH = this.currentNodeId;
 
             this.comp_renderer_nodes.setArg("adjacencyMatrix", function () {
-                return new Float32Array(_this13._ADJ_MATRIX_WIDTH * _this13._ADJ_MATRIX_WIDTH * 4);
+                return new Float32Array(_this10._ADJ_MATRIX_WIDTH * _this10._ADJ_MATRIX_WIDTH * 4);
             });
             for (var na = 0; na < this.linksObj.length; na++) {
                 this.linksObj[na].componentRenderer.getComponentBufferArg("adjacencyMatrix", this.comp_renderer_nodes);
-            }for (var _na18 = 0; _na18 < this.arrowsObj.length; _na18++) {
-                this.arrowsObj[_na18].componentRenderer.getComponentBufferArg("adjacencyMatrix", this.comp_renderer_nodes);
+            }for (var _na11 = 0; _na11 < this.arrowsObj.length; _na11++) {
+                this.arrowsObj[_na11].componentRenderer.getComponentBufferArg("adjacencyMatrix", this.comp_renderer_nodes);
             }this.comp_renderer_nodes.setArg("adjacencyMatrixB", function () {
-                return new Float32Array(_this13._ADJ_MATRIX_WIDTH * _this13._ADJ_MATRIX_WIDTH * 4);
+                return new Float32Array(_this10._ADJ_MATRIX_WIDTH * _this10._ADJ_MATRIX_WIDTH * 4);
             });
-            for (var _na19 = 0; _na19 < this.linksObj.length; _na19++) {
-                this.linksObj[_na19].componentRenderer.getComponentBufferArg("adjacencyMatrixB", this.comp_renderer_nodes);
-            }for (var _na20 = 0; _na20 < this.arrowsObj.length; _na20++) {
-                this.arrowsObj[_na20].componentRenderer.getComponentBufferArg("adjacencyMatrixB", this.comp_renderer_nodes);
-            }this.comp_renderer_nodes.setArg("adjacencyMatrixC", function () {
-                return new Float32Array(_this13._ADJ_MATRIX_WIDTH * _this13._ADJ_MATRIX_WIDTH * 4);
-            });
-            for (var _na21 = 0; _na21 < this.linksObj.length; _na21++) {
-                this.linksObj[_na21].componentRenderer.getComponentBufferArg("adjacencyMatrixC", this.comp_renderer_nodes);
-            }for (var _na22 = 0; _na22 < this.arrowsObj.length; _na22++) {
-                this.arrowsObj[_na22].componentRenderer.getComponentBufferArg("adjacencyMatrixC", this.comp_renderer_nodes);
+            for (var _na12 = 0; _na12 < this.linksObj.length; _na12++) {
+                this.linksObj[_na12].componentRenderer.getComponentBufferArg("adjacencyMatrixB", this.comp_renderer_nodes);
+            }for (var _na13 = 0; _na13 < this.arrowsObj.length; _na13++) {
+                this.arrowsObj[_na13].componentRenderer.getComponentBufferArg("adjacencyMatrixB", this.comp_renderer_nodes);
             }this.comp_renderer_nodes.setArg("widthAdjMatrix", function () {
-                return _this13._ADJ_MATRIX_WIDTH;
+                return _this10._ADJ_MATRIX_WIDTH;
             });
-            for (var _na23 = 0; _na23 < this.linksObj.length; _na23++) {
-                this.linksObj[_na23].componentRenderer.setArg("widthAdjMatrix", function () {
-                    return _this13._ADJ_MATRIX_WIDTH;
+            for (var _na14 = 0; _na14 < this.linksObj.length; _na14++) {
+                this.linksObj[_na14].componentRenderer.setArg("widthAdjMatrix", function () {
+                    return _this10._ADJ_MATRIX_WIDTH;
                 });
-            }for (var _na24 = 0; _na24 < this.arrowsObj.length; _na24++) {
-                this.arrowsObj[_na24].componentRenderer.setArg("widthAdjMatrix", function () {
-                    return _this13._ADJ_MATRIX_WIDTH;
+            }for (var _na15 = 0; _na15 < this.arrowsObj.length; _na15++) {
+                this.arrowsObj[_na15].componentRenderer.setArg("widthAdjMatrix", function () {
+                    return _this10._ADJ_MATRIX_WIDTH;
                 });
             }this.comp_renderer_nodes.setArg("data", function () {
-                return _this13.arrayNodeData;
+                return _this10.arrayNodeData;
             });
             this.comp_renderer_nodes.setArg("dataB", function () {
-                return _this13.arrayNodeDataB;
+                return _this10.arrayNodeDataB;
             });
             this.comp_renderer_nodes.setArg("dataF", function () {
-                return _this13.arrayNodeDataF;
+                return _this10.arrayNodeDataF;
             });
             this.comp_renderer_nodes.setArg("dataG", function () {
-                return _this13.arrayNodeDataG;
+                return _this10.arrayNodeDataG;
             });
             this.comp_renderer_nodes.setArg("dataH", function () {
-                return _this13.arrayNodeDataH;
+                return _this10.arrayNodeDataH;
             });
 
             if (this.comp_renderer_nodes.getBuffers()["posXYZW"] !== undefined && this.comp_renderer_nodes.getBuffers()["posXYZW"] !== null) this.arrayNodePosXYZW = Array.prototype.slice.call(this.comp_renderer_nodes.gpufG.readArg("posXYZW"));
             this.comp_renderer_nodes.setArg("posXYZW", function () {
-                return _this13.arrayNodePosXYZW;
+                return _this10.arrayNodePosXYZW;
             });
 
             this.comp_renderer_nodes.setArg("nodeVertexPos", function () {
-                return _this13.arrayNodeVertexPos;
+                return _this10.arrayNodeVertexPos;
             });
             this.comp_renderer_nodes.setArg("nodeVertexNormal", function () {
-                return _this13.arrayNodeVertexNormal;
+                return _this10.arrayNodeVertexNormal;
             });
             this.comp_renderer_nodes.setArg("nodeVertexTexture", function () {
-                return _this13.arrayNodeVertexTexture;
+                return _this10.arrayNodeVertexTexture;
             });
 
             this.comp_renderer_nodes.setArg("nodesCount", function () {
-                return _this13.currentNodeId;
+                return _this10.currentNodeId;
             });
-            this._MAX_ADJ_MATRIX_WIDTH = this.currentNodeId;
             this.comp_renderer_nodes.setArg("nodeImgColumns", function () {
-                return _this13.NODE_IMG_COLUMNS;
+                return _this10.NODE_IMG_COLUMNS;
             });
             this.comp_renderer_nodes.setArg("nodeImgId", function () {
-                return _this13.arrayNodeImgId;
+                return _this10.arrayNodeImgId;
             });
             this.comp_renderer_nodes.setArg("indices", function () {
-                return _this13.arrayNodeIndices;
+                return _this10.arrayNodeIndices;
             });
 
             if (this.comp_renderer_nodes.getBuffers()["dir"] !== undefined && this.comp_renderer_nodes.getBuffers()["dir"] !== null) this.arrayNodeDir = Array.prototype.slice.call(this.comp_renderer_nodes.gpufG.readArg("dir"));
             this.comp_renderer_nodes.setArg("dir", function () {
-                return _this13.arrayNodeDir;
+                return _this10.arrayNodeDir;
             });
 
             this.comp_renderer_nodes.setArg("PMatrix", function () {
-                return _this13._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.PROJECTION).getMatrix().transpose().e;
+                return _this10._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.PROJECTION).getMatrix().transpose().e;
             });
             this.comp_renderer_nodes.setArgUpdatable("PMatrix", true);
             this.comp_renderer_nodes.setArg("cameraWMatrix", function () {
-                return _this13._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.TRANSFORM_TARGET).getMatrix().transpose().e;
+                return _this10._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.TRANSFORM_TARGET).getMatrix().transpose().e;
             });
             this.comp_renderer_nodes.setArgUpdatable("cameraWMatrix", true);
             this.comp_renderer_nodes.setArg("nodeWMatrix", function () {
-                return _this13.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;
+                return _this10.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;
             });
             this.comp_renderer_nodes.setArgUpdatable("nodeWMatrix", true);
 
             this.comp_renderer_nodes.setArg("currentTrainLayer", function () {
-                return _this13.currentTrainLayer;
+                return _this10.currentTrainLayer;
             });
             this.comp_renderer_nodes.setArg("afferentNodesCount", function () {
-                return _this13.afferentNodesCount;
+                return _this10.afferentNodesCount;
             });
             this.comp_renderer_nodes.setArg("efferentNodesCount", function () {
-                return _this13.efferentNodesCount;
+                return _this10.efferentNodesCount;
             });
             this.comp_renderer_nodes.setArg("efferentStart", function () {
-                return _this13.currentNodeId - _this13.efferentNodesCount;
+                return _this10.currentNodeId - _this10.efferentNodesCount;
             });
 
             this.comp_renderer_nodes.setArg("afferentNodesA", function () {
-                return new Float32Array(_this13.afferentNodesCount);
+                return new Float32Array(_this10.afferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("efferentNodesA", function () {
-                return new Float32Array(_this13.efferentNodesCount);
+                return new Float32Array(_this10.efferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("afferentNodesB", function () {
-                return new Float32Array(_this13.afferentNodesCount);
+                return new Float32Array(_this10.afferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("efferentNodesB", function () {
-                return new Float32Array(_this13.efferentNodesCount);
+                return new Float32Array(_this10.efferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("afferentNodesC", function () {
-                return new Float32Array(_this13.afferentNodesCount);
+                return new Float32Array(_this10.afferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("efferentNodesC", function () {
-                return new Float32Array(_this13.efferentNodesCount);
+                return new Float32Array(_this10.efferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("afferentNodesD", function () {
-                return new Float32Array(_this13.afferentNodesCount);
+                return new Float32Array(_this10.afferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("efferentNodesD", function () {
-                return new Float32Array(_this13.efferentNodesCount);
+                return new Float32Array(_this10.efferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("afferentNodesE", function () {
-                return new Float32Array(_this13.afferentNodesCount);
+                return new Float32Array(_this10.afferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("efferentNodesE", function () {
-                return new Float32Array(_this13.efferentNodesCount);
+                return new Float32Array(_this10.efferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("afferentNodesF", function () {
-                return new Float32Array(_this13.afferentNodesCount);
+                return new Float32Array(_this10.afferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("efferentNodesF", function () {
-                return new Float32Array(_this13.efferentNodesCount);
+                return new Float32Array(_this10.efferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("afferentNodesG", function () {
-                return new Float32Array(_this13.afferentNodesCount);
+                return new Float32Array(_this10.afferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("efferentNodesG", function () {
-                return new Float32Array(_this13.efferentNodesCount);
+                return new Float32Array(_this10.efferentNodesCount);
             });
             this.comp_renderer_nodes.setArg("isNode", function () {
                 return 1;
             });
             this.comp_renderer_nodes.setArg("bufferNodesWidth", function () {
-                return _this13.comp_renderer_nodes.getBuffers()["posXYZW"].W;
+                return _this10.comp_renderer_nodes.getBuffers()["posXYZW"].W;
             });
 
             var _loop3 = function _loop3(argNameKey) {
-                var expl = _this13._customArgs[argNameKey].arg.split("*");
+                var expl = _this10._customArgs[argNameKey].arg.split("*");
                 if (expl.length > 0) {
                     // argument is type buffer
-                    _this13.comp_renderer_nodes.setArg(argNameKey, function () {
-                        return _this13._customArgs[argNameKey].nodes_array_value;
+                    _this10.comp_renderer_nodes.setArg(argNameKey, function () {
+                        return _this10._customArgs[argNameKey].nodes_array_value;
                     });
                 }
             };
@@ -2997,43 +2417,43 @@ var Graph = exports.Graph = function () {
     }, {
         key: "updateNodesText",
         value: function updateNodesText() {
-            var _this14 = this;
+            var _this11 = this;
 
             this.comp_renderer_nodesText.setArg("data", function () {
-                return _this14.arrayNodeTextData;
+                return _this11.arrayNodeTextData;
             });
             this.comp_renderer_nodesText.getComponentBufferArg("posXYZW", this.comp_renderer_nodes);
 
             this.comp_renderer_nodesText.setArg("nodeVertexPos", function () {
-                return _this14.arrayNodeTextVertexPos;
+                return _this11.arrayNodeTextVertexPos;
             });
             this.comp_renderer_nodesText.setArg("nodeVertexNormal", function () {
-                return _this14.arrayNodeTextVertexNormal;
+                return _this11.arrayNodeTextVertexNormal;
             });
             this.comp_renderer_nodesText.setArg("nodeVertexTexture", function () {
-                return _this14.arrayNodeTextVertexTexture;
+                return _this11.arrayNodeTextVertexTexture;
             });
 
             this.comp_renderer_nodesText.setArg("fontImgColumns", function () {
-                return _this14.FONT_IMG_COLUMNS;
+                return _this11.FONT_IMG_COLUMNS;
             });
             this.comp_renderer_nodesText.setArg("letterId", function () {
-                return _this14.arrayNodeTextLetterId;
+                return _this11.arrayNodeTextLetterId;
             });
             this.comp_renderer_nodesText.setArg("indices", function () {
-                return _this14.arrayNodeTextIndices;
+                return _this11.arrayNodeTextIndices;
             });
 
             this.comp_renderer_nodesText.setArg("PMatrix", function () {
-                return _this14._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.PROJECTION).getMatrix().transpose().e;
+                return _this11._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.PROJECTION).getMatrix().transpose().e;
             });
             this.comp_renderer_nodesText.setArgUpdatable("PMatrix", true);
             this.comp_renderer_nodesText.setArg("cameraWMatrix", function () {
-                return _this14._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.TRANSFORM_TARGET).getMatrix().transpose().e;
+                return _this11._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.TRANSFORM_TARGET).getMatrix().transpose().e;
             });
             this.comp_renderer_nodesText.setArgUpdatable("cameraWMatrix", true);
             this.comp_renderer_nodesText.setArg("nodeWMatrix", function () {
-                return _this14.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;
+                return _this11.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;
             });
             this.comp_renderer_nodesText.setArgUpdatable("nodeWMatrix", true);
 
@@ -3041,17 +2461,17 @@ var Graph = exports.Graph = function () {
                 return 1;
             });
             this.comp_renderer_nodesText.setArg("bufferNodesWidth", function () {
-                return _this14.comp_renderer_nodes.getBuffers()["posXYZW"].W;
+                return _this11.comp_renderer_nodes.getBuffers()["posXYZW"].W;
             });
             this.comp_renderer_nodesText.setArg("bufferTextsWidth", function () {
-                return _this14.comp_renderer_nodesText.getBuffers()["data"].W;
+                return _this11.comp_renderer_nodesText.getBuffers()["data"].W;
             });
 
             var _loop4 = function _loop4(argNameKey) {
-                var expl = _this14._customArgs[argNameKey].arg.split("*");
+                var expl = _this11._customArgs[argNameKey].arg.split("*");
                 if (expl.length > 0) // argument is type buffer
-                    _this14.comp_renderer_nodesText.setArg(argNameKey, function () {
-                        return _this14._customArgs[argNameKey].nodestext_array_value;
+                    _this11.comp_renderer_nodesText.setArg(argNameKey, function () {
+                        return _this11._customArgs[argNameKey].nodestext_array_value;
                     });
             };
 
@@ -3070,68 +2490,64 @@ var Graph = exports.Graph = function () {
         //╚██████╔╝██║     ██████╔╝██║  ██║   ██║   ███████╗    ███████╗██║██║ ╚████║██║  ██╗███████║
         // ╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝    ╚══════╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝
         value: function updateLinks() {
-            var _this15 = this;
+            var _this12 = this;
 
             console.log(Object.keys(this._links).length + " links");
 
             this.comp_renderer_nodes.setArg("data", function () {
-                return _this15.arrayNodeData;
+                return _this12.arrayNodeData;
             });
-            //this.comp_renderer_nodes.setArg("dataB", () => {return this.arrayNodeDataB;});
 
             var _loop5 = function _loop5(na) {
-                _this15.linksObj[na].componentRenderer.setArg("data", function () {
-                    return _this15.linksObj[na].arrayLinkData;
+                _this12.linksObj[na].componentRenderer.setArg("data", function () {
+                    return _this12.linksObj[na].arrayLinkData;
                 });
-                _this15.linksObj[na].componentRenderer.setArg("dataC", function () {
-                    return _this15.linksObj[na].arrayLinkDataC;
+                _this12.linksObj[na].componentRenderer.getComponentBufferArg("dataB", _this12.comp_renderer_nodes);
+                _this12.linksObj[na].componentRenderer.getComponentBufferArg("posXYZW", _this12.comp_renderer_nodes);
+                _this12.linksObj[na].componentRenderer.setArg("nodeVertexPos", function () {
+                    return _this12.linksObj[na].arrayLinkVertexPos;
                 });
-                _this15.linksObj[na].componentRenderer.getComponentBufferArg("dataB", _this15.comp_renderer_nodes);
-                _this15.linksObj[na].componentRenderer.getComponentBufferArg("posXYZW", _this15.comp_renderer_nodes);
-                _this15.linksObj[na].componentRenderer.setArg("nodeVertexPos", function () {
-                    return _this15.linksObj[na].arrayLinkVertexPos;
-                });
-                _this15.linksObj[na].componentRenderer.setArg("indices", function () {
-                    return _this15.linksObj[na].arrayLinkIndices;
+                _this12.linksObj[na].componentRenderer.setArg("indices", function () {
+                    return _this12.linksObj[na].arrayLinkIndices;
                 });
 
-                _this15.linksObj[na].componentRenderer.setArg("nodesCount", function () {
-                    return _this15.currentNodeId;
+                _this12.linksObj[na].componentRenderer.setArg("nodesCount", function () {
+                    return _this12.currentNodeId;
                 });
-                _this15.linksObj[na].componentRenderer.setArg("PMatrix", function () {
-                    return _this15._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.PROJECTION).getMatrix().transpose().e;
+                _this12.linksObj[na].componentRenderer.setArg("PMatrix", function () {
+                    return _this12._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.PROJECTION).getMatrix().transpose().e;
                 });
-                _this15.linksObj[na].componentRenderer.setArgUpdatable("PMatrix", true);
-                _this15.linksObj[na].componentRenderer.setArg("cameraWMatrix", function () {
-                    return _this15._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.TRANSFORM_TARGET).getMatrix().transpose().e;
+                _this12.linksObj[na].componentRenderer.setArgUpdatable("PMatrix", true);
+                _this12.linksObj[na].componentRenderer.setArg("cameraWMatrix", function () {
+                    return _this12._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.TRANSFORM_TARGET).getMatrix().transpose().e;
                 });
-                _this15.linksObj[na].componentRenderer.setArgUpdatable("cameraWMatrix", true);
-                _this15.linksObj[na].componentRenderer.setArg("nodeWMatrix", function () {
-                    return _this15.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;
+                _this12.linksObj[na].componentRenderer.setArgUpdatable("cameraWMatrix", true);
+                _this12.linksObj[na].componentRenderer.setArg("nodeWMatrix", function () {
+                    return _this12.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;
                 });
-                _this15.linksObj[na].componentRenderer.setArgUpdatable("nodeWMatrix", true);
+                _this12.linksObj[na].componentRenderer.setArgUpdatable("nodeWMatrix", true);
 
-                _this15.linksObj[na].componentRenderer.setArg("isLink", function () {
+                _this12.linksObj[na].componentRenderer.setArg("isLink", function () {
                     return 1;
                 });
-                _this15.linksObj[na].componentRenderer.setArg("bufferNodesWidth", function () {
-                    return _this15.comp_renderer_nodes.getBuffers()["posXYZW"].W;
+                _this12.linksObj[na].componentRenderer.setArg("bufferNodesWidth", function () {
+                    return _this12.comp_renderer_nodes.getBuffers()["posXYZW"].W;
                 });
-                _this15.linksObj[na].componentRenderer.setArg("bufferLinksWidth", function () {
-                    return _this15.linksObj[na].componentRenderer.getBuffers()["data"].W;
+                _this12.linksObj[na].componentRenderer.setArg("bufferLinksWidth", function () {
+                    return _this12.linksObj[na].componentRenderer.getBuffers()["data"].W;
                 });
 
                 var _loop6 = function _loop6(argNameKey) {
-                    var expl = _this15._customArgs[argNameKey].arg.split("*");
+                    var expl = _this12._customArgs[argNameKey].arg.split("*");
                     if (expl.length > 0) {
                         // argument is type buffer
-                        _this15.linksObj[na].componentRenderer.setArg(argNameKey, function () {
-                            return _this15._customArgs[argNameKey].links_array_value;
+                        _this12.linksObj[na].componentRenderer.setArg(argNameKey, function () {
+                            return _this12._customArgs[argNameKey].links_array_value;
                         });
                     }
                 };
 
-                for (var argNameKey in _this15._customArgs) {
+                for (var argNameKey in _this12._customArgs) {
                     _loop6(argNameKey);
                 }
             };
@@ -3147,68 +2563,65 @@ var Graph = exports.Graph = function () {
     }, {
         key: "updateArrows",
         value: function updateArrows() {
-            var _this16 = this;
+            var _this13 = this;
 
             var _loop7 = function _loop7(na) {
-                _this16.arrowsObj[na].componentRenderer.setArg("data", function () {
-                    return _this16.arrowsObj[na].arrayArrowData;
+                _this13.arrowsObj[na].componentRenderer.setArg("data", function () {
+                    return _this13.arrowsObj[na].arrayArrowData;
                 });
-                _this16.arrowsObj[na].componentRenderer.setArg("dataC", function () {
-                    return _this16.arrowsObj[na].arrayArrowDataC;
-                });
-                _this16.arrowsObj[na].componentRenderer.getComponentBufferArg("dataB", _this16.comp_renderer_nodes);
-                _this16.arrowsObj[na].componentRenderer.getComponentBufferArg("posXYZW", _this16.comp_renderer_nodes);
+                _this13.arrowsObj[na].componentRenderer.getComponentBufferArg("dataB", _this13.comp_renderer_nodes);
+                _this13.arrowsObj[na].componentRenderer.getComponentBufferArg("posXYZW", _this13.comp_renderer_nodes);
 
-                _this16.arrowsObj[na].componentRenderer.setArg("nodeVertexPos", function () {
-                    return _this16.arrowsObj[na].arrayArrowVertexPos;
+                _this13.arrowsObj[na].componentRenderer.setArg("nodeVertexPos", function () {
+                    return _this13.arrowsObj[na].arrayArrowVertexPos;
                 });
-                _this16.arrowsObj[na].componentRenderer.setArg("nodeVertexNormal", function () {
-                    return _this16.arrowsObj[na].arrayArrowVertexNormal;
+                _this13.arrowsObj[na].componentRenderer.setArg("nodeVertexNormal", function () {
+                    return _this13.arrowsObj[na].arrayArrowVertexNormal;
                 });
-                _this16.arrowsObj[na].componentRenderer.setArg("nodeVertexTexture", function () {
-                    return _this16.arrowsObj[na].arrayArrowVertexTexture;
+                _this13.arrowsObj[na].componentRenderer.setArg("nodeVertexTexture", function () {
+                    return _this13.arrowsObj[na].arrayArrowVertexTexture;
                 });
-                _this16.arrowsObj[na].componentRenderer.setArg("indices", function () {
-                    return _this16.arrowsObj[na].arrayArrowIndices;
+                _this13.arrowsObj[na].componentRenderer.setArg("indices", function () {
+                    return _this13.arrowsObj[na].arrayArrowIndices;
                 });
 
-                _this16.arrowsObj[na].componentRenderer.setArg("PMatrix", function () {
-                    return _this16._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.PROJECTION).getMatrix().transpose().e;
+                _this13.arrowsObj[na].componentRenderer.setArg("PMatrix", function () {
+                    return _this13._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.PROJECTION).getMatrix().transpose().e;
                 });
-                _this16.arrowsObj[na].componentRenderer.setArgUpdatable("PMatrix", true);
-                _this16.arrowsObj[na].componentRenderer.setArg("cameraWMatrix", function () {
-                    return _this16._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.TRANSFORM_TARGET).getMatrix().transpose().e;
+                _this13.arrowsObj[na].componentRenderer.setArgUpdatable("PMatrix", true);
+                _this13.arrowsObj[na].componentRenderer.setArg("cameraWMatrix", function () {
+                    return _this13._project.getActiveStage().getActiveCamera().getComponent(Constants.COMPONENT_TYPES.TRANSFORM_TARGET).getMatrix().transpose().e;
                 });
-                _this16.arrowsObj[na].componentRenderer.setArgUpdatable("cameraWMatrix", true);
-                _this16.arrowsObj[na].componentRenderer.setArg("nodeWMatrix", function () {
-                    return _this16.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;
+                _this13.arrowsObj[na].componentRenderer.setArgUpdatable("cameraWMatrix", true);
+                _this13.arrowsObj[na].componentRenderer.setArg("nodeWMatrix", function () {
+                    return _this13.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;
                 });
-                _this16.arrowsObj[na].componentRenderer.setArgUpdatable("nodeWMatrix", true);
+                _this13.arrowsObj[na].componentRenderer.setArgUpdatable("nodeWMatrix", true);
 
-                _this16.arrowsObj[na].componentRenderer.setArg("nodesCount", function () {
-                    return _this16.currentNodeId;
+                _this13.arrowsObj[na].componentRenderer.setArg("nodesCount", function () {
+                    return _this13.currentNodeId;
                 });
-                _this16.arrowsObj[na].componentRenderer.setArg("isArrow", function () {
+                _this13.arrowsObj[na].componentRenderer.setArg("isArrow", function () {
                     return 1.0;
                 });
-                _this16.arrowsObj[na].componentRenderer.setArg("bufferNodesWidth", function () {
-                    return _this16.comp_renderer_nodes.getBuffers()["posXYZW"].W;
+                _this13.arrowsObj[na].componentRenderer.setArg("bufferNodesWidth", function () {
+                    return _this13.comp_renderer_nodes.getBuffers()["posXYZW"].W;
                 });
-                _this16.arrowsObj[na].componentRenderer.setArg("bufferArrowsWidth", function () {
-                    return _this16.arrowsObj[na].componentRenderer.getBuffers()["data"].W;
+                _this13.arrowsObj[na].componentRenderer.setArg("bufferArrowsWidth", function () {
+                    return _this13.arrowsObj[na].componentRenderer.getBuffers()["data"].W;
                 });
 
                 var _loop8 = function _loop8(argNameKey) {
-                    var expl = _this16._customArgs[argNameKey].arg.split("*");
+                    var expl = _this13._customArgs[argNameKey].arg.split("*");
                     if (expl.length > 0) {
                         // argument is type buffer
-                        _this16.arrowsObj[na].componentRenderer.setArg(argNameKey, function () {
-                            return _this16._customArgs[argNameKey].arrows_array_value;
+                        _this13.arrowsObj[na].componentRenderer.setArg(argNameKey, function () {
+                            return _this13._customArgs[argNameKey].arrows_array_value;
                         });
                     }
                 };
 
-                for (var argNameKey in _this16._customArgs) {
+                for (var argNameKey in _this13._customArgs) {
                     _loop8(argNameKey);
                 }
             };
@@ -3220,48 +2633,39 @@ var Graph = exports.Graph = function () {
     }, {
         key: "updateAdjMat",
         value: function updateAdjMat() {
-            var _this17 = this;
+            var _this14 = this;
 
-            var setAdjMat = function setAdjMat(columnAsParent, pixel, nodeId, nodeIdInv, bornDate, dieDate, weight, linkMultiplier, activationFunc, layerNum) {
+            var setAdjMat = function setAdjMat(columnAsParent, pixel, nodeId, nodeIdInv, weight, linkMultiplier, activationFunc, layerNum) {
                 var idx = pixel * 4;
 
-                _this17.arrAdjMatrix[idx] = bornDate;
-                _this17.arrAdjMatrix[idx + 1] = dieDate;
-                _this17.arrAdjMatrix[idx + 2] = columnAsParent === true ? _this17.disabVal : weight;
-                _this17.arrAdjMatrix[idx + 3] = columnAsParent === true ? 1.0 : 0.5; // columnAsParent=1.0;
+                _this14.arrAdjMatrix[idx] = layerNum;
+                _this14.arrAdjMatrix[idx + 1] = 0.0;
+                _this14.arrAdjMatrix[idx + 2] = columnAsParent === true ? 0.0 : weight;
+                _this14.arrAdjMatrix[idx + 3] = columnAsParent === true ? 1.0 : 0.5; // columnAsParent=1.0;
 
-                _this17.arrAdjMatrixB[idx] = linkMultiplier;
-                _this17.arrAdjMatrixB[idx + 1] = activationFunc;
-                _this17.arrAdjMatrixB[idx + 2] = nodeId;
-                _this17.arrAdjMatrixB[idx + 3] = nodeIdInv;
-
-                _this17.arrAdjMatrixC[idx] = 0.0; // error
-                _this17.arrAdjMatrixC[idx + 1] = layerNum;
-                _this17.arrAdjMatrixC[idx + 2] = 0.0;
-                _this17.arrAdjMatrixC[idx + 3] = 0.0;
+                _this14.arrAdjMatrixB[idx] = linkMultiplier; // not used here
+                _this14.arrAdjMatrixB[idx + 1] = activationFunc; // not used here
+                _this14.arrAdjMatrixB[idx + 2] = nodeId;
+                _this14.arrAdjMatrixB[idx + 3] = nodeIdInv;
             };
 
             this.arrAdjMatrix = new Float32Array(this._ADJ_MATRIX_WIDTH * this._ADJ_MATRIX_WIDTH * 4);
             this.arrAdjMatrixB = new Float32Array(this._ADJ_MATRIX_WIDTH * this._ADJ_MATRIX_WIDTH * 4);
-            this.arrAdjMatrixC = new Float32Array(this._ADJ_MATRIX_WIDTH * this._ADJ_MATRIX_WIDTH * 4);
             for (var key in this._links) {
                 var childNodeId = this._links[key].origin_nodeId;
                 var parentNodeId = this._links[key].target_nodeId;
 
                 var pixelParent = parentNodeId * this._ADJ_MATRIX_WIDTH + childNodeId;
                 var pixelChild = childNodeId * this._ADJ_MATRIX_WIDTH + parentNodeId;
-                setAdjMat(true, pixelParent, parentNodeId, childNodeId, this._links[key].bornDate, this._links[key].dieDate, this._links[key].weight, this._links[key].linkMultiplier, this._links[key].activationFunc, -99); // (columns=child;rows=parent)
-                setAdjMat(false, pixelChild, childNodeId, parentNodeId, this._links[key].bornDate, this._links[key].dieDate, this._links[key].weight, this._links[key].linkMultiplier, this._links[key].activationFunc, this._links[key].layerNum); // (columns=parent;rows=child)
+                setAdjMat(true, pixelParent, parentNodeId, childNodeId, this._links[key].weight, this._links[key].linkMultiplier, this._links[key].activationFunc, -99); // (columns=child;rows=parent)
+                setAdjMat(false, pixelChild, childNodeId, parentNodeId, this._links[key].weight, this._links[key].linkMultiplier, this._links[key].activationFunc, this._links[key].layerNum); // (columns=parent;rows=child)
             }
 
             this.comp_renderer_nodes.setArg("adjacencyMatrix", function () {
-                return _this17.arrAdjMatrix;
+                return _this14.arrAdjMatrix;
             });
             this.comp_renderer_nodes.setArg("adjacencyMatrixB", function () {
-                return _this17.arrAdjMatrixB;
-            });
-            this.comp_renderer_nodes.setArg("adjacencyMatrixC", function () {
-                return _this17.arrAdjMatrixC;
+                return _this14.arrAdjMatrixB;
             });
 
             /*
@@ -3281,15 +2685,15 @@ var Graph = exports.Graph = function () {
          * @param {Function} onload
          */
         value: function adjacencyMatrixToImage(adjMat, width, onload) {
-            var _this18 = this;
+            var _this15 = this;
 
             var toArrF = function toArrF(arr) {
                 var arrO = new Uint8Array(arr.length * 4);
-                for (var _n36 = 0; _n36 < arr.length; _n36++) {
-                    var idO = _n36 * 4;
-                    arrO[idO] = arr[_n36] * 255;
-                    arrO[idO + 1] = arr[_n36] * 255;
-                    arrO[idO + 2] = arr[_n36] * 255;
+                for (var n = 0; n < arr.length; n++) {
+                    var idO = n * 4;
+                    arrO[idO] = arr[n] * 255;
+                    arrO[idO + 1] = arr[n] * 255;
+                    arrO[idO + 2] = arr[n] * 255;
                     arrO[idO + 3] = 255;
                 }
 
@@ -3298,7 +2702,7 @@ var Graph = exports.Graph = function () {
 
             var toImage = function toImage(arrO, w, h) {
                 var canvas = Utils.getCanvasFromUint8Array(arrO, w, h);
-                _this18._utils.getImageFromCanvas(canvas, function (im) {
+                _this15._utils.getImageFromCanvas(canvas, function (im) {
                     onload(im);
                 });
             };
@@ -3331,20 +2735,6 @@ var Graph = exports.Graph = function () {
             }this._enabledForceLayout = false;
         }
     }, {
-        key: "enableForceLayoutCollision",
-        value: function enableForceLayoutCollision() {
-            this.comp_renderer_nodes.setArg("enableForceLayoutCollision", function () {
-                return 1.0;
-            });
-        }
-    }, {
-        key: "disableForceLayoutCollision",
-        value: function disableForceLayoutCollision() {
-            this.comp_renderer_nodes.setArg("enableForceLayoutCollision", function () {
-                return 0.0;
-            });
-        }
-    }, {
         key: "enableShowOutputWeighted",
         value: function enableShowOutputWeighted() {
             this.comp_renderer_nodes.setArg("multiplyOutput", function () {
@@ -3354,8 +2744,8 @@ var Graph = exports.Graph = function () {
                 this.linksObj[na].componentRenderer.setArg("multiplyOutput", function () {
                     return 1.0;
                 });
-            }for (var _na25 = 0; _na25 < this.arrowsObj.length; _na25++) {
-                this.arrowsObj[_na25].componentRenderer.setArg("multiplyOutput", function () {
+            }for (var _na16 = 0; _na16 < this.arrowsObj.length; _na16++) {
+                this.arrowsObj[_na16].componentRenderer.setArg("multiplyOutput", function () {
                     return 1.0;
                 });
             }
@@ -3370,31 +2760,11 @@ var Graph = exports.Graph = function () {
                 this.linksObj[na].componentRenderer.setArg("multiplyOutput", function () {
                     return 0.0;
                 });
-            }for (var _na26 = 0; _na26 < this.arrowsObj.length; _na26++) {
-                this.arrowsObj[_na26].componentRenderer.setArg("multiplyOutput", function () {
+            }for (var _na17 = 0; _na17 < this.arrowsObj.length; _na17++) {
+                this.arrowsObj[_na17].componentRenderer.setArg("multiplyOutput", function () {
                     return 0.0;
                 });
             }
-        }
-    }], [{
-        key: "datetimeToTimestamp",
-
-
-        /**
-         * datetimeToTimestamp
-         * @example
-         * let ts = datetimeToTimestamp("24-Nov-2009 17:57:35")
-         * */
-        value: function datetimeToTimestamp(dt) {
-            return Date.parse(dt);
-        }
-    }, {
-        key: "timestampToDate",
-        value: function timestampToDate(ts) {
-            var d = new Date(ts);
-            d = d.toISOString().split("T")[0].split("-");
-
-            return d[2] + "/" + d[1] + "/" + d[0];
         }
     }]);
 
@@ -3429,9 +2799,7 @@ var KERNEL_ADJMATRIX_UPDATE = exports.KERNEL_ADJMATRIX_UPDATE = function () {
             "",
 
             // source
-            // adjacencyMatrix= bornDate, dieDate, weight(childs), isParent(1.0:parent;0.5:child)
-            // adjacencyMatrixB= linkMultiplier, activationFunc, nodeId, nodeIdInv
-            "vec4 adjMat = adjacencyMatrix[x]; \n            vec4 adjMatB = adjacencyMatrixB[x]; \n            vec4 adjMatC = adjacencyMatrixC[x]; \n\n            float linkBornDate = adjMat.x;\n            float linkDieDate = adjMat.y;\n            float linkWeight = adjMat.z;\n            float linkTypeParent = adjMat.w;\n\n            float id = adjMatB.z;\n            float idInv = adjMatB.w;\n            float linkLayerNum = adjMatC.y;\n\n           if(linkTypeParent == 0.5) {\n                vec2 xGeometryCurrentChild = get_global_id(id, bufferNodesWidth, " + geometryLength.toFixed(1) + ");\n                vec2 xGeometryParent = get_global_id(idInv, bufferNodesWidth, " + geometryLength.toFixed(1) + ");\n\n                float childGOutputA = dataB[xGeometryCurrentChild].z;\n                float parentGErrorA = dataB[xGeometryParent].w;\n                \n                float childGOutputB = dataF[xGeometryCurrentChild].x;\n                float parentGErrorB = dataF[xGeometryParent].y;\n                \n                float childGOutputC = dataF[xGeometryCurrentChild].z;\n                float parentGErrorC = dataF[xGeometryParent].w;\n                \n                float childGOutputD = dataG[xGeometryCurrentChild].x;\n                float parentGErrorD = dataG[xGeometryParent].y;\n                \n                float childGOutputE = dataG[xGeometryCurrentChild].z;\n                float parentGErrorE = dataG[xGeometryParent].w;\n                \n                float childGOutputF = dataH[xGeometryCurrentChild].x;\n                float parentGErrorF = dataH[xGeometryParent].y;\n                \n                float childGOutputG = dataH[xGeometryCurrentChild].z;\n                float parentGErrorG = dataH[xGeometryParent].w;                \n            \n                if(linkLayerNum > 0.0) {                        \n                    float learningRate = 0.01;\n                    float l2_decay = 0.01;\n                    float cpu_batch_repeats = 7.0;\n                    linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputA*parentGErrorA))/(7.0*cpu_batch_repeats));\n                    linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputB*parentGErrorB))/(7.0*cpu_batch_repeats));\n                    linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputC*parentGErrorC))/(7.0*cpu_batch_repeats));\n                    linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputD*parentGErrorD))/(7.0*cpu_batch_repeats));\n                    linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputE*parentGErrorE))/(7.0*cpu_batch_repeats));\n                    linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputF*parentGErrorF))/(7.0*cpu_batch_repeats));\n                    linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputG*parentGErrorG))/(7.0*cpu_batch_repeats));\n                }\n            }\n            \n            return [vec4(linkBornDate, linkDieDate, linkWeight, linkTypeParent)];\n            "];
+            "vec4 adjMat = adjacencyMatrix[x]; \n            vec4 adjMatB = adjacencyMatrixB[x];\n\n            float linkLayerNum = adjMat.x;\n            float linkWeight = adjMat.z;\n            float linkTypeParent = adjMat.w;\n            \n            if(linkTypeParent == 0.5 && linkLayerNum > 0.0) {\n                float id = adjMatB.z;\n                float idInv = adjMatB.w;\n            \n                vec2 xGeometryCurrentChild = get_global_id(id, bufferNodesWidth, " + geometryLength.toFixed(1) + ");\n                vec2 xGeometryParent = get_global_id(idInv, bufferNodesWidth, " + geometryLength.toFixed(1) + ");\n\n                float childGOutputA = dataB[xGeometryCurrentChild].z;\n                float parentGErrorA = dataB[xGeometryParent].w;\n                \n                float childGOutputB = dataF[xGeometryCurrentChild].x;\n                float parentGErrorB = dataF[xGeometryParent].y;\n                \n                float childGOutputC = dataF[xGeometryCurrentChild].z;\n                float parentGErrorC = dataF[xGeometryParent].w;\n                \n                float childGOutputD = dataG[xGeometryCurrentChild].x;\n                float parentGErrorD = dataG[xGeometryParent].y;\n                \n                float childGOutputE = dataG[xGeometryCurrentChild].z;\n                float parentGErrorE = dataG[xGeometryParent].w;\n                \n                float childGOutputF = dataH[xGeometryCurrentChild].x;\n                float parentGErrorF = dataH[xGeometryParent].y;\n                \n                float childGOutputG = dataH[xGeometryCurrentChild].z;\n                float parentGErrorG = dataH[xGeometryParent].w;\n            \n                float learningRate = 0.01;\n                float l2_decay = 0.01;\n                float cpu_batch_repeats = 7.0;\n                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputA*parentGErrorA))/(7.0*cpu_batch_repeats));\n                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputB*parentGErrorB))/(7.0*cpu_batch_repeats));\n                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputC*parentGErrorC))/(7.0*cpu_batch_repeats));\n                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputD*parentGErrorD))/(7.0*cpu_batch_repeats));\n                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputE*parentGErrorE))/(7.0*cpu_batch_repeats));\n                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputF*parentGErrorF))/(7.0*cpu_batch_repeats));\n                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputG*parentGErrorG))/(7.0*cpu_batch_repeats));\n            }\n            \n            return [vec4(linkLayerNum, 0.0, linkWeight, linkTypeParent)];\n            "];
         }
     }]);
 
@@ -3446,7 +2814,7 @@ module.exports.KERNEL_ADJMATRIX_UPDATE = KERNEL_ADJMATRIX_UPDATE;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+                    value: true
 });
 exports.KERNEL_DIR = undefined;
 
@@ -3457,33 +2825,26 @@ var _graphUtil = require("./graphUtil");
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var KERNEL_DIR = exports.KERNEL_DIR = function () {
-    function KERNEL_DIR() {
-        _classCallCheck(this, KERNEL_DIR);
-    }
+                    function KERNEL_DIR() {
+                                        _classCallCheck(this, KERNEL_DIR);
+                    }
 
-    _createClass(KERNEL_DIR, null, [{
-        key: "getSrc",
-        value: function getSrc(customCode, geometryLength, efferentStart, efferentNodesCount, _enableNeuronalNetwork) {
-            var outputArr = null;
-            var returnStr = null;
-            if (_enableNeuronalNetwork === true) {
-                outputArr = ["dir", "posXYZW", "dataB", "dataF", "dataG", "dataH"];
-                returnStr = 'return [vec4(currentDir, 1.0), vec4(currentPos.x, currentPos.y, currentPos.z, 1.0), currentDataB, currentDataF, currentDataG, currentDataH];';
-            } else {
-                outputArr = ["dir", "posXYZW"];
-                returnStr = 'return [vec4(currentDir, 1.0), vec4(currentPos.x, currentPos.y, currentPos.z, 1.0)];';
-            }
+                    _createClass(KERNEL_DIR, null, [{
+                                        key: "getSrc",
+                                        value: function getSrc(customCode, geometryLength, efferentStart, efferentNodesCount) {
+                                                            var outputArr = ["dir", "posXYZW", "dataB", "dataF", "dataG", "dataH"];
+                                                            var returnStr = 'return [vec4(currentDir, 1.0), vec4(currentPos.x, currentPos.y, currentPos.z, 1.0), currentDataB, currentDataF, currentDataG, currentDataH];';
 
-            return ["x", outputArr,
-            // head
-            _graphUtil.GraphUtils.adjMatrix_ForceLayout_GLSLFunctionString(geometryLength, efferentStart, efferentNodesCount),
+                                                            return ["x", outputArr,
+                                                            // head
+                                                            _graphUtil.GraphUtils.adjMatrix_ForceLayout_GLSLFunctionString(geometryLength, efferentStart, efferentNodesCount),
 
-            // source
-            "float nodeId = data[x].x;\n                    float numOfConnections = data[x].y;\n                    vec2 xGeometry = get_global_id(nodeId, uBufferWidth, " + geometryLength.toFixed(1) + ");\n\n\n                    vec3 currentPos = posXYZW[xGeometry].xyz;\n\n                    float bornDate = dataB[xGeometry].x;\n                    float dieDate = dataB[xGeometry].y;\n\n                    vec3 currentDir = dir[xGeometry].xyz;\n\n\n                    vec4 currentDataB = dataB[xGeometry];\n                    vec4 currentDataF = dataF[xGeometry];\n                    vec4 currentDataG = dataG[xGeometry];\n                    vec4 currentDataH = dataH[xGeometry];\n\n                    currentDir = vec3(0.0, 0.0, 0.0);\n\n                    if(enableForceLayout == 1.0) {\n                        idAdjMatrixResponse adjM = idAdjMatrix_ForceLayout(nodeId, currentPos, currentDir, numOfConnections, currentTimestamp, bornDate, dieDate, enableNeuronalNetwork);\n                        currentDir = (adjM.collisionExists == 1.0) ? adjM.force : currentDir+(adjM.force*1.0);\n\n                        if(enableNeuronalNetwork == 1.0 && currentTrainLayer == -3.0) {\n                            currentDataB = vec4(currentDataB.x, currentDataB.y, adjM.netFOutputA, adjM.netErrorWeightA);\n                            currentDataF = vec4(adjM.netFOutputB, adjM.netErrorWeightB, adjM.netFOutputC, adjM.netErrorWeightC);\n                            currentDataG = vec4(adjM.netFOutputD, adjM.netErrorWeightD, adjM.netFOutputE, adjM.netErrorWeightE);\n                            currentDataH = vec4(adjM.netFOutputF, adjM.netErrorWeightF, adjM.netFOutputG, adjM.netErrorWeightG);\n                        }\n                    }\n\n                    " + (customCode !== undefined ? customCode : '') + "\n\n                    if(enableDrag == 1.0) {\n                        if(nodeId == idToDrag) {\n                            currentPos = vec3(MouseDragTranslationX, MouseDragTranslationY, MouseDragTranslationZ);\n                        }\n                    }\n\n                    currentPos += currentDir;\n                    if(only2d == 1.0) {\n                        currentPos.y = 0.0;\n                    }\n\n                    " + returnStr];
-        }
-    }]);
+                                                            // source
+                                                            "float nodeId = data[x].x;\n                    float numOfConnections = data[x].y;\n                    vec2 xGeometry = get_global_id(nodeId, uBufferWidth, " + geometryLength.toFixed(1) + ");\n\n\n                    vec3 currentPos = posXYZW[xGeometry].xyz;\n                    vec3 currentDir = dir[xGeometry].xyz;\n\n\n                    vec4 currentDataB = dataB[xGeometry];\n                    vec4 currentDataF = dataF[xGeometry];\n                    vec4 currentDataG = dataG[xGeometry];\n                    vec4 currentDataH = dataH[xGeometry];\n\n                    currentDir = vec3(0.0, 0.0, 0.0);\n\n                    idAdjMatrixResponse adjM = idAdjMatrix_ForceLayout(nodeId, currentPos, currentDir, numOfConnections);\n                    currentDir += adjM.force;\n\n                    if(currentTrainLayer == -3.0) {\n                        currentDataB = vec4(currentDataB.x, currentDataB.y, adjM.netFOutputA, adjM.netErrorWeightA);\n                        currentDataF = vec4(adjM.netFOutputB, adjM.netErrorWeightB, adjM.netFOutputC, adjM.netErrorWeightC);\n                        currentDataG = vec4(adjM.netFOutputD, adjM.netErrorWeightD, adjM.netFOutputE, adjM.netErrorWeightE);\n                        currentDataH = vec4(adjM.netFOutputF, adjM.netErrorWeightF, adjM.netFOutputG, adjM.netErrorWeightG);\n                    }\n\n                    " + (customCode !== undefined ? customCode : '') + "\n\n                    if(enableDrag == 1.0) {\n                        if(nodeId == idToDrag) {\n                            currentPos = vec3(MouseDragTranslationX, MouseDragTranslationY, MouseDragTranslationZ);\n                        }\n                    }\n\n                    currentPos += currentDir;\n                    if(only2d == 1.0) {\n                        currentPos.y = 0.0;\n                    }\n\n                    " + returnStr];
+                                        }
+                    }]);
 
-    return KERNEL_DIR;
+                    return KERNEL_DIR;
 }();
 
 global.KERNEL_DIR = KERNEL_DIR;
@@ -3669,22 +3030,9 @@ var VFP_NODE = exports.VFP_NODE = function () {
             //╚██╗ ██╔╝██╔══╝  ██╔══██╗   ██║   ██╔══╝   ██╔██╗     ██╔══██║██╔══╝  ██╔══██║██║  ██║
             // ╚████╔╝ ███████╗██║  ██║   ██║   ███████╗██╔╝ ██╗    ██║  ██║███████╗██║  ██║██████╔╝
             //  ╚═══╝  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝    ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝
-            'varying vec4 vVertexColor;\n' + 'varying vec4 vVertexColorNetError;\n' + 'varying vec4 vUV;\n' + 'varying vec2 vVertexUV;\n' + 'varying float vUseTex;\n' + 'varying vec4 vWNMatrix;\n' + 'varying float vNodeId;\n' + 'varying float vNodeIdOpposite;\n' + 'varying float vDist;\n' + 'varying float vVisibility;\n' + 'varying float vIsSelected;\n' + 'varying float vIsHover;\n' + 'varying float vUseCrosshair;\n' + 'varying float vIstarget;\n' + 'vec2 get2Dfrom1D(float idx, float columns) {' + 'float n = idx/columns;' + 'float row = float(int(n));' + 'float col = fract(n)*columns;' + 'float ts = 1.0/columns;' + 'return vec2(ts*col, ts*row);' + '}' + 'mat4 lookAt(vec3 eye, vec3 center, vec3 up) {' + 'vec3 zaxis = normalize(center - eye);' + 'vec3 xaxis = normalize(cross(up, zaxis));' + 'vec3 yaxis = cross(zaxis, xaxis);' + 'mat4 matrix;' +
+            'varying vec4 vVertexColor;\n' + 'varying vec4 vVertexColorNetError;\n' + 'varying vec4 vUV;\n' + 'varying vec2 vVertexUV;\n' + 'varying float vUseTex;\n' + 'varying vec4 vWNMatrix;\n' + 'varying float vNodeId;\n' + 'varying float vNodeIdOpposite;\n' + 'varying float vDist;\n' + 'varying float vIsSelected;\n' + 'varying float vIsHover;\n' + 'varying float vUseCrosshair;\n' + 'varying float vIstarget;\n' + 'vec2 get2Dfrom1D(float idx, float columns) {' + 'float n = idx/columns;' + 'float row = float(int(n));' + 'float col = fract(n)*columns;' + 'float ts = 1.0/columns;' + 'return vec2(ts*col, ts*row);' + '}' + 'mat4 lookAt(vec3 eye, vec3 center, vec3 up) {' + 'vec3 zaxis = normalize(center - eye);' + 'vec3 xaxis = normalize(cross(up, zaxis));' + 'vec3 yaxis = cross(zaxis, xaxis);' + 'mat4 matrix;' +
             //Column Major
-            'matrix[0][0] = xaxis.x;' + 'matrix[1][0] = yaxis.x;' + 'matrix[2][0] = zaxis.x;' + 'matrix[3][0] = 0.0;' + 'matrix[0][1] = xaxis.y;' + 'matrix[1][1] = yaxis.y;' + 'matrix[2][1] = zaxis.y;' + 'matrix[3][1] = 0.0;' + 'matrix[0][2] = xaxis.z;' + 'matrix[1][2] = yaxis.z;' + 'matrix[2][2] = zaxis.z;' + 'matrix[3][2] = 0.0;' + 'matrix[0][3] = -dot(xaxis, eye);' + 'matrix[1][3] = -dot(yaxis, eye);' + 'matrix[2][3] = -dot(zaxis, eye);' + 'matrix[3][3] = 1.0;' + 'return matrix;' + '}' + 'mat4 transpose(mat4 m) {' + 'return mat4(  m[0][0], m[1][0], m[2][0], m[3][0],' + 'm[0][1], m[1][1], m[2][1], m[3][1],' + 'm[0][2], m[1][2], m[2][2], m[3][2],' + 'm[0][3], m[1][3], m[2][3], m[3][3]);' + '}' + 'mat4 rotationMatrix(vec3 axis, float angle) {' + 'axis = normalize(axis);' + 'float s = sin(angle);' + 'float c = cos(angle);' + 'float oc = 1.0 - c;' + 'return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,' + 'oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,' + 'oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,' + '0.0,                                0.0,                                0.0,                                1.0);' + '}' + _graphUtil.GraphUtils.adjMatrix_Autolink_GLSLFunctionString(geometryLength) + Utils.degToRadGLSLFunctionString() + Utils.radToDegGLSLFunctionString() + Utils.cartesianToSphericalGLSLFunctionString() + Utils.sphericalToCartesianGLSLFunctionString() + Utils.getVectorGLSLFunctionString() + 'vec3 getVV(vec3 crB, float acum) {' + 'vec3 ob = cartesianToSpherical(crB);' + 'float angleLat = ob.y;' + 'float angleLng = ob.z;' + 'float desvLat = 0.0;' + // (vecNoise.x*180.0)-90.0
-            'float desvLng = 10.0;' + // (vecNoise.x*180.0)-90.0
-            //'angleLat += (degrees*desvLat);'+
-            'angleLng += (acum*desvLng);' + 'return sphericalToCartesian(vec3(1.0, angleLat, angleLng));' + '}' + 'float getOddEven(float repeatId) {' + 'return (ceil(fract(repeatId/2.0)) == 0.0) ? 1.0*floor(repeatId/2.0) : -1.0*floor(repeatId/2.0);' + '}' + 'vec3 getFirstDispl(float nodeId, vec4 currentPosition, float repeatId) {' + 'float repeatDistribution = -0.1;' +
-            // first check output edges of own node and return the node (textCoord for get posXYZW) with max available angle to the right
-            'vec4 adjMatrix = idAdjMatrix_Autolink(nodeId, currentPosition.xyz);' + 'vec3 initialVec = normalize(posXYZW[adjMatrix.xy].xyz-currentPosition.xyz)*vec3(1.0, -1.0, 1.0);' + 'float totalAngleRelations = adjMatrix.z;' +
-            // then first sum half of available angle received
-            'initialVec = getVV(initialVec, (totalAngleRelations/2.0)*repeatDistribution);' +
-            // and now left or right (oddEven)
-            'return getVV(initialVec, getOddEven(repeatId)*totalAngleRelations*0.01);' + '}' + 'float checkLinkArrowVisibility(float currentTimestamp, float bornDate, float dieDate, float bornDateOpposite, float dieDateOpposite, float linkBornDate, float linkDieDate) {' + 'float visible =1.0;' + 'if(dieDate != 0.0) {' + 'if((currentTimestamp < bornDate || currentTimestamp > dieDate) || (currentTimestamp < bornDateOpposite || currentTimestamp > dieDateOpposite)) {' + 'visible = 0.0;' + '} else {' +
-            // now check link
-            'if(linkDieDate != 0.0) {' + 'if(currentTimestamp < linkBornDate || currentTimestamp > linkDieDate) {' + 'visible = 0.0;' + '}' + '}' + '}' + '} else {' +
-            // now check link
-            'if(linkDieDate != 0.0) {' + 'if(currentTimestamp < linkBornDate || currentTimestamp > linkDieDate) {' + 'visible = 0.0;' + '}' + '}' + '}' + 'return visible;' + '}',
+            'matrix[0][0] = xaxis.x;' + 'matrix[1][0] = yaxis.x;' + 'matrix[2][0] = zaxis.x;' + 'matrix[3][0] = 0.0;' + 'matrix[0][1] = xaxis.y;' + 'matrix[1][1] = yaxis.y;' + 'matrix[2][1] = zaxis.y;' + 'matrix[3][1] = 0.0;' + 'matrix[0][2] = xaxis.z;' + 'matrix[1][2] = yaxis.z;' + 'matrix[2][2] = zaxis.z;' + 'matrix[3][2] = 0.0;' + 'matrix[0][3] = -dot(xaxis, eye);' + 'matrix[1][3] = -dot(yaxis, eye);' + 'matrix[2][3] = -dot(zaxis, eye);' + 'matrix[3][3] = 1.0;' + 'return matrix;' + '}' + 'mat4 transpose(mat4 m) {' + 'return mat4(  m[0][0], m[1][0], m[2][0], m[3][0],' + 'm[0][1], m[1][1], m[2][1], m[3][1],' + 'm[0][2], m[1][2], m[2][2], m[3][2],' + 'm[0][3], m[1][3], m[2][3], m[3][3]);' + '}' + 'mat4 rotationMatrix(vec3 axis, float angle) {' + 'axis = normalize(axis);' + 'float s = sin(angle);' + 'float c = cos(angle);' + 'float oc = 1.0 - c;' + 'return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,' + 'oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,' + 'oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,' + '0.0,                                0.0,                                0.0,                                1.0);' + '}' + Utils.degToRadGLSLFunctionString() + Utils.radToDegGLSLFunctionString() + Utils.cartesianToSphericalGLSLFunctionString() + Utils.sphericalToCartesianGLSLFunctionString() + Utils.getVectorGLSLFunctionString(),
 
             //██╗   ██╗███████╗██████╗ ████████╗███████╗██╗  ██╗    ███████╗ ██████╗ ██╗   ██╗██████╗  ██████╗███████╗
             //██║   ██║██╔════╝██╔══██╗╚══██╔══╝██╔════╝╚██╗██╔╝    ██╔════╝██╔═══██╗██║   ██║██╔══██╗██╔════╝██╔════╝
@@ -3692,43 +3040,7 @@ var VFP_NODE = exports.VFP_NODE = function () {
             //╚██╗ ██╔╝██╔══╝  ██╔══██╗   ██║   ██╔══╝   ██╔██╗     ╚════██║██║   ██║██║   ██║██╔══██╗██║     ██╔══╝
             // ╚████╔╝ ███████╗██║  ██║   ██║   ███████╗██╔╝ ██╗    ███████║╚██████╔╝╚██████╔╝██║  ██║╚██████╗███████╗
             //  ╚═══╝  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝    ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚══════╝
-            'float nodeId = data[].x;' + 'float nodeIdOpposite = data[].y;' + 'float currentLineVertex = data[].z;' + // this is isTarget for arrows
-            'float repeatId = data[].w;' + 'vec2 xGeometryNode = get_global_id(nodeId, bufferNodesWidth, ' + geometryLength.toFixed(1) + ');' + // bufferWidth6, geometryLength
-            'vec2 xGeometryNode_opposite = get_global_id(nodeIdOpposite, bufferNodesWidth, ' + geometryLength.toFixed(1) + ');' + 'vec2 xGeometryLinks = get_global_id(nodeId, bufferLinksWidth, 2.0);' + // bufferWidth, geometryLength
-            'vec2 xGeometryLinks_opposite = get_global_id(nodeIdOpposite, bufferLinksWidth, 2.0);' + 'vec2 xGeometryArrows = get_global_id(nodeId, bufferArrowsWidth, 3.0);' + // bufferWidth, geometryLength
-            'vec2 xGeometryArrows_opposite = get_global_id(nodeIdOpposite, bufferArrowsWidth, 3.0);' + 'vec2 xGeometryText = get_global_id(nodeId, bufferTextsWidth, 4.0*12.0);' + // bufferWidth, geometryLength
-            'vec2 xGeometryText_opposite = get_global_id(nodeIdOpposite, bufferTextsWidth, 4.0*12.0);' + 'vec4 nodeVertexPosition = nodeVertexPos[];\n' + 'vec4 nodeVertexTex = nodeVertexTexture[];\n' + 'float linkBornDate = dataC[].x;' + 'float linkDieDate = dataC[].y;' + 'float bornDate = dataB[xGeometryNode].x;' + 'float dieDate = dataB[xGeometryNode].y;' + 'float foutput = dataB[xGeometryNode].z;' + 'float error = dataF[xGeometryNode].x;' + 'float bornDateOpposite = dataB[xGeometryNode_opposite].x;' + 'float dieDateOpposite = dataB[xGeometryNode_opposite].y;' + 'vec4 currentPosition = posXYZW[xGeometryNode];\n' + 'vec3 oppositePosition = posXYZW[xGeometryNode_opposite].xyz;\n' + 'vec4 nodeVertexColor = vec4(1.0, 1.0, 1.0, 1.0);\n' + 'vec4 nodeVertexColorNetError = vec4(1.0, 1.0, 1.0, 1.0);\n' + 'vec3 dir = oppositePosition-vec3(currentPosition.x, currentPosition.y, currentPosition.z);' + 'float dist = length(dir);' + 'float vertexCount = 1.0;' + 'float lineIncrements = dist/vertexCount;' + 'vec3 dirN = normalize(dir);' + 'vec3 cr = cross(dirN, vec3(0.0, 1.0, 0.0));' + 'float currentLineVertexSQRT = abs( currentLineVertex-(vertexCount/2.0) )/(vertexCount/2.0);' + 'currentLineVertexSQRT = sqrt(1.0-currentLineVertexSQRT);' + 'vVertexUV = vec2(-1.0, -1.0);' + 'vDist = max(0.3, 1.0-(distance(currentPosition.xyz, oppositePosition)*0.01));\n' + // dist/acum
-
-            'mat4 nodepos = nodeWMatrix;' + 'if(isNode == 1.0) {' + 'vVisibility = 1.0;' + 'currentPosition += vec4(0.0, 0.1, 0.0, 1.0);' + 'mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);' + 'nodepos = nodepos*mm;' + 'float nodeImgId = nodeImgId[];' + 'if(nodeImgId != -1.0) {' + 'vUseTex = 1.0;' + 'vVertexUV = get2Dfrom1D(nodeImgId, nodeImgColumns)+vec2(nodeVertexTexture.x/nodeImgColumns,nodeVertexTexture.y/nodeImgColumns);' + '}' + 'if(dieDate != 0.0 && (currentTimestamp < bornDate || currentTimestamp > dieDate)) ' + 'vVisibility = 0.0;' + 'if(enableNeuronalNetwork == 1.0) {' + 'nodeVertexColor = vec4(0.0, 0.0, 0.0, 1.0);' + 'if(foutput > 0.0) ' + 'nodeVertexColor = vec4(abs(foutput), abs(foutput), abs(foutput), 1.0);' + 'else if(foutput < 0.0) ' + 'nodeVertexColor = vec4(abs(foutput), 0.0, 0.0, 1.0);' + 'if(error > 0.0) ' + 'nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);' + 'else if(error < 0.0) ' + 'nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);' + 'else ' + 'nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);' + '}' + 'vIsSelected = (idToDrag == data[].x) ? 1.0 : 0.0;' + 'vIsHover = (idToHover == data[].x) ? 1.0 : 0.0;' + '}' + 'if(isLink == 1.0) {' + 'if(xGeometryLinks != xGeometryLinks_opposite) {' +
-            // displacing from center to first point
-            'currentPosition += vec4(dirN*(lineIncrements*currentLineVertex), 1.0);' +
-
-            // displacing from first point to cross direction (repeatId)
-            'if(currentLineVertex != 0.0 && currentLineVertex != vertexCount) ' + 'currentPosition += vec4(cr*currentLineVertexSQRT*getOddEven(repeatId)*4.0, 1.0);' + '} else {' + // is Autolink
-            'float currentLineVertexMM = abs( currentLineVertex-(vertexCount/2.0) );' + 'currentLineVertexMM = (vertexCount/2.0)-currentLineVertexMM;' +
-
-            // displacing from center to first point
-            'vec3 initialVec = getFirstDispl(nodeId, currentPosition, repeatId);' + 'currentPosition += vec4(initialVec*(5.0*currentLineVertexMM), 1.0);' +
-
-            // displacing from first point to cross direction (repeatId)
-            'if(currentLineVertex != 0.0 && currentLineVertex != vertexCount) {' + 'float sig = (currentLineVertex > (vertexCount/2.0)) ? 1.0 : -1.0;' + 'vec3 crB = cross(vec3(0.0, 1.0, 0.0), initialVec);' + 'float hhSCount = (vertexCount/2.0)/2.0;' + 'float currentLineVertexMMB = hhSCount-(abs(currentLineVertexMM-hhSCount));' + 'currentPosition += vec4((crB*sig)*currentLineVertexMMB*1.0, 1.0);' + '}' + '}' + 'vVisibility = checkLinkArrowVisibility(currentTimestamp, bornDate, dieDate, bornDateOpposite, dieDateOpposite, linkBornDate, linkDieDate);' + 'vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;' + 'vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;' + 'if(enableNeuronalNetwork == 1.0) {' + 'nodeVertexColor = vec4(abs(foutput), abs(foutput), abs(foutput), 1.0);' + 'if(error > 0.0) ' + 'nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);' + 'else if(error < 0.0) ' + 'nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);' + 'else ' + 'nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);' + '}' + '}' + 'if(isArrow == 1.0) {' + 'vec3 currentPositionTMP;' + 'if(xGeometryArrows != xGeometryArrows_opposite) {' +
-            // displacing from center to first point
-            'float currentLineVertexU = vertexCount-1.0;' + 'currentPositionTMP = oppositePosition+((dirN*-1.0)*(lineIncrements*currentLineVertexU));' +
-
-            // displacing from first point to cross direction (repeatId)
-            'currentPositionTMP -= cr*(currentLineVertexSQRT*getOddEven(repeatId)*4.0);' + '} else {' + // is Autolink
-            'float currentLineVertexU = vertexCount-1.0;' + 'float currentLineVertexMM = abs( currentLineVertexU-(vertexCount/2.0) );' + 'currentLineVertexMM = (vertexCount/2.0)-currentLineVertexMM;' +
-
-            // displacing from center to first point
-            'vec3 initialVec = getFirstDispl(nodeId, currentPosition, repeatId);' + 'currentPositionTMP = oppositePosition+(initialVec*(5.0*currentLineVertexMM));' +
-
-            // displacing from first point to cross direction (repeatId)
-            'if(currentLineVertex != 0.0 && currentLineVertex != vertexCount) {' + 'float sig = (currentLineVertex > (vertexCount/2.0)) ? 1.0 : -1.0;' + 'vec3 crB = cross(vec3(0.0, 1.0, 0.0), initialVec);' + 'float hhSCount = (vertexCount/2.0)/2.0;' + 'float currentLineVertexMMB = hhSCount-(abs(currentLineVertexMM-hhSCount));' + 'currentPositionTMP += (crB*sig)*currentLineVertexMMB*1.0;' +
-            //'currentPositionTMP -= vec4((crB*sig)*(currentLineVertexSQRT*(repeatId+1.0)*4.0), 1.0);'+
-            '}' + '}' + 'mat4 pp = lookAt(currentPositionTMP, vec3(currentPosition.x, currentPosition.y, currentPosition.z), vec3(0.0, 1.0, 0.0));' + 'pp = transpose(pp);' + 'nodepos[0][0] = pp[0][0];' + 'nodepos[0][1] = pp[1][0];' + 'nodepos[0][2] = pp[2][0];' + 'nodepos[1][0] = pp[0][1];' + 'nodepos[1][1] = pp[1][1];' + 'nodepos[1][2] = pp[2][1];' + 'nodepos[2][0] = pp[0][2];' + 'nodepos[2][1] = pp[1][2];' + 'nodepos[2][2] = pp[2][2];' +
-
-            // displace from center to node border
-            'dir = currentPositionTMP-vec3(currentPosition.x, currentPosition.y, currentPosition.z);' + 'currentPosition += vec4(normalize(dir),1.0)*2.0;' + 'vVisibility = checkLinkArrowVisibility(currentTimestamp, bornDate, dieDate, bornDateOpposite, dieDateOpposite, linkBornDate, linkDieDate);' + 'vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;' + 'vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;' + '}' + 'if(isNodeText == 1.0) {' + 'float letId = letterId[];\n' + 'mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);' + 'nodepos = nodepos*mm;' + 'vVertexUV = get2Dfrom1D(letId, fontImgColumns)+vec2(nodeVertexTexture.x/fontImgColumns,nodeVertexTexture.y/fontImgColumns);' + 'nodeVertexPosition = vec4(nodeVertexPosition.x*0.1, nodeVertexPosition.y*0.1, nodeVertexPosition.z*0.1, 1.0);' + 'currentPosition.z += 2.5;' + 'vVisibility = 1.0;' + 'vIsSelected = (idToDrag == data[].x) ? 1.0 : 0.0;' + 'vIsHover = (idToHover == data[].x) ? 1.0 : 0.0;' + '}' + 'nodepos[3][0] = currentPosition.x;' + 'nodepos[3][1] = currentPosition.y;' + 'nodepos[3][2] = currentPosition.z;' + 'mat4 nodeposG = nodeWMatrix;' + 'vWNMatrix = nodeposG * nodeVertexNormal[];\n' + 'vUseCrosshair = 0.0;' + 'vIstarget = (currentLineVertex == 1.0) ? 1.0 : 0.0;' + customCode + 'vVertexColor = nodeVertexColor;' + 'vVertexColorNetError = nodeVertexColorNetError;' + 'vUV = nodeVertexTexture;' + 'vNodeId = nodeId;\n' + 'vNodeIdOpposite = nodeIdOpposite;\n' + 'gl_Position = PMatrix * cameraWMatrix * nodepos * nodeVertexPosition;\n',
+            "\n            mat4 nodepos = nodeWMatrix;\n            \n            vec4 nodeVertexPosition = nodeVertexPos[];\n            vec4 nodeVertexTex = nodeVertexTexture[];\n            \n            float nodeId = data[].x;            \n            vec2 xGeometryNode = get_global_id(nodeId, bufferNodesWidth, " + geometryLength.toFixed(1) + ("); " + "\n\n            vec4 currentPosition = posXYZW[xGeometryNode];\n            vec3 oppositePosition = vec3(0.0, 0.0, 0.0);\n            \n\n            float currentLineVertex = data[].z; " + "\n            float vertexCount = 1.0;\n                \n            vec4 nodeVertexColor = vec4(1.0, 1.0, 1.0, 1.0);\n            vec4 nodeVertexColorNetError = vec4(1.0, 1.0, 1.0, 1.0);\n            vVertexUV = vec2(-1.0, -1.0);\n\n            if(isNode == 1.0) {\n                float foutput = dataB[xGeometryNode].z;\n                float error = dataB[xGeometryNode].w;\n            \n                currentPosition += vec4(0.0, 0.1, 0.0, 1.0);\n\n                mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);\n                nodepos = nodepos*mm;\n                float nodeImgId = nodeImgId[];\n\n                if(nodeImgId != -1.0) {\n                    vUseTex = 1.0;\n                    vVertexUV = get2Dfrom1D(nodeImgId, nodeImgColumns)+vec2(nodeVertexTexture.x/nodeImgColumns,nodeVertexTexture.y/nodeImgColumns);\n                }\n\n                nodeVertexColor = vec4(0.0, 0.0, 0.0, 1.0);\n                if(foutput > 0.0) {\n                    nodeVertexColor = vec4(abs(foutput), abs(foutput), abs(foutput), 1.0);\n                } else if(foutput < 0.0) {\n                    nodeVertexColor = vec4(abs(foutput), 0.0, 0.0, 1.0);\n                }\n\n                if(error > 0.0) {\n                    nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);\n                } else if(error < 0.0) {\n                    nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);\n                } else {\n                    nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);\n                }\n\n                vIsSelected = (idToDrag == data[].x) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x) ? 1.0 : 0.0;\n            }\n            if(isLink == 1.0) {        \n                float nodeIdOpposite = data[].y;\n                \n                vec2 xGeometryNode_opposite = get_global_id(nodeIdOpposite, bufferNodesWidth, ") + geometryLength.toFixed(1) + (");\n                vec3 oppositePosition = posXYZW[xGeometryNode_opposite].xyz;\n                \n                " + VFP_NODE.linkStr() + "\n            \n                currentPosition += vec4(dirN*(lineIncrements*currentLineVertex), 1.0); " + "\n\n                vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;\n                \n                vNodeIdOpposite = nodeIdOpposite;\n            }\n            if(isArrow == 1.0) {\n                float nodeIdOpposite = data[].y;\n                \n                vec2 xGeometryNode_opposite = get_global_id(nodeIdOpposite, bufferNodesWidth, ") + geometryLength.toFixed(1) + (");\n                vec3 oppositePosition = posXYZW[xGeometryNode_opposite].xyz;\n                \n                " + VFP_NODE.linkStr() + "                \n            \n                vec3 currentPositionTMP;\n                " + "\n                float currentLineVertexU = vertexCount-1.0;\n                currentPositionTMP = oppositePosition+((dirN*-1.0)*(lineIncrements*currentLineVertexU));\n\n                mat4 pp = lookAt(currentPositionTMP, vec3(currentPosition.x, currentPosition.y, currentPosition.z), vec3(0.0, 1.0, 0.0));\n                pp = transpose(pp);\n                nodepos[0][0] = pp[0][0];\n                nodepos[0][1] = pp[1][0];\n                nodepos[0][2] = pp[2][0];\n\n                nodepos[1][0] = pp[0][1];\n                nodepos[1][1] = pp[1][1];\n                nodepos[1][2] = pp[2][1];\n\n                nodepos[2][0] = pp[0][2];\n                nodepos[2][1] = pp[1][2];\n                nodepos[2][2] = pp[2][2];\n\n                " + "\n                dir = currentPositionTMP-vec3(currentPosition.x, currentPosition.y, currentPosition.z);\n                currentPosition += vec4(normalize(dir),1.0)*2.0;\n\n                vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;\n                \n                vNodeIdOpposite = nodeIdOpposite;\n            }\n            if(isNodeText == 1.0) {            \n                float letId = letterId[];\n                mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);\n                nodepos = nodepos*mm;\n\n                vVertexUV = get2Dfrom1D(letId, fontImgColumns)+vec2(nodeVertexTexture.x/fontImgColumns,nodeVertexTexture.y/fontImgColumns);\n                nodeVertexPosition = vec4(nodeVertexPosition.x*0.1, nodeVertexPosition.y*0.1, nodeVertexPosition.z*0.1, 1.0);\n                currentPosition.z += 2.5;\n\n                vIsSelected = (idToDrag == data[].x) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x) ? 1.0 : 0.0;\n                \n                vIstarget = (currentLineVertex == 1.0) ? 1.0 : 0.0;\n            }\n            nodepos[3][0] = currentPosition.x;\n            nodepos[3][1] = currentPosition.y;\n            nodepos[3][2] = currentPosition.z;\n\n            mat4 nodeposG = nodeWMatrix;\n            vWNMatrix = nodeposG * nodeVertexNormal[];\n\n            vUseCrosshair = 0.0;\n            \n\n            " + customCode + "\n            \n            vDist = max(0.3, 1.0-(distance(currentPosition.xyz, oppositePosition)*0.01)); " + "\n            vVertexColor = nodeVertexColor;\n            vVertexColorNetError = nodeVertexColorNetError;\n            vUV = nodeVertexTexture;\n            vNodeId = nodeId;\n\n\n            gl_Position = PMatrix * cameraWMatrix * nodepos * nodeVertexPosition;"),
 
             //███████╗██████╗  █████╗  ██████╗ ███╗   ███╗███████╗███╗   ██╗████████╗    ██╗  ██╗███████╗ █████╗ ██████╗
             //██╔════╝██╔══██╗██╔══██╗██╔════╝ ████╗ ████║██╔════╝████╗  ██║╚══██╔══╝    ██║  ██║██╔════╝██╔══██╗██╔══██╗
@@ -3736,7 +3048,7 @@ var VFP_NODE = exports.VFP_NODE = function () {
             //██╔══╝  ██╔══██╗██╔══██║██║   ██║██║╚██╔╝██║██╔══╝  ██║╚██╗██║   ██║       ██╔══██║██╔══╝  ██╔══██║██║  ██║
             //██║     ██║  ██║██║  ██║╚██████╔╝██║ ╚═╝ ██║███████╗██║ ╚████║   ██║       ██║  ██║███████╗██║  ██║██████╔╝
             //╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝   ╚═╝       ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝
-            'varying vec4 vVertexColor;\n' + 'varying vec4 vVertexColorNetError;\n' + 'varying vec4 vUV;\n' + 'varying vec2 vVertexUV;\n' + 'varying float vUseTex;\n' + 'varying vec4 vWNMatrix;\n' + 'varying float vNodeId;\n' + 'varying float vNodeIdOpposite;\n' + 'varying float vDist;\n' + 'varying float vVisibility;\n' + 'varying float vIsSelected;\n' + 'varying float vIsHover;\n' + 'varying float vUseCrosshair;\n' + 'varying float vIstarget;\n',
+            "varying vec4 vVertexColor;\n            varying vec4 vVertexColorNetError;\n            varying vec4 vUV;\n       \t\tvarying vec2 vVertexUV;\n       \t\tvarying float vUseTex;\n       \t\tvarying vec4 vWNMatrix;\n            varying float vNodeId;\n            varying float vNodeIdOpposite;\n       \t\tvarying float vDist;\n       \t\tvarying float vIsSelected;\n            varying float vIsHover;\n       \t\tvarying float vUseCrosshair;\n       \t\tvarying float vIstarget;",
 
             //███████╗██████╗  █████╗  ██████╗ ███╗   ███╗███████╗███╗   ██╗████████╗    ███████╗ ██████╗ ██╗   ██╗██████╗  ██████╗███████╗
             //██╔════╝██╔══██╗██╔══██╗██╔════╝ ████╗ ████║██╔════╝████╗  ██║╚══██╔══╝    ██╔════╝██╔═══██╗██║   ██║██╔══██╗██╔════╝██╔════╝
@@ -3744,25 +3056,24 @@ var VFP_NODE = exports.VFP_NODE = function () {
             //██╔══╝  ██╔══██╗██╔══██║██║   ██║██║╚██╔╝██║██╔══╝  ██║╚██╗██║   ██║       ╚════██║██║   ██║██║   ██║██╔══██╗██║     ██╔══╝
             //██║     ██║  ██║██║  ██║╚██████╔╝██║ ╚═╝ ██║███████╗██║ ╚████║   ██║       ███████║╚██████╔╝╚██████╔╝██║  ██║╚██████╗███████╗
             //╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═══╝   ╚═╝       ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚══════╝
-            'vec4 color = vVertexColor;\n' + 'vec4 colorB = vVertexColorNetError;\n' + 'vec4 colorOrange = vec4(255.0/255.0, 131.0/255.0, 0.0/255.0, 1.0);' + 'vec4 colorOrangeDark = vec4(255.0/255.0, 80.0/255.0, 0.0/255.0, 1.0);' + 'vec4 colorPurple = vec4(132.0/255.0, 0.0/255.0, 255.0/255.0, 1.0);' + 'vec4 fcolor = vec4(0.0, 0.0, 0.0, 1.0);' + 'if(isNode == 1.0) {' + 'if(vUseTex == 1.0) {' + 'vec4 tex;' + 'if(vUseCrosshair == 1.0) {' + 'tex = nodesImgCrosshair[vVertexUV.xy];' + '} else if(vIsSelected == 1.0) {' + 'color = colorOrangeDark;' + 'tex = nodesImgCrosshair[vVertexUV.xy];' + '} else if(vIsHover == 1.0) {' + 'color = colorPurple;' + 'tex = nodesImg[vVertexUV.xy];' + '} else {' + 'tex = nodesImg[vVertexUV.xy];' + '}' + 'color = ' + _graphUtil.GraphUtils.nodesDrawMode(geometryLength) + ';\n' + '}' + 'if(color.a < 0.1) discard;' + 'fcolor = color;\n' + 'if(enableNeuronalNetwork == 1.0) {' +
+            'vec4 color = vVertexColor;\n' + 'vec4 colorB = vVertexColorNetError;\n' + 'vec4 colorOrange = vec4(255.0/255.0, 131.0/255.0, 0.0/255.0, 1.0);' + 'vec4 colorOrangeDark = vec4(255.0/255.0, 80.0/255.0, 0.0/255.0, 1.0);' + 'vec4 colorPurple = vec4(132.0/255.0, 0.0/255.0, 255.0/255.0, 1.0);' + 'vec4 fcolor = vec4(0.0, 0.0, 0.0, 1.0);' + 'if(isNode == 1.0) {' + 'if(vUseTex == 1.0) {' + 'vec4 tex;' + 'if(vUseCrosshair == 1.0) {' + 'tex = nodesImgCrosshair[vVertexUV.xy];' + '} else if(vIsSelected == 1.0) {' + 'color = colorOrangeDark;' + 'tex = nodesImgCrosshair[vVertexUV.xy];' + '} else if(vIsHover == 1.0) {' + 'color = colorPurple;' + 'tex = nodesImg[vVertexUV.xy];' + '} else {' + 'tex = nodesImg[vVertexUV.xy];' + '}' + 'color = ' + _graphUtil.GraphUtils.nodesDrawMode(geometryLength) + ';\n' + '}' + 'if(color.a < 0.1) discard;' + 'fcolor = color;\n' +
             // half up: ouput; half down: error
             'if(vUV.y > (0.7)) ' + 'fcolor = colorB;\n' + // 0.75-(colorB.w*1.0)   'fcolor = (vUV.y < (0.5)) ? color : ((colorB.w == 0.0)?color:colorB);\n'+
-            '}' + '} else if(isLink == 1.0) {' + 'if(vIsSelected == 1.0) ' + 'color = colorOrange;' + 'else if(vIsHover == 1.0) ' + 'color = colorPurple;' + 'if(enableNeuronalNetwork == 1.0) {' +
+            '} else if(isLink == 1.0) {' + 'if(vIsSelected == 1.0) ' + 'color = colorOrange;' + 'else if(vIsHover == 1.0) ' + 'color = colorPurple;' +
+
             // weight color
-            'vec2 xAdjMatCurrent = get_global_id(vec2(vNodeIdOpposite, vNodeId), widthAdjMatrix);' + 'vec4 pixAdjMatACurrent = adjacencyMatrix[xAdjMatCurrent];\n' + 'vec4 pixAdjMatCCurrent = adjacencyMatrixC[xAdjMatCurrent];\n' +
+            'vec2 xAdjMatCurrent = get_global_id(vec2(vNodeIdOpposite, vNodeId), widthAdjMatrix);' + 'vec4 pixAdjMatACurrent = adjacencyMatrix[xAdjMatCurrent];\n' +
 
             // x weight
             'if(pixAdjMatACurrent.z > 0.0) ' + 'fcolor = vec4(0.0, pixAdjMatACurrent.z, 0.0, 1.0);\n' + 'else ' + 'fcolor = vec4(abs(pixAdjMatACurrent.z), 0.0, 0.0, 1.0);\n' +
 
-            /*'if(pixAdjMatCCurrent.x > 0.0) '+
-                'fcolor *= vec4(0.0, abs(pixAdjMatCCurrent.x), 0.0, 1.0);'+
-            'else if(pixAdjMatCCurrent.x < 0.0) '+
-                'fcolor *= vec4(abs(pixAdjMatCCurrent.x), 0.0, 0.0, 1.0);'+
-            'else '+
-                'fcolor *= vec4(0.0,0.0,0.0, 0.0);'+*/
-
             // x output
-            'if(multiplyOutput == 1.0) ' + 'fcolor *= vec4(color.xyz, 1.0);\n' + '} else ' + 'fcolor = vec4(color.xyz, 1.0);\n' + '} else if(isArrow == 1.0) {' + 'if(vIstarget == 1.0) {' + 'if(vIsSelected == 1.0) {' + 'color = vec4(colorOrange.rgb*vDist, 1.0);\n' + '} else if(vIsHover == 1.0) {' + 'color = vec4(colorPurple.rgb*vDist, 1.0);\n' + '}' + '} else {' + 'color = vec4(1.0, 0.0, 0.0, 0.0);' + '}' + 'fcolor = color;\n' + '} else if(isNodeText == 1.0) {' + 'fcolor = fontsImg[vVertexUV.xy];\n' + '}' + 'if(vVisibility == 0.0) ' + 'discard;' + 'return [fcolor];'];
+            'if(multiplyOutput == 1.0) ' + 'fcolor *= vec4(color.xyz, 1.0);\n' + '} else if(isArrow == 1.0) {' + 'if(vIstarget == 1.0) {' + 'if(vIsSelected == 1.0) {' + 'color = vec4(colorOrange.rgb*vDist, 1.0);\n' + '} else if(vIsHover == 1.0) {' + 'color = vec4(colorPurple.rgb*vDist, 1.0);\n' + '}' + '} else {' + 'color = vec4(1.0, 0.0, 0.0, 0.0);' + '}' + 'fcolor = color;\n' + '} else if(isNodeText == 1.0) {' + 'fcolor = fontsImg[vVertexUV.xy];\n' + '}' + 'return [fcolor];'];
+        }
+    }, {
+        key: "linkStr",
+        value: function linkStr() {
+            return "\n\t    vec3 dir = oppositePosition-vec3(currentPosition.x, currentPosition.y, currentPosition.z);\n        float dist = length(dir);\n        float lineIncrements = dist/vertexCount;\n        vec3 dirN = normalize(dir);\n\n        float repeatId = data[].w;\n        vec3 cr = cross(dirN, vec3(0.0, 1.0, 0.0));\n        float currentLineVertexSQRT = abs( currentLineVertex-(vertexCount/2.0) )/(vertexCount/2.0);\n        currentLineVertexSQRT = sqrt(1.0-currentLineVertexSQRT);";
         }
     }]);
 
@@ -3802,7 +3113,7 @@ var VFP_NODEPICKDRAG = exports.VFP_NODEPICKDRAG = function () {
                                     Utils.packGLSLFunctionString() + 'mat4 rotationMatrix(vec3 axis, float angle) {' + 'axis = normalize(axis);' + 'float s = sin(angle);' + 'float c = cos(angle);' + 'float oc = 1.0 - c;' + 'return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,' + 'oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,' + 'oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,' + '0.0,                                0.0,                                0.0,                                1.0);' + '}',
 
                                     // vertex source
-                                    'vec2 xGeometry = get_global_id(data[].x, uBufferWidth, ' + geometryLength.toFixed(1) + ');' + 'vec4 nodePosition = posXYZW[xGeometry];\n' + 'float bornDate = dataB[xGeometry].x;' + 'float dieDate = dataB[xGeometry].y;' + 'mat4 nodepos = nodeWMatrix;' + 'mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);' + 'nodepos = nodepos*mm;' + 'nodepos[3][0] = nodePosition.x;' + 'nodepos[3][1] = nodePosition.y;' + 'nodepos[3][2] = nodePosition.z;' + 'vColor = vec4(1.0, 1.0, 1.0, 1.0);' + 'int mak = 0;' + 'if(dieDate != 0.0) {' + 'if(currentTimestamp > bornDate && currentTimestamp < dieDate) ' + 'mak = 1;' + '} else ' + 'mak = 1;' + 'if(mak == 1) {' + 'vColor = pack((data[].x+1.0)/1000000.0);' + '}' + 'if(vColor.x == 1.0 && vColor.y == 1.0 && vColor.z == 1.0 && vColor.w == 1.0) ' + 'nodepos[3][0] = 10000.0;' + 'gl_Position = PMatrix * cameraWMatrix * nodepos * nodeVertexPos[];\n' + 'gl_PointSize = 10.0;\n',
+                                    'vec2 xGeometry = get_global_id(data[].x, uBufferWidth, ' + geometryLength.toFixed(1) + ');' + 'vec4 nodePosition = posXYZW[xGeometry];\n' + 'mat4 nodepos = nodeWMatrix;' + 'mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);' + 'nodepos = nodepos*mm;' + 'nodepos[3][0] = nodePosition.x;' + 'nodepos[3][1] = nodePosition.y;' + 'nodepos[3][2] = nodePosition.z;' + 'vColor = pack((data[].x+1.0)/1000000.0);' + 'if(vColor.x == 1.0 && vColor.y == 1.0 && vColor.z == 1.0 && vColor.w == 1.0) ' + 'nodepos[3][0] = 10000.0;' + 'gl_Position = PMatrix * cameraWMatrix * nodepos * nodeVertexPos[];\n' + 'gl_PointSize = 10.0;\n',
 
                                     // fragment head
                                     'varying vec4 vColor;\n',
@@ -4341,16 +3652,12 @@ var GraphUtils = exports.GraphUtils = function () {
     }, {
         key: "adjMatrix_ForceLayout_GLSLFunctionString",
         value: function adjMatrix_ForceLayout_GLSLFunctionString(geometryLength, efferentStart, efferentNodesCount) {
-            return '' + "vec3 sphericalColl(vec3 currentDir, vec3 currentDirB, vec3 dirToBN) {\n            vec3 currentDirN = normalize(currentDir);\n            float pPoint = abs(dot(currentDirN, dirToBN));\n            vec3 reflectV = reflect(currentDirN*-1.0, dirToBN);\n\n            vec3 currentDirBN = normalize(currentDirB);\n            float pPointB = abs(dot(currentDirBN, dirToBN));\n\n            vec3 repulsionForce = (reflectV*-1.0)* (((1.0-pPoint)*length(currentDir))+((pPointB)*length(currentDirB)));\n\n            return (repulsionForce.x > 0.0 && repulsionForce.y > 0.0 && repulsionForce.z > 0.0) ? repulsionForce : dirToBN*-0.1;\n        }\n\n        struct CalculationResponse {\n            vec3 atraction;\n            float acumAtraction;\n            vec3 repulsion;\n            float collisionExists;\n            float netChildInputSumA;\n            float netParentErrorWeightA;\n            float netChildInputSumB;\n            float netParentErrorWeightB;\n            float netChildInputSumC;\n            float netParentErrorWeightC;\n            float netChildInputSumD;\n            float netParentErrorWeightD;\n            float netChildInputSumE;\n            float netParentErrorWeightE;\n            float netChildInputSumF;\n            float netParentErrorWeightF;\n            float netChildInputSumG;\n            float netParentErrorWeightG;\n        };" +
-
-            // pixAdjMatA (bornDate, dieDate, weight (parent:-2;child:w), isParent (1.0:parent;0.0:child))
-            // pixAdjMatA (linkMultiplier, activationFunction)
-            "CalculationResponse calculate(float nodeId,\n                                        vec4 pixAdjMatACurrent, vec4 pixAdjMatAOpposite,\n                                        vec4 pixAdjMatBCurrent, vec4 pixAdjMatBOpposite,\n                                        vec2 xGeomCurrent, vec2 xGeomOpposite,\n                                        vec3 currentPos, vec3 currentDir,\n                                        vec3 atraction, float acumAtraction, vec3 repulsion,\n                                        float enableNeuronalNetwork,\n                                        float netChildInputSumA, float netParentErrorWeightA,\n                                        float netChildInputSumB, float netParentErrorWeightB,\n                                        float netChildInputSumC, float netParentErrorWeightC,\n                                        float netChildInputSumD, float netParentErrorWeightD,\n                                        float netChildInputSumE, float netParentErrorWeightE,\n                                        float netChildInputSumF, float netParentErrorWeightF,\n                                        float netChildInputSumG, float netParentErrorWeightG) {" +
+            return '' + "struct CalculationResponse {\n            vec3 atraction;\n            float acumAtraction;\n            vec3 repulsion;\n            float netChildInputSumA;\n            float netParentErrorWeightA;\n            float netChildInputSumB;\n            float netParentErrorWeightB;\n            float netChildInputSumC;\n            float netParentErrorWeightC;\n            float netChildInputSumD;\n            float netParentErrorWeightD;\n            float netChildInputSumE;\n            float netParentErrorWeightE;\n            float netChildInputSumF;\n            float netParentErrorWeightF;\n            float netChildInputSumG;\n            float netParentErrorWeightG;\n        };" + "CalculationResponse calculate(float nodeId,\n                                        vec4 pixAdjMatACurrent, vec4 pixAdjMatAOpposite,\n                                        vec4 pixAdjMatBCurrent, vec4 pixAdjMatBOpposite,\n                                        vec2 xGeomCurrent, vec2 xGeomOpposite,\n                                        vec3 currentPos, vec3 currentDir,\n                                        vec3 atraction, float acumAtraction, vec3 repulsion,\n                                        float netChildInputSumA, float netParentErrorWeightA,\n                                        float netChildInputSumB, float netParentErrorWeightB,\n                                        float netChildInputSumC, float netParentErrorWeightC,\n                                        float netChildInputSumD, float netParentErrorWeightD,\n                                        float netChildInputSumE, float netParentErrorWeightE,\n                                        float netChildInputSumF, float netParentErrorWeightF,\n                                        float netChildInputSumG, float netParentErrorWeightG) {" +
             // pixAdjMatACurrent
-            "float currentBornDate = pixAdjMatACurrent.x;\n            float currentDieDate = pixAdjMatACurrent.y;\n            float currentWeight = pixAdjMatACurrent.z;\n            float currentIsParent = pixAdjMatACurrent.w;" +
+            "float currentWeight = pixAdjMatACurrent.z;\n            float currentIsParent = pixAdjMatACurrent.w;" +
 
             // pixAdjMatAOpposite
-            "float oppositeBornDate = pixAdjMatAOpposite.x;\n            float oppositeDieDate = pixAdjMatAOpposite.y;\n            float oppositeWeight = pixAdjMatAOpposite.z;\n            float oppositeIsParent = pixAdjMatAOpposite.w;" +
+            "float oppositeWeight = pixAdjMatAOpposite.z;\n            float oppositeIsParent = pixAdjMatAOpposite.w;" +
 
             // pixAdjMatBCurrent
             "float currentLinkMultiplier = pixAdjMatBCurrent.x;\n            float currentActivationFn = pixAdjMatBCurrent.y;" +
@@ -4359,14 +3666,12 @@ var GraphUtils = exports.GraphUtils = function () {
             "float oppositeLinkMultiplier = pixAdjMatBOpposite.x;\n            float oppositeActivationFn = pixAdjMatBOpposite.y;" +
 
             // dataB Current
-            //'float currentBornDate = dataB[xGeomCurrent].x;'+
-            //'float currentDieDate = dataB[xGeomCurrent].y;'+
+            //'float currentBiasNode = dataB[xGeomCurrent].x;'+
             //'float currentNetOutput = dataB[xGeomCurrent].z;'+
             //'float currentNetError = dataB[xGeomCurrent].w;'+
 
             // dataB Opposite
-            //'float oppositeBornDate = dataB[xGeomOpposite].x;'+
-            //'float oppositeDieDate = dataB[xGeomOpposite].y;'+
+            //'float oppositeBiasNode = dataB[xGeomOpposite].x;'+
             "float oppositeNetOutputA = dataB[xGeomOpposite].z;\n            float oppositeNetErrorA = dataB[xGeomOpposite].w;\n\n            float oppositeNetOutputB = dataF[xGeomOpposite].x;\n            float oppositeNetErrorB = dataF[xGeomOpposite].y;\n        \n            float oppositeNetOutputC = dataF[xGeomOpposite].z;\n            float oppositeNetErrorC = dataF[xGeomOpposite].w;\n        \n            float oppositeNetOutputD = dataG[xGeomOpposite].x;\n            float oppositeNetErrorD = dataG[xGeomOpposite].y;\n        \n            float oppositeNetOutputE = dataG[xGeomOpposite].z;\n            float oppositeNetErrorE = dataG[xGeomOpposite].w;\n        \n            float oppositeNetOutputF = dataH[xGeomOpposite].x;\n            float oppositeNetErrorF = dataH[xGeomOpposite].y;\n        \n            float oppositeNetOutputG = dataH[xGeomOpposite].z;\n            float oppositeNetErrorG = dataH[xGeomOpposite].w;" +
 
             // pos & dir Current
@@ -4378,24 +3683,9 @@ var GraphUtils = exports.GraphUtils = function () {
 
             // dir / dist to opposite
             'vec3 dirToOpposite = (oppositePos-currentPos);\n' + 'vec3 dirToOppositeN = normalize(dirToOpposite);\n' + 'float dist = distance(oppositePos, currentPos);\n' + // near=0.0 ; far=1.0
-            'float distN = max(0.0,dist)/100000.0;' + 'float p = 1.0;' + 'if(currentDieDate != 0.0 && (currentTimestamp < currentBornDate || currentTimestamp > currentDieDate)) ' + 'p = 0.0;' + 'if(oppositeDieDate != 0.0 && (currentTimestamp < oppositeBornDate || currentTimestamp > oppositeDieDate)) ' + 'p = 0.0;' + 'if(p == 1.0) {' + 'float m1 = (enableNeuronalNetwork == 1.0) ? 0.0 : 400000.0;' + 'float m2 = (enableNeuronalNetwork == 1.0) ? 0.0 : 48.0;' + 'if(currentIsParent == 1.0) {' +
-            //'if(enableNeuronalNetwork == 1.0) '+
-            'netChildInputSumA += oppositeNetOutputA*oppositeWeight;' + 'netChildInputSumB += oppositeNetOutputB*oppositeWeight;' + 'netChildInputSumC += oppositeNetOutputC*oppositeWeight;' + 'netChildInputSumD += oppositeNetOutputD*oppositeWeight;' + 'netChildInputSumE += oppositeNetOutputE*oppositeWeight;' + 'netChildInputSumF += oppositeNetOutputF*oppositeWeight;' + 'netChildInputSumG += oppositeNetOutputG*oppositeWeight;' +
-            //'else {'+
-            'atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));\n' + 'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));\n' + 'acumAtraction += 1.0;\n' +
-            //'}'+
-            '} else if(currentIsParent == 0.5) {' +
-            //'if(enableNeuronalNetwork == 1.0) '+
-            'netParentErrorWeightA += oppositeNetErrorA*currentWeight;' + 'netParentErrorWeightB += oppositeNetErrorB*currentWeight;' + 'netParentErrorWeightC += oppositeNetErrorC*currentWeight;' + 'netParentErrorWeightD += oppositeNetErrorD*currentWeight;' + 'netParentErrorWeightE += oppositeNetErrorE*currentWeight;' + 'netParentErrorWeightF += oppositeNetErrorF*currentWeight;' + 'netParentErrorWeightG += oppositeNetErrorG*currentWeight;' +
-            //'else {'+
-            'atraction += dirToOppositeN*max(1.0, distN*abs(currentWeight)*m1);\n' + 'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*m2);\n' + 'acumAtraction += 1.0;\n' +
-            //'}'+
-            '}' +
-
-            //'if(enableNeuronalNetwork == 0.0) {'+
-            'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*(m2/8.0));\n' + 'acumAtraction += 1.0;\n' +
-            //'}'+
-            '}' + ("float collisionExists = 0.0;\n            if(enableForceLayoutCollision == 1.0 && dist < 4.0) {\n                collisionExists = 1.0;\n                atraction = sphericalColl(currentDir, oppositeDir, dirToOppositeN);\n            }\n\n            return CalculationResponse(atraction, acumAtraction, repulsion, collisionExists,\n                                        netChildInputSumA, netParentErrorWeightA,\n                                        netChildInputSumB, netParentErrorWeightB,\n                                        netChildInputSumC, netParentErrorWeightC,\n                                        netChildInputSumD, netParentErrorWeightD,\n                                        netChildInputSumE, netParentErrorWeightE,\n                                        netChildInputSumF, netParentErrorWeightF,\n                                        netChildInputSumG, netParentErrorWeightG);\n        }\n        struct idAdjMatrixResponse {\n            vec3 force;\n            float collisionExists;\n            float netFOutputA;\n            float netErrorWeightA;\n            float netFOutputB;\n            float netErrorWeightB;\n            float netFOutputC;\n            float netErrorWeightC;\n            float netFOutputD;\n            float netErrorWeightD;\n            float netFOutputE;\n            float netErrorWeightE;\n            float netFOutputF;\n            float netErrorWeightF;\n            float netFOutputG;\n            float netErrorWeightG;\n        };\n        float tanh(float val) {\n            float tmp = exp(val);\n            float tanH = (tmp - 1.0 / tmp) / (tmp + 1.0 / tmp);\n            return tanH;\n        }\n        float sigm(float val) {\n            return (1.0 / (1.0 + exp(-val)));\n        }\n        idAdjMatrixResponse idAdjMatrix_ForceLayout(float nodeId, vec3 currentPos, vec3 currentDir, float numOfConnections, float currentTimestamp, float bornDate, float dieDate, float enableNeuronalNetwork) {\n            vec3 atraction = vec3(0.0, 0.0, 0.0);\n            float acumAtraction = 1.0;\n            vec3 repulsion = vec3(0.0, 0.0, 0.0);\n\n            float collisionExists = 0.0;\n            vec3 force = vec3(0.0, 0.0, 0.0);\n\n\n            float netChildInputSumA = 0.0;\n            float foutputA = 0.0;\n            float netParentErrorWeightA = 0.0;\n            \n            float netChildInputSumB = 0.0;\n            float foutputB = 0.0;\n            float netParentErrorWeightB = 0.0;\n            \n            float netChildInputSumC = 0.0;\n            float foutputC = 0.0;\n            float netParentErrorWeightC = 0.0;\n            \n            float netChildInputSumD = 0.0;\n            float foutputD = 0.0;\n            float netParentErrorWeightD = 0.0;\n            \n            float netChildInputSumE = 0.0;\n            float foutputE = 0.0;\n            float netParentErrorWeightE = 0.0;\n            \n            float netChildInputSumF = 0.0;\n            float foutputF = 0.0;\n            float netParentErrorWeightF = 0.0;\n            \n            float netChildInputSumG = 0.0;\n            float foutputG = 0.0;\n            float netParentErrorWeightG = 0.0;\n            \n\n            if(nodeId < nodesCount) {\n                float currentActivationFn = 0.0;\n                vec2 xGeomCurrent = get_global_id(nodeId, uBufferWidth, " + geometryLength.toFixed(1) + ");\n                for(int n=0; n < 4096; n++) {\n                    if(float(n) >= nodesCount) {break;}\n                    if(float(n) != nodeId) {\n                        vec2 xGeomOpposite = get_global_id(float(n), uBufferWidth, " + geometryLength.toFixed(1) + ");\n\n\n                        vec2 xAdjMatCurrent = get_global_id(vec2(float(n), nodeId), widthAdjMatrix);\n                        vec2 xAdjMatOpposite = get_global_id(vec2(nodeId, float(n)), widthAdjMatrix);\n\n                        vec4 pixAdjMatACurrent = adjacencyMatrix[xAdjMatCurrent];\n                        vec4 pixAdjMatAOpposite = adjacencyMatrix[xAdjMatOpposite];\n\n                        vec4 pixAdjMatBCurrent = adjacencyMatrixB[xAdjMatCurrent];\n                        vec4 pixAdjMatBOpposite = adjacencyMatrixB[xAdjMatOpposite];\n\n\n                        CalculationResponse calcResponse = calculate(nodeId,\n                                                                    pixAdjMatACurrent, pixAdjMatAOpposite,\n                                                                    pixAdjMatBCurrent, pixAdjMatBOpposite,\n                                                                    xGeomCurrent, xGeomOpposite,\n                                                                    currentPos, currentDir,\n                                                                    atraction, acumAtraction, repulsion,\n                                                                    enableNeuronalNetwork,\n                                                                    netChildInputSumA, netParentErrorWeightA,\n                                                                    netChildInputSumB, netParentErrorWeightB,\n                                                                    netChildInputSumC, netParentErrorWeightC,\n                                                                    netChildInputSumD, netParentErrorWeightD,\n                                                                    netChildInputSumE, netParentErrorWeightE,\n                                                                    netChildInputSumF, netParentErrorWeightF,\n                                                                    netChildInputSumG, netParentErrorWeightG);\n                        atraction = calcResponse.atraction;\n                        acumAtraction = calcResponse.acumAtraction;\n                        repulsion = calcResponse.repulsion;\n                        \n                        \n                        netChildInputSumA = calcResponse.netChildInputSumA;\n                        netParentErrorWeightA = calcResponse.netParentErrorWeightA;\n                        \n                        netChildInputSumB = calcResponse.netChildInputSumB;\n                        netParentErrorWeightB = calcResponse.netParentErrorWeightB;\n                        \n                        netChildInputSumC = calcResponse.netChildInputSumC;\n                        netParentErrorWeightC = calcResponse.netParentErrorWeightC;\n                        \n                        netChildInputSumD = calcResponse.netChildInputSumD;\n                        netParentErrorWeightD = calcResponse.netParentErrorWeightD;\n                        \n                        netChildInputSumE = calcResponse.netChildInputSumE;\n                        netParentErrorWeightE = calcResponse.netParentErrorWeightE;\n                        \n                        netChildInputSumF = calcResponse.netChildInputSumF;\n                        netParentErrorWeightF = calcResponse.netParentErrorWeightF;\n                        \n                        netChildInputSumG = calcResponse.netChildInputSumG;\n                        netParentErrorWeightG = calcResponse.netParentErrorWeightG;\n\n\n                        if(calcResponse.collisionExists == 1.0) {\n                            collisionExists = 1.0;\n                            force = calcResponse.atraction;\n                            break;\n                        }\n\n                        if(dieDate != 0.0) {\n                            if(currentTimestamp < bornDate || currentTimestamp > dieDate) {\n                                force = vec3(0.0, 0.0, 0.0);\n                                break;\n                            }\n                        }\n                    }\n                }\n\n                if(collisionExists == 0.0) {\n                    force += (atraction/acumAtraction)*1.0;\n                    force += (repulsion/acumAtraction)*1.0;\n                }\n\n                if(enableNeuronalNetwork == 1.0) {\n                    " + GraphUtils.efferentNodesStr(efferentStart, efferentNodesCount) + "\n                }\n            }\n\n            return idAdjMatrixResponse(vec3(force), collisionExists,\n                                        foutputA, netParentErrorWeightA,\n                                        foutputB, netParentErrorWeightB,\n                                        foutputC, netParentErrorWeightC,\n                                        foutputD, netParentErrorWeightD,\n                                        foutputE, netParentErrorWeightE,\n                                        foutputF, netParentErrorWeightF,\n                                        foutputG, netParentErrorWeightG);\n        }");
+            'float distN = max(0.0,dist)/100000.0;' + 'float m1 = 0.0;' + // 400000.0
+            'float m2 = 0.0;' + // 48.0
+            'if(currentIsParent == 1.0) {' + 'netChildInputSumA += oppositeNetOutputA*oppositeWeight;' + 'netChildInputSumB += oppositeNetOutputB*oppositeWeight;' + 'netChildInputSumC += oppositeNetOutputC*oppositeWeight;' + 'netChildInputSumD += oppositeNetOutputD*oppositeWeight;' + 'netChildInputSumE += oppositeNetOutputE*oppositeWeight;' + 'netChildInputSumF += oppositeNetOutputF*oppositeWeight;' + 'netChildInputSumG += oppositeNetOutputG*oppositeWeight;' + 'atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));\n' + 'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));\n' + 'acumAtraction += 1.0;\n' + '} else if(currentIsParent == 0.5) {' + 'netParentErrorWeightA += oppositeNetErrorA*currentWeight;' + 'netParentErrorWeightB += oppositeNetErrorB*currentWeight;' + 'netParentErrorWeightC += oppositeNetErrorC*currentWeight;' + 'netParentErrorWeightD += oppositeNetErrorD*currentWeight;' + 'netParentErrorWeightE += oppositeNetErrorE*currentWeight;' + 'netParentErrorWeightF += oppositeNetErrorF*currentWeight;' + 'netParentErrorWeightG += oppositeNetErrorG*currentWeight;' + 'atraction += dirToOppositeN*max(1.0, distN*abs(currentWeight)*m1);\n' + 'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*m2);\n' + 'acumAtraction += 1.0;\n' + '}' + 'repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*(m2/8.0));\n' + 'acumAtraction += 1.0;\n' + ("return CalculationResponse(atraction, acumAtraction, repulsion,\n                                        netChildInputSumA, netParentErrorWeightA,\n                                        netChildInputSumB, netParentErrorWeightB,\n                                        netChildInputSumC, netParentErrorWeightC,\n                                        netChildInputSumD, netParentErrorWeightD,\n                                        netChildInputSumE, netParentErrorWeightE,\n                                        netChildInputSumF, netParentErrorWeightF,\n                                        netChildInputSumG, netParentErrorWeightG);\n        }\n        struct idAdjMatrixResponse {\n            vec3 force;\n            float netFOutputA;\n            float netErrorWeightA;\n            float netFOutputB;\n            float netErrorWeightB;\n            float netFOutputC;\n            float netErrorWeightC;\n            float netFOutputD;\n            float netErrorWeightD;\n            float netFOutputE;\n            float netErrorWeightE;\n            float netFOutputF;\n            float netErrorWeightF;\n            float netFOutputG;\n            float netErrorWeightG;\n        };\n        float tanh(float val) {\n            float tmp = exp(val);\n            float tanH = (tmp - 1.0 / tmp) / (tmp + 1.0 / tmp);\n            return tanH;\n        }\n        float sigm(float val) {\n            return (1.0 / (1.0 + exp(-val)));\n        }\n        idAdjMatrixResponse idAdjMatrix_ForceLayout(float nodeId, vec3 currentPos, vec3 currentDir, float numOfConnections) {\n            vec3 atraction = vec3(0.0, 0.0, 0.0);\n            float acumAtraction = 1.0;\n            vec3 repulsion = vec3(0.0, 0.0, 0.0);\n\n            vec3 force = vec3(0.0, 0.0, 0.0);\n\n\n            float netChildInputSumA = 0.0;\n            float foutputA = 0.0;\n            float netParentErrorWeightA = 0.0;\n            \n            float netChildInputSumB = 0.0;\n            float foutputB = 0.0;\n            float netParentErrorWeightB = 0.0;\n            \n            float netChildInputSumC = 0.0;\n            float foutputC = 0.0;\n            float netParentErrorWeightC = 0.0;\n            \n            float netChildInputSumD = 0.0;\n            float foutputD = 0.0;\n            float netParentErrorWeightD = 0.0;\n            \n            float netChildInputSumE = 0.0;\n            float foutputE = 0.0;\n            float netParentErrorWeightE = 0.0;\n            \n            float netChildInputSumF = 0.0;\n            float foutputF = 0.0;\n            float netParentErrorWeightF = 0.0;\n            \n            float netChildInputSumG = 0.0;\n            float foutputG = 0.0;\n            float netParentErrorWeightG = 0.0;\n            \n\n            if(nodeId < nodesCount) {\n                float currentActivationFn = 0.0;\n                vec2 xGeomCurrent = get_global_id(nodeId, uBufferWidth, " + geometryLength.toFixed(1) + ");\n                for(int n=0; n < 4096; n++) {\n                    if(float(n) >= nodesCount) {break;}\n                    if(float(n) != nodeId) {\n                        vec2 xGeomOpposite = get_global_id(float(n), uBufferWidth, " + geometryLength.toFixed(1) + ");\n\n\n                        vec2 xAdjMatCurrent = get_global_id(vec2(float(n), nodeId), widthAdjMatrix);\n                        vec2 xAdjMatOpposite = get_global_id(vec2(nodeId, float(n)), widthAdjMatrix);\n\n                        vec4 pixAdjMatACurrent = adjacencyMatrix[xAdjMatCurrent];\n                        vec4 pixAdjMatAOpposite = adjacencyMatrix[xAdjMatOpposite];\n\n                        vec4 pixAdjMatBCurrent = adjacencyMatrixB[xAdjMatCurrent];\n                        vec4 pixAdjMatBOpposite = adjacencyMatrixB[xAdjMatOpposite];\n\n\n                        CalculationResponse calcResponse = calculate(nodeId,\n                                                                    pixAdjMatACurrent, pixAdjMatAOpposite,\n                                                                    pixAdjMatBCurrent, pixAdjMatBOpposite,\n                                                                    xGeomCurrent, xGeomOpposite,\n                                                                    currentPos, currentDir,\n                                                                    atraction, acumAtraction, repulsion,\n                                                                    netChildInputSumA, netParentErrorWeightA,\n                                                                    netChildInputSumB, netParentErrorWeightB,\n                                                                    netChildInputSumC, netParentErrorWeightC,\n                                                                    netChildInputSumD, netParentErrorWeightD,\n                                                                    netChildInputSumE, netParentErrorWeightE,\n                                                                    netChildInputSumF, netParentErrorWeightF,\n                                                                    netChildInputSumG, netParentErrorWeightG);\n                        atraction = calcResponse.atraction;\n                        acumAtraction = calcResponse.acumAtraction;\n                        repulsion = calcResponse.repulsion;\n                        \n                        netChildInputSumA = calcResponse.netChildInputSumA;\n                        netParentErrorWeightA = calcResponse.netParentErrorWeightA;\n                        \n                        netChildInputSumB = calcResponse.netChildInputSumB;\n                        netParentErrorWeightB = calcResponse.netParentErrorWeightB;\n                        \n                        netChildInputSumC = calcResponse.netChildInputSumC;\n                        netParentErrorWeightC = calcResponse.netParentErrorWeightC;\n                        \n                        netChildInputSumD = calcResponse.netChildInputSumD;\n                        netParentErrorWeightD = calcResponse.netParentErrorWeightD;\n                        \n                        netChildInputSumE = calcResponse.netChildInputSumE;\n                        netParentErrorWeightE = calcResponse.netParentErrorWeightE;\n                        \n                        netChildInputSumF = calcResponse.netChildInputSumF;\n                        netParentErrorWeightF = calcResponse.netParentErrorWeightF;\n                        \n                        netChildInputSumG = calcResponse.netChildInputSumG;\n                        netParentErrorWeightG = calcResponse.netParentErrorWeightG;\n                    }\n                }\n                force += (atraction/acumAtraction);\n                force += (repulsion/acumAtraction);\n                \n                " + GraphUtils.efferentNodesStr(efferentStart, efferentNodesCount) + "\n            }\n\n            return idAdjMatrixResponse(vec3(force),\n                                        foutputA, netParentErrorWeightA,\n                                        foutputB, netParentErrorWeightB,\n                                        foutputC, netParentErrorWeightC,\n                                        foutputD, netParentErrorWeightD,\n                                        foutputE, netParentErrorWeightE,\n                                        foutputF, netParentErrorWeightF,\n                                        foutputG, netParentErrorWeightG);\n        }");
         }
     }, {
         key: "efferentNodesStr",
@@ -4408,27 +3698,6 @@ var GraphUtils = exports.GraphUtils = function () {
             }str += "\n        else {\n            if(foutputA <= 0.0) {\n                netParentErrorWeightA = 0.0;\n            }\n            if(foutputB <= 0.0) {\n                netParentErrorWeightB = 0.0;\n            }\n            if(foutputC <= 0.0) {\n                netParentErrorWeightC = 0.0;\n            }\n            if(foutputD <= 0.0) {\n                netParentErrorWeightD = 0.0;\n            }\n            if(foutputE <= 0.0) {\n                netParentErrorWeightE = 0.0;\n            }\n            if(foutputF <= 0.0) {\n                netParentErrorWeightF = 0.0;\n            }\n            if(foutputG <= 0.0) {\n                netParentErrorWeightG = 0.0;\n            }\n        }";
 
             return str;
-        }
-    }, {
-        key: "adjMatrix_Autolink_GLSLFunctionString",
-        value: function adjMatrix_Autolink_GLSLFunctionString(geometryLength) {
-            return '' + 'float GetAngle(vec3 A, vec3 B) {' + // from -180.0 to 180.0
-            'vec3 cr = cross(A, B);' + 'float d = dot(A, B);' + 'if(cr.y < 0.0) {' + 'if(d > 0.0) {' + 'd =        (1.0-d)*90.0;' + '} else {' + 'd = 90.0+  (abs(d)*90.0);' + '}' + '} else {' + 'if(d > 0.0) {' + 'd = 270.0+ (d*90.0);' + '} else {' + 'd = 180.0+ ((1.0-abs(d))*90.0);' + '}' + '}' + 'return d;' + '}' + 'vec4 idAdjMatrix_Autolink(float nodeId, vec3 currentPos) {\n' +
-            // INIT VARS
-            'vec2 totalIDrelation = vec2(0.0, 0.0);' + 'float totalAngleRelations = 0.0;' +
-            // END INIT VARS
-
-            'if(nodeId < nodesCount) {\n' + 'for(int n=0; n < 4096; n++) {\n' + 'if(float(n) >= nodesCount) break;\n' + 'if(float(n) != nodeId) {' + 'vec2 xAdjMatCurrent = get_global_id(vec2(float(n), nodeId), widthAdjMatrix);' + 'vec4 pixAdjMatACurrent = adjacencyMatrix[xAdjMatCurrent];\n' +
-
-            // RELATION FOUND
-            'if(pixAdjMatACurrent.x > 0.0) {' + 'vec2 xGeomOpposite = get_global_id(float(n), uBufferWidth, ' + geometryLength.toFixed(1) + ');\n' + 'vec3 currentPosB = posXYZW[xGeomOpposite].xyz;\n' + 'vec3 dirToBN = normalize(currentPosB-currentPos);\n' + 'vec2 IDrelation = vec2(0.0, 0.0);' + 'float angleRelations = 360.0;' + 'if(nodeId < nodesCount) {\n' + 'for(int nB=0; nB < 4096; nB++) {\n' + 'if(float(nB) >= nodesCount) break;\n' + 'if(float(nB) != float(n) && float(nB) != nodeId) {' + 'vec2 xAdjMatCurrentB = get_global_id(vec2(float(nB), nodeId), widthAdjMatrix);' + 'vec4 pixAdjMatACurrent_B = adjacencyMatrix[xAdjMatCurrentB];\n' + 'if(pixAdjMatACurrent_B.x > 0.0) {' + 'vec2 xGeom_oppoB = get_global_id(float(nB), uBufferWidth, ' + geometryLength.toFixed(1) + ');\n' + 'vec3 currentPosBB = posXYZW[xGeom_oppoB].xyz;\n' + 'vec3 dirToBBN = normalize(currentPosBB-currentPos);\n' + 'float angle = GetAngle(dirToBN,dirToBBN);' + 'if(angle > 0.0 && angle < angleRelations) {' + 'IDrelation = xGeom_oppoB;' + 'angleRelations = angle;' + '}' + '}' + '}' + '}' + '}' + 'if(angleRelations < 360.0 && angleRelations > totalAngleRelations) {' + 'totalIDrelation = IDrelation;' + 'totalAngleRelations = angleRelations;' + '}' + '}' +
-            // END RELATION FOUND
-
-            '}' + '}' +
-            // SUMMATION
-            // END SUMMATION
-
-            '}' + 'return vec4(totalIDrelation, totalAngleRelations, 0.0);' + '}';
         }
     }]);
 
