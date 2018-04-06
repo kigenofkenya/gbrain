@@ -62,7 +62,7 @@
 <script>
     var agentLib = 0; // gbrain=0 ; convnetjs=1
     var ctx = document.getElementById("canvasChartJS").getContext('2d');
-    var color = Chart.helpers.color;
+    /*var color = Chart.helpers.color;
     var myChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -107,7 +107,7 @@
                 }]
             }
         }
-    });
+    });*/
 
     var brain = null;
     var showOutputWeighted = false;
@@ -561,11 +561,11 @@
             }
         },
         ff: function(reward) {
-            myChart.data.labels.push("");
+            /*myChart.data.labels.push("");
             myChart.data.datasets.forEach((dataset) => {
                 dataset.data.push(reward);
             });
-            myChart.update();
+            myChart.update();*/
 
             this.forward();
         }
