@@ -1050,7 +1050,7 @@ export class Graph {
      * @param {int} jsonIn.layerNum
      */
     connectNeuronWithNeuronLayer(jsonIn) {
-        for(let n=0; n < jsonIn.neuronLayer.length; n++)
+        for(let n=0; n < jsonIn.neuronLayer.length-1; n++)
             this.addSinapsis({  "neuronNameA": jsonIn.neuron.toString(),
                                 "neuronNameB": jsonIn.neuronLayer[n].toString(),
                                 "activationFunc": jsonIn.activationFunc,

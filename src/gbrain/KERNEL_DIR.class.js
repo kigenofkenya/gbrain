@@ -38,44 +38,30 @@ export class KERNEL_DIR {
             float netChildInputSumA = 0.0;
             float foutputA = 0.0;
             float netParentErrorWeightA = 0.0;
-            float netChildInputSumBiasA = 0.0;
-            float netParentErrorBiasA = 0.0;
             
             float netChildInputSumB = 0.0;
             float foutputB = 0.0;
             float netParentErrorWeightB = 0.0;
-            float netChildInputSumBiasB = 0.0;
-            float netParentErrorBiasB = 0.0;
             
             float netChildInputSumC = 0.0;
             float foutputC = 0.0;
             float netParentErrorWeightC = 0.0;
-            float netChildInputSumBiasC = 0.0;
-            float netParentErrorBiasC = 0.0;
             
             float netChildInputSumD = 0.0;
             float foutputD = 0.0;
             float netParentErrorWeightD = 0.0;
-            float netChildInputSumBiasD = 0.0;
-            float netParentErrorBiasD = 0.0;
             
             float netChildInputSumE = 0.0;
             float foutputE = 0.0;
             float netParentErrorWeightE = 0.0;
-            float netChildInputSumBiasE = 0.0;
-            float netParentErrorBiasE = 0.0;
             
             float netChildInputSumF = 0.0;
             float foutputF = 0.0;
             float netParentErrorWeightF = 0.0;
-            float netChildInputSumBiasF = 0.0;
-            float netParentErrorBiasF = 0.0;
             
             float netChildInputSumG = 0.0;
             float foutputG = 0.0;
             float netParentErrorWeightG = 0.0;
-            float netChildInputSumBiasG = 0.0;
-            float netParentErrorBiasG = 0.0;
             
 
             if(nodeId < nodesCount && currentTrainLayer == -3.0) {
@@ -164,42 +150,44 @@ export class KERNEL_DIR {
                         float m1 = 400000.0/mm;
                         float m2 = 48.0/mm;
                         if(currentIsParent == 1.0) {
-                            netChildInputSumA += oppositeNetOutputA*oppositeWeight;
-                            netChildInputSumB += oppositeNetOutputB*oppositeWeight;
-                            netChildInputSumC += oppositeNetOutputC*oppositeWeight;
-                            netChildInputSumD += oppositeNetOutputD*oppositeWeight;
-                            netChildInputSumE += oppositeNetOutputE*oppositeWeight;
-                            netChildInputSumF += oppositeNetOutputF*oppositeWeight;
-                            netChildInputSumG += oppositeNetOutputG*oppositeWeight;
-            
-                            netChildInputSumBiasA += oppositeWeight;
-                            netChildInputSumBiasB += oppositeWeight;
-                            netChildInputSumBiasC += oppositeWeight;
-                            netChildInputSumBiasD += oppositeWeight;
-                            netChildInputSumBiasE += oppositeWeight;
-                            netChildInputSumBiasF += oppositeWeight;
-                            netChildInputSumBiasG += oppositeWeight;
-            
+                            if(oppositeBiasNode == 0.0) {
+                                netChildInputSumA += oppositeNetOutputA*oppositeWeight;
+                                netChildInputSumB += oppositeNetOutputB*oppositeWeight;
+                                netChildInputSumC += oppositeNetOutputC*oppositeWeight;
+                                netChildInputSumD += oppositeNetOutputD*oppositeWeight;
+                                netChildInputSumE += oppositeNetOutputE*oppositeWeight;
+                                netChildInputSumF += oppositeNetOutputF*oppositeWeight;
+                                netChildInputSumG += oppositeNetOutputG*oppositeWeight;
+                            } else {
+                                netChildInputSumA += oppositeWeight;
+                                netChildInputSumB += oppositeWeight;
+                                netChildInputSumC += oppositeWeight;
+                                netChildInputSumD += oppositeWeight;
+                                netChildInputSumE += oppositeWeight;
+                                netChildInputSumF += oppositeWeight;
+                                netChildInputSumG += oppositeWeight;
+                            }
                             atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));
                             repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));
                             acumAtraction += 1.0;
                         } else if(currentIsParent == 0.5) {
-                            netParentErrorWeightA += oppositeNetErrorA*currentWeight;
-                            netParentErrorWeightB += oppositeNetErrorB*currentWeight;
-                            netParentErrorWeightC += oppositeNetErrorC*currentWeight;
-                            netParentErrorWeightD += oppositeNetErrorD*currentWeight;
-                            netParentErrorWeightE += oppositeNetErrorE*currentWeight;
-                            netParentErrorWeightF += oppositeNetErrorF*currentWeight;
-                            netParentErrorWeightG += oppositeNetErrorG*currentWeight;
-            
-                            netParentErrorBiasA += oppositeNetErrorA;
-                            netParentErrorBiasB += oppositeNetErrorB;
-                            netParentErrorBiasC += oppositeNetErrorC;
-                            netParentErrorBiasD += oppositeNetErrorD;
-                            netParentErrorBiasE += oppositeNetErrorE;
-                            netParentErrorBiasF += oppositeNetErrorF;
-                            netParentErrorBiasG += oppositeNetErrorG;
-            
+                            if(oppositeBiasNode == 0.0) {
+                                netParentErrorWeightA += oppositeNetErrorA*currentWeight;
+                                netParentErrorWeightB += oppositeNetErrorB*currentWeight;
+                                netParentErrorWeightC += oppositeNetErrorC*currentWeight;
+                                netParentErrorWeightD += oppositeNetErrorD*currentWeight;
+                                netParentErrorWeightE += oppositeNetErrorE*currentWeight;
+                                netParentErrorWeightF += oppositeNetErrorF*currentWeight;
+                                netParentErrorWeightG += oppositeNetErrorG*currentWeight;
+                            } else {
+                                netParentErrorWeightA += oppositeNetErrorA;
+                                netParentErrorWeightB += oppositeNetErrorB;
+                                netParentErrorWeightC += oppositeNetErrorC;
+                                netParentErrorWeightD += oppositeNetErrorD;
+                                netParentErrorWeightE += oppositeNetErrorE;
+                                netParentErrorWeightF += oppositeNetErrorF;
+                                netParentErrorWeightG += oppositeNetErrorG;
+                            }
                             atraction += dirToOppositeN*max(1.0, distN*abs(currentWeight)*m1);
                             repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*m2);
                             acumAtraction += 1.0;
@@ -262,7 +250,7 @@ export class KERNEL_DIR {
                     }
                 }
             } else {
-                if(currentBiasNode == 0.0) {                
+                if(currentBiasNode == 0.0) {                                     
                     foutputA = max(0.0, netChildInputSumA); ${/* SIGM= sigm(netChildInputSumA)-0.5 ; TANH=tanh(netChildInputSumA) ; RELU=max(0.0, netChildInputSumA) */''}
                     foutputB = max(0.0, netChildInputSumB);
                     foutputC = max(0.0, netChildInputSumC);
@@ -271,13 +259,13 @@ export class KERNEL_DIR {
                     foutputF = max(0.0, netChildInputSumF);
                     foutputG = max(0.0, netChildInputSumG);
                 } else {
-                    foutputA = netChildInputSumA;
-                    foutputB = netChildInputSumB;
-                    foutputC = netChildInputSumC;
-                    foutputD = netChildInputSumD;
-                    foutputE = netChildInputSumE;
-                    foutputF = netChildInputSumF;
-                    foutputG = netChildInputSumG;
+                    foutputA = 1.0;
+                    foutputB = 1.0;
+                    foutputC = 1.0;
+                    foutputD = 1.0;
+                    foutputE = 1.0;
+                    foutputF = 1.0;
+                    foutputG = 1.0;
                 }
             }`;
 
@@ -328,14 +316,6 @@ export class KERNEL_DIR {
                 if(foutputG <= 0.0) {
                     netParentErrorWeightG = 0.0;
                 }
-            } else {
-                netParentErrorWeightA = netParentErrorBiasA;
-                netParentErrorWeightB = netParentErrorBiasB;
-                netParentErrorWeightC = netParentErrorBiasC;
-                netParentErrorWeightD = netParentErrorBiasD;
-                netParentErrorWeightE = netParentErrorBiasE;
-                netParentErrorWeightF = netParentErrorBiasF;
-                netParentErrorWeightG = netParentErrorBiasG;
             }
         }`;
 
