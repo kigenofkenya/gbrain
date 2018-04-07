@@ -377,8 +377,8 @@
 
             var layer_defs = [];
             layer_defs.push({"type": "input", "depth": network_size});
-            layer_defs.push({"type": "fc", "num_neurons": 50, "activation": "sigm"});
-            layer_defs.push({"type": "fc", "num_neurons": 50, "activation": "sigm"});
+            layer_defs.push({"type": "fc", "num_neurons": 50, "activation": "relu"});
+            layer_defs.push({"type": "fc", "num_neurons": 50, "activation": "relu"});
             layer_defs.push({"type": "regression", "num_neurons": num_actions});
 
             brain = new GBrainRL({   "target": document.getElementById("el_gbrain"),
@@ -393,6 +393,7 @@
                 "start_learn_threshold": 1000,
                 "gpu_batch_repeats": 7, // 7cpu*7gpu= 56 batch size
                 "layer_defs": layer_defs});
+            brain.setLearningRate(0.01);
         } else {
             var num_inputs = 27; // 9 eyes, each sees 3 numbers (wall, green, red thing proximity)
             var num_actions = 5; // 5 possible angles agent can turn

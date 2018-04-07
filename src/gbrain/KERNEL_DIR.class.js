@@ -64,7 +64,7 @@ export class KERNEL_DIR {
             float netParentErrorWeightG = 0.0;
             
 
-            if(nodeId < nodesCount && currentTrainLayer == -3.0) {
+            if(nodeId < nodesCount && enableTrain == 0.0) {
                 float currentActivationFn = 0.0;
                 vec2 xGeomCurrent = get_global_id(nodeId, uBufferWidth, ${geometryLength.toFixed(1)});
                 for(int n=0; n < 4096; n++) {

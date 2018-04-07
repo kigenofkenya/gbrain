@@ -44,17 +44,17 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float childGOutputG = dataH[xGeometryCurrentChild].z;
                 float parentGErrorG = dataH[xGeometryParent].w;
             
-                float learningRate = 0.01;
+                float lr = learningRate;
                 float l2_decay = 0.01;
                 float gpu_batch_size = 7.0;
-                float gpu_batch_repeats = 7.0;
-                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputA*parentGErrorA))/(gpu_batch_size*gpu_batch_repeats));
-                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputB*parentGErrorB))/(gpu_batch_size*gpu_batch_repeats));
-                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputC*parentGErrorC))/(gpu_batch_size*gpu_batch_repeats));
-                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputD*parentGErrorD))/(gpu_batch_size*gpu_batch_repeats));
-                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputE*parentGErrorE))/(gpu_batch_size*gpu_batch_repeats));
-                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputF*parentGErrorF))/(gpu_batch_size*gpu_batch_repeats));
-                linkWeight += -learningRate*(((l2_decay*linkWeight)+(childGOutputG*parentGErrorG))/(gpu_batch_size*gpu_batch_repeats));
+                float br = gpu_batch_repeats;
+                linkWeight += -lr*(((l2_decay*linkWeight)+(childGOutputA*parentGErrorA))/(gpu_batch_size*br));
+                linkWeight += -lr*(((l2_decay*linkWeight)+(childGOutputB*parentGErrorB))/(gpu_batch_size*br));
+                linkWeight += -lr*(((l2_decay*linkWeight)+(childGOutputC*parentGErrorC))/(gpu_batch_size*br));
+                linkWeight += -lr*(((l2_decay*linkWeight)+(childGOutputD*parentGErrorD))/(gpu_batch_size*br));
+                linkWeight += -lr*(((l2_decay*linkWeight)+(childGOutputE*parentGErrorE))/(gpu_batch_size*br));
+                linkWeight += -lr*(((l2_decay*linkWeight)+(childGOutputF*parentGErrorF))/(gpu_batch_size*br));
+                linkWeight += -lr*(((l2_decay*linkWeight)+(childGOutputG*parentGErrorG))/(gpu_batch_size*br));
             }
             
             return [vec4(linkLayerNum, 0.0, linkWeight, linkTypeParent)];

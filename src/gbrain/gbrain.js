@@ -5,7 +5,7 @@ import {Graph} from "./Graph.class";
  * @param {Object} jsonIn
  * @param {HTMLElement} jsonIn.target
  * @param {Object} [jsonIn.dimensions={width: Int, height: Int}]
- * @param {int} jsonIn.batch_size
+ * @param {int} jsonIn.gpu_batch_repeats
  */
 export class GBrain {
     constructor(jsonIn) {
@@ -52,6 +52,7 @@ export class GBrain {
         this.graph.enableNeuronalNetwork();
         this.graph.layerCount = 0;
         this.graph.batch_size = this.batch_size;
+        this.graph.gpu_batch_repeats = jsonIn.gpu_batch_repeats;
 
         let mesh_point = new Mesh().loadPoint();
         //this.graph.setNodeMesh(mesh_point);
@@ -146,6 +147,10 @@ export class GBrain {
                             "onTrained": (data) => {
                                 onTrain(data);
                             }});
+    };
+
+    setLearningRate(v) {
+        this.graph.setLearningRate(v);
     };
 
     enableShowOutputWeighted() {

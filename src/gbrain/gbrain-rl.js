@@ -67,7 +67,8 @@ export class GBrainRL {
         this.arrTargets = [];
 
         this.gbrain = new GBrain({  "target": jsonIn.target,
-                                    "dimensions": jsonIn.dimensions});
+                                    "dimensions": jsonIn.dimensions,
+                                    "gpu_batch_repeats": jsonIn.gpu_batch_repeats});
         this.gbrain.makeLayers(jsonIn.layer_defs);
 
         this.lastTotalError = 0;
@@ -267,6 +268,10 @@ export class GBrainRL {
             } else
                 this.onLearned();
         }
+    };
+
+    setLearningRate(v) {
+        this.gbrain.setLearningRate(v);
     };
 }
 global.GBrainRL = GBrainRL;

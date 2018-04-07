@@ -40,6 +40,7 @@ export class Graph {
 
         this.batch_size = null;
         this.layerCount = 0;
+        this.gpu_batch_repeats = null;
         this.afferentNodesCount = 0;
         this.efferentNodesCount = 0;
         this.trainTickCount = 0;
@@ -63,7 +64,7 @@ export class Graph {
         this.arrAdjMatrix = null; // null, null, linkWeight, columnAsParent
         this.arrAdjMatrixB = null;
 
-        this.currentTrainLayer = -3;
+        this.enableTrain = 0;
         this._ADJ_MATRIX_WIDTH = null;
 
         this.readPixel = false;
@@ -435,10 +436,12 @@ export class Graph {
             'float idToDrag': () => {return null;},
             'float idToHover': () => {return null;},
             "float enableForceLayout": () => {return null;},
+            "float learningRate": () => {return null;},
+            "float gpu_batch_repeats": () => {return null;},
             'float afferentNodesCount': () => {return null;},
             'float efferentNodesCount': () => {return null;},
             'float efferentStart': () => {return null;},
-            'float currentTrainLayer': () => {return null;},
+            'float enableTrain': () => {return null;},
             'float multiplyOutput': () => {return null;},
             'float only2d': () => {return null;},
             'float nodeImgColumns': () => {return null;},
@@ -1156,11 +1159,11 @@ export class Graph {
 
         //this.comp_renderer_nodes.gpufG.disableKernel(0);
         this.comp_renderer_nodes.gpufG.enableKernel(1);
-        this.comp_renderer_nodes.setArg("currentTrainLayer", () => {return 10;});
+        this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
         this._sce.getLoadedProject().getActiveStage().tick();
         //this.comp_renderer_nodes.tick();
         //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
-        this.comp_renderer_nodes.setArg("currentTrainLayer", () => {return -3;});
+        this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
         this.comp_renderer_nodes.gpufG.disableKernel(1);
         //this.comp_renderer_nodes.gpufG.enableKernel(0);
 
@@ -1183,7 +1186,9 @@ export class Graph {
         return [arr4Uint8_XYZW[n], arr4Uint8_XYZW[n+1], arr4Uint8_XYZW[n+2], arr4Uint8_XYZW[n+3]];
     };
 
-
+    setLearningRate(v) {
+        this.comp_renderer_nodes.setArg("learningRate", () => {return v;});
+    };
 
     /**
      * @param {Object} jsonIn
@@ -1988,7 +1993,9 @@ export class Graph {
         this.comp_renderer_nodes.setArg("nodeWMatrix", () => {return this.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;});
         this.comp_renderer_nodes.setArgUpdatable("nodeWMatrix", true);
 
-        this.comp_renderer_nodes.setArg("currentTrainLayer", () => {return this.currentTrainLayer;});
+        this.comp_renderer_nodes.setArg("learningRate", () => {return 0.01;});
+        this.comp_renderer_nodes.setArg("gpu_batch_repeats", () => {return this.gpu_batch_repeats;});
+        this.comp_renderer_nodes.setArg("enableTrain", () => {return this.enableTrain;});
         this.comp_renderer_nodes.setArg("afferentNodesCount", () => {return this.afferentNodesCount;});
         this.comp_renderer_nodes.setArg("efferentNodesCount", () => {return this.efferentNodesCount;});
         this.comp_renderer_nodes.setArg("efferentStart", () => {return this.currentNodeId-this.efferentNodesCount;});
