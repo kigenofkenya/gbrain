@@ -62,6 +62,8 @@ export class GBrain {
      * @param {Array<Object>} layer_defs
      */
     makeLayers(layer_defs) {
+        this.graph.layer_defs = layer_defs;
+
         let offsetX = -30;
         let lType = {   "input": (l) => {
                             let offsetZ = -10.0*(l.depth/2);
@@ -151,6 +153,10 @@ export class GBrain {
 
     setLearningRate(v) {
         this.graph.setLearningRate(v);
+    };
+
+    toJson() {
+        this.graph.toJson();
     };
 
     enableShowOutputWeighted() {

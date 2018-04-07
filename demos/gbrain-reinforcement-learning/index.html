@@ -55,6 +55,7 @@
         </div>
         <button id="BTNID_STOP" style="display:inline-block;">stop train</button>
         <button id="BTNID_RESUME" style="display:inline-block;">resume train</button>
+        <button id="BTNID_TOJSON" style="display:inline-block;">toJson</button>
     </div>
 </div>
 
@@ -123,6 +124,10 @@
 
     document.getElementById("BTNID_RESUME").addEventListener("click", function () {
         brain.learning = true;
+    });
+
+    document.getElementById("BTNID_TOJSON").addEventListener("click", function () {
+        brain.toJson();
     });
 
     var waitingAction = false;

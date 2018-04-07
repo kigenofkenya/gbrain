@@ -38,6 +38,7 @@ export class Graph {
 
         this.lineVertexCount = 1;
 
+        this.layer_defs = null;
         this.batch_size = null;
         this.layerCount = 0;
         this.gpu_batch_repeats = null;
@@ -1180,10 +1181,10 @@ export class Graph {
     };
 
     getNeuronOutput(neuronName, loc) {
-        let arr4Uint8_XYZW = this.comp_renderer_nodes.gpufG.readArg(loc[0]);
+        let o = this.comp_renderer_nodes.gpufG.readArg(loc[0]);
 
         let n = (this._nodesByName[neuronName].itemStart*4);
-        return [arr4Uint8_XYZW[n], arr4Uint8_XYZW[n+1], arr4Uint8_XYZW[n+2], arr4Uint8_XYZW[n+3]];
+        return [o[n], o[n+1], o[n+2], o[n+3]];
     };
 
     setLearningRate(v) {
@@ -2154,8 +2155,8 @@ export class Graph {
             let childNodeId = this._links[key].origin_nodeId;
             let parentNodeId = this._links[key].target_nodeId;
 
-            let pixelParent = (parentNodeId*this._ADJ_MATRIX_WIDTH)+(childNodeId);
-            let pixelChild = (childNodeId*this._ADJ_MATRIX_WIDTH)+(parentNodeId);
+            let pixelParent = this.getPixelParent(parentNodeId, childNodeId);
+            let pixelChild = this.getPixelChild(parentNodeId, childNodeId);
             setAdjMat(true, pixelParent, parentNodeId, childNodeId, this._links[key].weight, this._links[key].linkMultiplier, this._links[key].activationFunc, -99); // (columns=child;rows=parent)
             setAdjMat(false, pixelChild, childNodeId, parentNodeId, this._links[key].weight, this._links[key].linkMultiplier, this._links[key].activationFunc, this._links[key].layerNum); // (columns=parent;rows=child)
         }
@@ -2169,6 +2170,83 @@ export class Graph {
             img.style.border = "1px solid red";
         }); */
     };
+
+    getPixelParent(p,c) {
+        return (p*this._ADJ_MATRIX_WIDTH)+(c);
+    }
+
+    getPixelChild(p,c) {
+        return (c*this._ADJ_MATRIX_WIDTH)+(p);
+    }
+
+    toJson() {
+        let adjMA = this.comp_renderer_nodes.gpufG.readArg("adjacencyMatrix");
+
+        let outJson = {};
+        outJson.layers = [];
+
+        outJson.layers.push({   "out_depth": this.layer_defs[0].depth,
+                                "out_sx": 1,
+                                "out_sy": 1,
+                                "layer_type": "input"});
+        let currStartN = this.layer_defs[0].depth;
+
+        for(let n=1; n < this.layer_defs.length; n++) {
+            let currLayerDepth = this.layer_defs[n].num_neurons;
+            let lastLayerDepthU = (this.layer_defs[n-1].depth !== undefined) ? this.layer_defs[n-1].depth : (this.layer_defs[n-1].num_neurons);
+            let lastLayerDepth = (this.layer_defs[n-1].depth !== undefined) ? this.layer_defs[n-1].depth : (this.layer_defs[n-1].num_neurons+1);
+
+            outJson.layers.push({   "out_depth": this.layer_defs[n].num_neurons,
+                                    "out_sx": 1,
+                                    "out_sy": 1,
+                                    "layer_type": ((n === this.layer_defs.length-1) ? "regression" : "fc"),
+                                    "num_inputs": lastLayerDepthU,
+                                    "l1_decay_mul": 0,
+                                    "l2_decay_mul": 1,
+                                    "filters": []});
+            let lastL = outJson.layers[outJson.layers.length-1];
+
+            // filters minus bias
+            for(let p=currStartN; p < (currStartN+this.layer_defs[n].num_neurons); p++) {
+                lastL.filters.push({
+                    "sx": 1,
+                    "sy": 1,
+                    "depth": lastLayerDepthU,
+                    "w": {},
+                    "activation": "relu"});
+
+                let c_w = 0;
+                for(let c=(currStartN-lastLayerDepth); c < ( (currStartN-lastLayerDepth) +(lastLayerDepthU)); c++) {
+                    let pixelChild = this.getPixelChild(p, c)*4;
+                    lastL.filters[lastL.filters.length-1].w[c_w] = adjMA[pixelChild+2];
+                    c_w++;
+                }
+            }
+
+            // bias
+            if((n < this.layer_defs.length-1)) {
+                let nextLayerDepth = ((n === this.layer_defs.length-2) ? (this.layer_defs[n+1].num_neurons) : (this.layer_defs[n+1].num_neurons+1));
+
+                lastL.biases = {
+                    "sx": 1,
+                    "sy": 1,
+                    "depth": this.layer_defs[n+1].num_neurons,
+                    "w": {}};
+
+                let c = (currStartN+(currLayerDepth));
+                let c_w = 0;
+                for(let p=(currStartN+(currLayerDepth+1)); p < ( (currStartN+(currLayerDepth+1)) +(this.layer_defs[n+1].num_neurons)); p++) {
+                    let pixelChild = this.getPixelChild(c, p)*4;
+                    lastL.biases.w[c_w] = adjMA[pixelChild+2];
+                    c_w++;
+                }
+
+            }
+
+            currStartN += this.layer_defs[n].num_neurons+1;
+        }
+        console.log(JSON.stringify(outJson));
+    }
 
     /**
      * adjacencyMatrixToImage

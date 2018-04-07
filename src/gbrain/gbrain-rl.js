@@ -273,6 +273,10 @@ export class GBrainRL {
     setLearningRate(v) {
         this.gbrain.setLearningRate(v);
     };
+
+    toJson() {
+        this.gbrain.toJson();
+    };
 }
 global.GBrainRL = GBrainRL;
 module.exports.GBrainRL = GBrainRL;
