@@ -66,15 +66,25 @@ export class GBrainRL {
         this.arrInputs = [];
         this.arrTargets = [];
 
-        this.gbrain = new GBrain({  "target": jsonIn.target,
-                                    "dimensions": jsonIn.dimensions,
-                                    "gpu_batch_repeats": jsonIn.gpu_batch_repeats});
-        this.gbrain.makeLayers(jsonIn.layer_defs);
-
         this.lastTotalError = 0;
         this.currentBatchRepeat = 0;
         this.maxBatchRepeat = jsonIn.gpu_batch_repeats;
+
+        if(jsonIn.layer_defs !== undefined && jsonIn.layer_defs !== null) {
+            this.gbrain = new GBrain({  "target": jsonIn.target,
+                                        "dimensions": jsonIn.dimensions,
+                                        "gpu_batch_repeats": jsonIn.gpu_batch_repeats});
+            this.gbrain.makeLayers(jsonIn.layer_defs);
+        }
     }
+
+    fromJson(jsonIn) {
+        this.gbrain.fromJson(jsonIn);
+    };
+
+    toJson() {
+        this.gbrain.toJson();
+    };
 
     getNetInput(xt) {
         // return s = (x,a,x,a,x,a,xt) state vector.
@@ -272,10 +282,6 @@ export class GBrainRL {
 
     setLearningRate(v) {
         this.gbrain.setLearningRate(v);
-    };
-
-    toJson() {
-        this.gbrain.toJson();
     };
 }
 global.GBrainRL = GBrainRL;

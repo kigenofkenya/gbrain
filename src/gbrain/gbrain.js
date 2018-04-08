@@ -12,9 +12,6 @@ export class GBrain {
         this.project = null;
         this.graph = null;
 
-        this.inputCount = 0;
-        this.outputCount = 0;
-        this.neuronLayers = [];
         this.batch_size = 7;
 
         this.ini(jsonIn);
@@ -28,29 +25,32 @@ export class GBrain {
      * @param {WebGLRenderingContext} [jsonIn.gl=undefined]
      */
     ini(jsonIn) {
-        let sce = new SCE();
-        sce.initialize(jsonIn);
+        this.sce = new SCE();
+        this.sce.initialize(jsonIn);
 
         this.project = new Project();
-        sce.loadProject(this.project);
+        this.sce.loadProject(this.project);
 
         let stage = new Stage();
         this.project.addStage(stage);
         this.project.setActiveStage(stage);
 
         // CAMERA
-        let simpleCamera = new SimpleCamera(sce);
+        let simpleCamera = new SimpleCamera(this.sce);
         simpleCamera.setView(Constants.VIEW_TYPES.TOP);
         simpleCamera.setVelocity(1.0);
-        sce.setDimensions(jsonIn.dimensions.width, jsonIn.dimensions.height);
+        this.sce.setDimensions(jsonIn.dimensions.width, jsonIn.dimensions.height);
 
         // GRID
-        //let grid = new Grid(sce);
+        //let grid = new Grid(this.sce);
         //grid.generate(100.0, 1.0);
 
-        this.graph = new Graph(sce,{"enableFonts":true});
+        this.graph = new Graph(this.sce,{"enableFonts":true});
         this.graph.enableNeuronalNetwork();
         this.graph.layerCount = 0;
+        this.inputCount = 0;
+        this.outputCount = 0;
+        this.neuronLayers = [];
         this.graph.batch_size = this.batch_size;
         this.graph.gpu_batch_repeats = jsonIn.gpu_batch_repeats;
 
@@ -81,17 +81,21 @@ export class GBrain {
                             this.neuronLayers.push(neuronLayer);
 
                             if(this.graph.layerCount === 1) {
+                                let we = l.weights;
                                 for(let n=0; n < this.inputCount; n++) {
                                     this.graph.connectNeuronWithNeuronLayer({   "neuron": "input"+n,
                                                                                 "neuronLayer": this.neuronLayers[this.neuronLayers.length-1],
                                                                                 "activationFunc": 0,
-                                                                                "weight": null,
+                                                                                "weight": ((l.weights !== undefined && l.weights !== null) ? we.slice(0, l.num_neurons) : null),
                                                                                 "multiplier": 1,
                                                                                 "layerNum": this.graph.layerCount-1});
+                                    if(l.weights !== undefined && l.weights !== null)
+                                        we = we.slice(l.num_neurons);
                                 }
                             } else
                                 this.graph.connectNeuronLayerWithNeuronLayer({  "neuronLayerOrigin": this.neuronLayers[this.neuronLayers.length-2],
                                                                                 "neuronLayerTarget": this.neuronLayers[this.neuronLayers.length-1],
+                                                                                "weights": ((l.weights !== undefined && l.weights !== null) ? l.weights : null),
                                                                                 "layerNum": this.graph.layerCount-1}); // TODO l.activation
 
                             this.graph.layerCount++;
@@ -99,11 +103,22 @@ export class GBrain {
                         },
                         "regression": (l) => {
                             let offsetZ = -30.0*(l.num_neurons/2);
+                            let we = l.weights;
+                            let newWe = [];
+                            if(l.weights !== undefined && l.weights !== null) {
+                                for(let n=0; n < l.num_neurons; n++) {
+                                    for(let nb=0; nb < l.weights.length; nb=nb+l.num_neurons)
+                                        newWe.push(l.weights[nb+n]);
+                                }
+                            }
                             for(let n=0; n < l.num_neurons; n++) {
                                 this.graph.addEfferentNeuron("output"+this.outputCount, [offsetX, 0.0, offsetZ, 1.0]); // efferent neuron (actuator)
                                 this.graph.connectNeuronLayerWithNeuron({   "neuronLayer": this.neuronLayers[this.neuronLayers.length-1],
                                                                             "neuron": "output"+this.outputCount,
+                                                                            "weight": ((l.weights !== undefined && l.weights !== null) ? newWe.slice(0, this.neuronLayers[this.neuronLayers.length-1].length) : null),
                                                                             "layerNum": this.graph.layerCount-1});
+                                if(l.weights !== undefined && l.weights !== null)
+                                    newWe = newWe.slice(this.neuronLayers[this.neuronLayers.length-1].length);
 
                                 this.outputCount++;
                                 offsetZ += 30.0;
@@ -117,6 +132,56 @@ export class GBrain {
 
         this.graph.createWebGLBuffers();
         this.graph.enableForceLayout();
+    };
+
+    fromJson(jsonIn) {
+        layer_defs = [];
+        for(let n=0; n < jsonIn.layers.length; n++) {
+            if(jsonIn.layers[n].layer_type === "input") {
+
+
+            } else if(jsonIn.layers[n].layer_type === "fc") {
+                jsonIn.layers[n].weights = [];
+                for(let key in jsonIn.layers[n].filters[0].w) {
+                    for(let nb=0; nb < jsonIn.layers[n].filters.length; nb++) {
+                        jsonIn.layers[n].weights.push(jsonIn.layers[n].filters[nb].w[key]);
+                    }
+                }
+                if(n > 1) {
+                    for(let key in jsonIn.layers[n-1].biases.w)
+                        jsonIn.layers[n].weights.push(jsonIn.layers[n-1].biases.w[key]);
+                }
+            } else if(jsonIn.layers[n].layer_type === "regression") {
+                jsonIn.layers[n].weights = [];
+                for(let key in jsonIn.layers[n].filters[0].w) {
+                    for(let nb=0; nb < jsonIn.layers[n].filters.length; nb++) {
+                        jsonIn.layers[n].weights.push(jsonIn.layers[n].filters[nb].w[key]);
+                    }
+                }
+                if(n > 1) {
+                    for(let key in jsonIn.layers[n-1].biases.w)
+                        jsonIn.layers[n].weights.push(jsonIn.layers[n-1].biases.w[key]);
+                }
+            }
+        }
+        for(let n=0; n < jsonIn.layers.length; n++) {
+            if(jsonIn.layers[n].layer_type === "input")
+                layer_defs.push({"type": "input", "depth": jsonIn.layers[n].out_depth});
+            else if(jsonIn.layers[n].layer_type === "fc")
+                layer_defs.push({"type": "fc", "num_neurons": jsonIn.layers[n].out_depth, "activation": "relu", "weights": jsonIn.layers[n].weights});
+            else if(jsonIn.layers[n].layer_type === "regression")
+                layer_defs.push({"type": "regression", "num_neurons": jsonIn.layers[n].out_depth, "weights": jsonIn.layers[n].weights});
+        }
+
+        this.sce.target.innerHTML = "";
+        this.ini({  "target": this.sce.target,
+                    "dimensions": this.sce.dimensions,
+                    "gpu_batch_repeats": this.graph.gpu_batch_repeats});
+        this.makeLayers(layer_defs);
+    };
+
+    toJson() {
+        this.graph.toJson();
     };
 
     /**
@@ -153,10 +218,6 @@ export class GBrain {
 
     setLearningRate(v) {
         this.graph.setLearningRate(v);
-    };
-
-    toJson() {
-        this.graph.toJson();
     };
 
     enableShowOutputWeighted() {
