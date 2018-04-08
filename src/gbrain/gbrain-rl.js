@@ -108,7 +108,7 @@ export class GBrainRL {
                 action1ofk[q] = 0.0;
 
             let aw = (this.learning === true) ? this.action_window[n-1-k] : this.action_windowI[n-1-k];
-            action1ofk[this.action_window[n-1-k]] = 1.0*this.num_inputs;
+            action1ofk[aw] = 1.0*this.num_inputs;
             w = w.concat(action1ofk);
         }
         return w;
