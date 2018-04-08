@@ -251,13 +251,13 @@ export class KERNEL_DIR {
                 }
             } else {
                 if(currentBiasNode == 0.0) {                                     
-                    foutputA = max(0.0, netChildInputSumA); ${/* SIGM= sigm(netChildInputSumA)-0.5 ; TANH=tanh(netChildInputSumA) ; RELU=max(0.0, netChildInputSumA) */''}
-                    foutputB = max(0.0, netChildInputSumB);
-                    foutputC = max(0.0, netChildInputSumC);
-                    foutputD = max(0.0, netChildInputSumD);
-                    foutputE = max(0.0, netChildInputSumE);
-                    foutputF = max(0.0, netChildInputSumF);
-                    foutputG = max(0.0, netChildInputSumG);
+                    foutputA = max(0.01*netChildInputSumA, netChildInputSumA); ${/* SIGM= sigm(netChildInputSumA)-0.5 ; TANH=tanh(netChildInputSumA) ; RELU=max(0.0, netChildInputSumA) */''}
+                    foutputB = max(0.01*netChildInputSumB, netChildInputSumB);
+                    foutputC = max(0.01*netChildInputSumC, netChildInputSumC);
+                    foutputD = max(0.01*netChildInputSumD, netChildInputSumD);
+                    foutputE = max(0.01*netChildInputSumE, netChildInputSumE);
+                    foutputF = max(0.01*netChildInputSumF, netChildInputSumF);
+                    foutputG = max(0.01*netChildInputSumG, netChildInputSumG);
                 } else {
                     foutputA = 1.0;
                     foutputB = 1.0;
@@ -295,26 +295,26 @@ export class KERNEL_DIR {
         str += `
         else {
             if(currentBiasNode == 0.0) {
-                if(foutputA <= 0.0) {
-                    netParentErrorWeightA = 0.0;
+                if(foutputA <= 0.01) {
+                    netParentErrorWeightA = 0.01*netParentErrorWeightA;
                 }
-                if(foutputB <= 0.0) {
-                    netParentErrorWeightB = 0.0;
+                if(foutputB <= 0.01) {
+                    netParentErrorWeightB = 0.01*netParentErrorWeightB;
                 }
-                if(foutputC <= 0.0) {
-                    netParentErrorWeightC = 0.0;
+                if(foutputC <= 0.01) {
+                    netParentErrorWeightC = 0.01*netParentErrorWeightC;
                 }
-                if(foutputD <= 0.0) {
-                    netParentErrorWeightD = 0.0;
+                if(foutputD <= 0.01) {
+                    netParentErrorWeightD = 0.01*netParentErrorWeightD;
                 }
-                if(foutputE <= 0.0) {
-                    netParentErrorWeightE = 0.0;
+                if(foutputE <= 0.01) {
+                    netParentErrorWeightE = 0.01*netParentErrorWeightE;
                 }
-                if(foutputF <= 0.0) {
-                    netParentErrorWeightF = 0.0;
+                if(foutputF <= 0.01) {
+                    netParentErrorWeightF = 0.01*netParentErrorWeightF;
                 }
-                if(foutputG <= 0.0) {
-                    netParentErrorWeightG = 0.0;
+                if(foutputG <= 0.01) {
+                    netParentErrorWeightG = 0.01*netParentErrorWeightG;
                 }
             }
         }`;

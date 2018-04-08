@@ -177,15 +177,17 @@ export class GBrainRL {
             if(rf < this.epsilon) {
                 // choose a random action with epsilon probability
                 action = this.random_action();
-                this.pushWindow(input_array, net_input, action);
+                if(this.learning === true)
+                    this.pushWindow(input_array, net_input, action);
                 onAction(action);
             } else {
                 // otherwise use our policy to make decision
                 this.policy(net_input, (maxact) => {
-                    this.pushWindow(input_array, net_input, maxact[0].action);
+                    if(this.learning === true)
+                        this.pushWindow(input_array, net_input, maxact[0].action);
                     onAction(maxact[0].action);
                 });
-           }
+            }
         } else {
             // pathological case that happens first few iterations
             // before we accumulate window_size inputs

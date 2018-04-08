@@ -68,7 +68,7 @@ export class GBrain {
         let lType = {   "input": (l) => {
                             let offsetZ = -10.0*(l.depth/2);
                             for(let n=0; n < l.depth; n++) {
-                                this.graph.addAfferentNeuron("input"+this.inputCount, [offsetX, 0.0, offsetZ, 1.0]); // afferent neuron (sensor)
+                                this.graph.addAfferentNeuron("input"+this.inputCount, [offsetX, 0.0, offsetZ, 1.0]); // afferent neuron (input)
                                 this.inputCount++;
                                 offsetZ += 10.0;
                             }
@@ -87,6 +87,7 @@ export class GBrain {
                                                                                 "neuronLayer": this.neuronLayers[this.neuronLayers.length-1],
                                                                                 "activationFunc": 0,
                                                                                 "weight": ((l.weights !== undefined && l.weights !== null) ? we.slice(0, l.num_neurons) : null),
+                                                                                "layer_neurons_count": this.inputCount,
                                                                                 "multiplier": 1,
                                                                                 "layerNum": this.graph.layerCount-1});
                                     if(l.weights !== undefined && l.weights !== null)
@@ -96,6 +97,7 @@ export class GBrain {
                                 this.graph.connectNeuronLayerWithNeuronLayer({  "neuronLayerOrigin": this.neuronLayers[this.neuronLayers.length-2],
                                                                                 "neuronLayerTarget": this.neuronLayers[this.neuronLayers.length-1],
                                                                                 "weights": ((l.weights !== undefined && l.weights !== null) ? l.weights : null),
+                                                                                "layer_neurons_count": this.neuronLayers[this.neuronLayers.length-2].length,
                                                                                 "layerNum": this.graph.layerCount-1}); // TODO l.activation
 
                             this.graph.layerCount++;
@@ -112,10 +114,11 @@ export class GBrain {
                                 }
                             }
                             for(let n=0; n < l.num_neurons; n++) {
-                                this.graph.addEfferentNeuron("output"+this.outputCount, [offsetX, 0.0, offsetZ, 1.0]); // efferent neuron (actuator)
+                                this.graph.addEfferentNeuron("output"+this.outputCount, [offsetX, 0.0, offsetZ, 1.0]); // efferent neuron (output)
                                 this.graph.connectNeuronLayerWithNeuron({   "neuronLayer": this.neuronLayers[this.neuronLayers.length-1],
                                                                             "neuron": "output"+this.outputCount,
                                                                             "weight": ((l.weights !== undefined && l.weights !== null) ? newWe.slice(0, this.neuronLayers[this.neuronLayers.length-1].length) : null),
+                                                                            "layer_neurons_count": this.neuronLayers[this.neuronLayers.length-1].length,
                                                                             "layerNum": this.graph.layerCount-1});
                                 if(l.weights !== undefined && l.weights !== null)
                                     newWe = newWe.slice(this.neuronLayers[this.neuronLayers.length-1].length);

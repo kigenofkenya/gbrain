@@ -921,6 +921,12 @@ export class Graph {
         this.addNeuron(neuronName, destination);
     };
 
+    /**
+     * @param {int} numX
+     * @param {int} numY
+     * @param {Array<number>} pos
+     * @param {number} nodSep
+     */
     createNeuronLayer(numX, numY, pos, nodSep) {
         let arr = [];
         for(let x=0; x < numX; x++) {
@@ -1006,6 +1012,7 @@ export class Graph {
      * @param {String} jsonIn.neuronNameB
      * @param {int} [jsonIn.activationFunc=1.0] 1.0=use weight*data;0.0=use multiplier*data
      * @param {number} [jsonIn.weight]
+     * @param {int} [jsonIn.layer_neurons_count]
      * @param {number} [jsonIn.multiplier=1.0]
      * @param {int} jsonIn.layerNum
      */
@@ -1025,9 +1032,7 @@ export class Graph {
             return u*c;
         };
         let randn = (mu, std) => { return mu+gaussRandom()*std; };
-
-        let scale = Math.sqrt(1.0/(50)); // TODO
-
+        let scale = (jsonIn.layer_neurons_count !== undefined && jsonIn.layer_neurons_count !== null) ? Math.sqrt(1.0/(jsonIn.layer_neurons_count*5)) : Math.sqrt(1.0/(50));
 
         let _activationFunc = (jsonIn.activationFunc !== undefined && jsonIn.activationFunc !== null) ? jsonIn.activationFunc : 1.0;
         let _weight = (jsonIn.weight !== undefined && jsonIn.weight !== null) ? jsonIn.weight : randn(0.0, scale);
@@ -1050,6 +1055,7 @@ export class Graph {
      * @param {Array<int>} jsonIn.neuronLayer
      * @param {int} [jsonIn.activationFunc=1.0] 1.0=use weight*data;0.0=use multiplier*data
      * @param {number|null|Array<number>} [jsonIn.weight]
+     * @param {int} [jsonIn.layer_neurons_count]
      * @param {number} [jsonIn.multiplier=1.0]
      * @param {int} jsonIn.layerNum
      */
@@ -1059,6 +1065,7 @@ export class Graph {
                                 "neuronNameB": jsonIn.neuronLayer[n].toString(),
                                 "activationFunc": jsonIn.activationFunc,
                                 "weight": ((jsonIn.weight !== undefined && jsonIn.weight !== null && jsonIn.weight.constructor === Array) ? jsonIn.weight[n] : jsonIn.weight),
+                                "layer_neurons_count": jsonIn.layer_neurons_count,
                                 "multiplier": jsonIn.multiplier,
                                 "layerNum": jsonIn.layerNum});
     };
@@ -1067,6 +1074,7 @@ export class Graph {
      * @param {Object} jsonIn
      * @param {Array<int>} jsonIn.neuronLayer
      * @param {number|null|Array<number>} [jsonIn.weight]
+     * @param {int} [jsonIn.layer_neurons_count]
      * @param {String} jsonIn.neuron
      * @param {int} jsonIn.layerNum
      */
@@ -1076,6 +1084,7 @@ export class Graph {
                                 "neuronNameB": jsonIn.neuron,
                                 "activationFunc": 1.0,
                                 "weight": ((jsonIn.weight !== undefined && jsonIn.weight !== null && jsonIn.weight.constructor === Array) ? jsonIn.weight[n] : jsonIn.weight),
+                                "layer_neurons_count": jsonIn.layer_neurons_count,
                                 "layerNum": jsonIn.layerNum});
     };
 
@@ -1084,6 +1093,7 @@ export class Graph {
      * @param {Array<int>} jsonIn.neuronLayerOrigin
      * @param {Array<int>} jsonIn.neuronLayerTarget
      * @param {Array<number>} jsonIn.weights
+     * @param {int} [jsonIn.layer_neurons_count]
      * @param {int} jsonIn.layerNum
      */
     connectNeuronLayerWithNeuronLayer(jsonIn) {
@@ -1094,7 +1104,8 @@ export class Graph {
             this.connectNeuronWithNeuronLayer({ "neuron": neuronOrigin.toString(),
                                                 "neuronLayer": jsonIn.neuronLayerTarget,
                                                 "layerNum": jsonIn.layerNum,
-                                                "weight": ((jsonIn.weights !== undefined && jsonIn.weights !== null) ? we.slice(0, jsonIn.neuronLayerTarget.length-1) : null)});
+                                                "weight": ((jsonIn.weights !== undefined && jsonIn.weights !== null) ? we.slice(0, jsonIn.neuronLayerTarget.length-1) : null),
+                                                "layer_neurons_count": jsonIn.layer_neurons_count});
 
             if(jsonIn.weights !== undefined && jsonIn.weights !== null)
                 we = we.slice(jsonIn.neuronLayerTarget.length-1);
@@ -1147,8 +1158,6 @@ export class Graph {
 
             // bias
             if((n < this.layer_defs.length-1)) {
-                let nextLayerDepth = ((n === this.layer_defs.length-2) ? (this.layer_defs[n+1].num_neurons) : (this.layer_defs[n+1].num_neurons+1));
-
                 lastL.biases = {
                     "sx": 1,
                     "sy": 1,
@@ -1161,7 +1170,6 @@ export class Graph {
                     lastL.biases.w[c_w] = adjMA[pixelChild+2];
                     c_w++;
                 }
-
             }
 
             currStartN += this.layer_defs[n].num_neurons+1;
