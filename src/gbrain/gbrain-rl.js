@@ -36,7 +36,11 @@ export class GBrainRL {
         this.net_inputs = this.num_inputs * this.temporal_window + this.num_actions * this.temporal_window + this.num_inputs;
         this.window_size = Math.max(this.temporal_window, 2);
 
+        // infference windows
+        this.state_windowI = new Array(this.window_size);
+        this.action_windowI = new Array(this.window_size);
 
+        // training windows
         this.state_window = new Array(this.window_size);
         this.action_window = new Array(this.window_size);
         this.reward_window = new Array(this.window_size);
@@ -95,12 +99,15 @@ export class GBrainRL {
         let n = this.window_size;
         for(let k=0; k < this.temporal_window; k++) {
             // state
+            let sw = (this.learning === true) ? this.state_window[n-1-k] : this.state_windowI[n-1-k];
             w = w.concat(this.state_window[n-1-k]);
             // action, encoded as 1-of-k indicator vector. We scale it up a bit because
             // we dont want weight regularization to undervalue this information, as it only exists once
             let action1ofk = new Array(this.num_actions);
             for(let q=0; q < this.num_actions; q++)
                 action1ofk[q] = 0.0;
+
+            let aw = (this.learning === true) ? this.action_window[n-1-k] : this.action_windowI[n-1-k];
             action1ofk[this.action_window[n-1-k]] = 1.0*this.num_inputs;
             w = w.concat(action1ofk);
         }
@@ -145,6 +152,15 @@ export class GBrainRL {
         this.action_window.push(action);
     };
 
+    pushWindowInfference(input_array, action) {
+        // remember the state and action we took for backward pass
+        this.state_windowI.shift();
+        this.state_windowI.push(input_array);
+
+        this.action_windowI.shift();
+        this.action_windowI.push(action);
+    };
+
     forward(input_array, onAction) {
         this.forward_passes++;
         this.last_input_array = input_array;
@@ -177,14 +193,12 @@ export class GBrainRL {
             if(rf < this.epsilon) {
                 // choose a random action with epsilon probability
                 action = this.random_action();
-                if(this.learning === true)
-                    this.pushWindow(input_array, net_input, action);
+                (this.learning === true) ? this.pushWindow(input_array, net_input, action) : this.pushWindowInfference(input_array, action);
                 onAction(action);
             } else {
                 // otherwise use our policy to make decision
                 this.policy(net_input, (maxact) => {
-                    if(this.learning === true)
-                        this.pushWindow(input_array, net_input, maxact[0].action);
+                    (this.learning === true) ? this.pushWindow(input_array, net_input, maxact[0].action) : this.pushWindowInfference(input_array, maxact[0].action);
                     onAction(maxact[0].action);
                 });
             }
@@ -193,7 +207,7 @@ export class GBrainRL {
             // before we accumulate window_size inputs
             net_input = [];
             action = this.random_action();
-            this.pushWindow(input_array, net_input, action);
+            (this.learning === true) ? this.pushWindow(input_array, net_input, action) : this.pushWindowInfference(input_array, net_input, action);
             onAction(action);
         }
     };
