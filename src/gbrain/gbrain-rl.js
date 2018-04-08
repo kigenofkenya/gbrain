@@ -100,7 +100,7 @@ export class GBrainRL {
         for(let k=0; k < this.temporal_window; k++) {
             // state
             let sw = (this.learning === true) ? this.state_window[n-1-k] : this.state_windowI[n-1-k];
-            w = w.concat(this.state_window[n-1-k]);
+            w = w.concat(sw);
             // action, encoded as 1-of-k indicator vector. We scale it up a bit because
             // we dont want weight regularization to undervalue this information, as it only exists once
             let action1ofk = new Array(this.num_actions);
