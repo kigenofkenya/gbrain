@@ -1032,7 +1032,7 @@ export class Graph {
             return u*c;
         };
         let randn = (mu, std) => { return mu+gaussRandom()*std; };
-        let scale = (jsonIn.layer_neurons_count !== undefined && jsonIn.layer_neurons_count !== null) ? Math.sqrt(1.0/(jsonIn.layer_neurons_count*5)) : Math.sqrt(1.0/(50));
+        let scale = (jsonIn.layer_neurons_count !== undefined && jsonIn.layer_neurons_count !== null) ? Math.sqrt(2.0/(jsonIn.layer_neurons_count)) : Math.sqrt(2.0/(50));
 
         let _activationFunc = (jsonIn.activationFunc !== undefined && jsonIn.activationFunc !== null) ? jsonIn.activationFunc : 1.0;
         let _weight = (jsonIn.weight !== undefined && jsonIn.weight !== null) ? jsonIn.weight : randn(0.0, scale);

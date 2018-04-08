@@ -247,15 +247,14 @@ export class GBrainRL {
     }
 
     backward(reward, _onLearned) {
-        this.latest_reward = reward;
-        this.onLearned = _onLearned;
-        //this.average_reward_window.add(reward); TODO
-        this.reward_window.shift();
-        this.reward_window.push(reward);
-
         if(this.learning === false)
             this.onLearned();
         else {
+            this.latest_reward = reward;
+            this.onLearned = _onLearned;
+            //this.average_reward_window.add(reward); TODO
+            this.reward_window.shift();
+            this.reward_window.push(reward);
             this.age++;
 
             // it is time t+1 and we have to store (s_t, a_t, r_t, s_{t+1}) as new experience
