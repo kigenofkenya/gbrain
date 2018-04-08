@@ -135,7 +135,7 @@ export class GBrain {
     };
 
     fromJson(jsonIn) {
-        layer_defs = [];
+        let layer_defs = [];
         for(let n=0; n < jsonIn.layers.length; n++) {
             if(jsonIn.layers[n].layer_type === "input") {
 
