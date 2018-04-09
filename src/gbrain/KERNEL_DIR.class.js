@@ -150,23 +150,14 @@ export class KERNEL_DIR {
                         float m1 = 400000.0/mm;
                         float m2 = 48.0/mm;
                         if(currentIsParent == 1.0) {
-                            if(oppositeBiasNode == 0.0) {
-                                netChildInputSumA += oppositeNetOutputA*oppositeWeight;
-                                netChildInputSumB += oppositeNetOutputB*oppositeWeight;
-                                netChildInputSumC += oppositeNetOutputC*oppositeWeight;
-                                netChildInputSumD += oppositeNetOutputD*oppositeWeight;
-                                netChildInputSumE += oppositeNetOutputE*oppositeWeight;
-                                netChildInputSumF += oppositeNetOutputF*oppositeWeight;
-                                netChildInputSumG += oppositeNetOutputG*oppositeWeight;
-                            } else {
-                                netChildInputSumA += oppositeWeight;
-                                netChildInputSumB += oppositeWeight;
-                                netChildInputSumC += oppositeWeight;
-                                netChildInputSumD += oppositeWeight;
-                                netChildInputSumE += oppositeWeight;
-                                netChildInputSumF += oppositeWeight;
-                                netChildInputSumG += oppositeWeight;
-                            }
+                            netChildInputSumA += oppositeNetOutputA*oppositeWeight;
+                            netChildInputSumB += oppositeNetOutputB*oppositeWeight;
+                            netChildInputSumC += oppositeNetOutputC*oppositeWeight;
+                            netChildInputSumD += oppositeNetOutputD*oppositeWeight;
+                            netChildInputSumE += oppositeNetOutputE*oppositeWeight;
+                            netChildInputSumF += oppositeNetOutputF*oppositeWeight;
+                            netChildInputSumG += oppositeNetOutputG*oppositeWeight;
+                            
                             atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));
                             repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));
                             acumAtraction += 1.0;

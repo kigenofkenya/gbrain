@@ -57,7 +57,8 @@
 
 
             var gbrain = new GBrain({   "target": document.getElementById("el_gbrain"),
-                                        "dimensions": {"width": window.innerWidth*0.7, "height": window.innerHeight-100}});
+                                        "dimensions": {"width": window.innerWidth*0.7, "height": window.innerHeight-100},
+                                        "gpu_batch_repeats": 7});
             gbrain.makeLayers(layer_defs);
 
             var render = function() {
@@ -91,8 +92,8 @@
                 console.log("input: "+r+", "+g+", "+b);
 
                 gbrain.forward([r,g,b], function(data) {
-                    console.log("W output: "+data[0].output+" B output: "+data[1].output);
-                    if(data[1].output > data[0].output)
+                    console.log("W output: "+data[0][0].output+" B output: "+data[0][1].output);
+                    if(data[0][1].output > data[0][0].output)
                         elem_fgColor.style.color = "rgb(0, 0, 0)";
                     else
                         elem_fgColor.style.color = "rgb(255, 255, 255)";
@@ -110,7 +111,7 @@
             };
 
             document.getElementById("BTNID_WHITE").addEventListener("click", function() { // train white
-                let r = (elem_fgColor.style.color === "rgb(255, 255, 255)") ? {dim: 0, val: 1.0} : {dim: 1, val: -1.0};
+                let r = (elem_fgColor.style.color === "rgb(255, 255, 255)") ? [{dim: 0, val: 1.0}] : [{dim: 1, val: -1.0}];
 
                 gbrain.train(r, function(data) {
                     calculate(data);
@@ -119,7 +120,7 @@
             });
 
             document.getElementById("BTNID_BLACK").addEventListener("click", function() { // train black
-                let r = (elem_fgColor.style.color === "rgb(0, 0, 0)") ? {dim: 1, val: 1.0} : {dim: 0, val: -1.0};
+                let r = (elem_fgColor.style.color === "rgb(0, 0, 0)") ? [{dim: 1, val: 1.0}] : [{dim: 0, val: -1.0}];
 
                 gbrain.train(r, function(data) {
                     calculate(data);
