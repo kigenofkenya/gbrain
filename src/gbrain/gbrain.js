@@ -205,7 +205,7 @@ export class GBrain {
     train(reward, onTrain) {
         let arrReward = [];
         for(let n=0; n < reward.length; n++) {
-            for(let nb=0; nb < (this.outputCount/this.batch_size); nb++) {
+            for(let nb=0; nb < (this.outputCount*this.batch_size); nb++) {
                 if(nb === reward[n].dim)
                     arrReward.push(reward[n].val);
                 else
