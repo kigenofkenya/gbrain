@@ -36,11 +36,6 @@ export class GBrainRL {
         this.net_inputs = this.num_inputs * this.temporal_window + this.num_actions * this.temporal_window + this.num_inputs;
         this.window_size = Math.max(this.temporal_window, 2);
 
-        // infference windows
-        this.state_windowI = new Array(this.window_size);
-        this.action_windowI = new Array(this.window_size);
-
-        // training windows
         this.state_window = new Array(this.window_size);
         this.action_window = new Array(this.window_size);
         this.reward_window = new Array(this.window_size);
@@ -99,16 +94,13 @@ export class GBrainRL {
         let n = this.window_size;
         for(let k=0; k < this.temporal_window; k++) {
             // state
-            let sw = (this.learning === true) ? this.state_window[n-1-k] : this.state_windowI[n-1-k];
-            w = w.concat(sw);
+            w = w.concat(this.state_window[n-1-k]);
             // action, encoded as 1-of-k indicator vector. We scale it up a bit because
             // we dont want weight regularization to undervalue this information, as it only exists once
             let action1ofk = new Array(this.num_actions);
             for(let q=0; q < this.num_actions; q++)
                 action1ofk[q] = 0.0;
-
-            let aw = (this.learning === true) ? this.action_window[n-1-k] : this.action_windowI[n-1-k];
-            action1ofk[aw] = 1.0*this.num_inputs;
+            action1ofk[this.action_window[n-1-k]] = 1.0*this.num_inputs;
             w = w.concat(action1ofk);
         }
         return w;
@@ -152,21 +144,8 @@ export class GBrainRL {
         this.action_window.push(action);
     };
 
-    pushWindowInfference(input_array, action) {
-        // remember the state and action we took for backward pass
-        this.state_windowI.shift();
-        this.state_windowI.push(input_array);
-
-        this.action_windowI.shift();
-        this.action_windowI.push(action);
-    };
-
     stopLearning() {
         this.learning = false;
-        this.forward_passes = 0;
-
-        this.state_windowI = new Array(this.window_size);
-        this.action_windowI = new Array(this.window_size);
     };
 
     resumeLearning() {
@@ -184,9 +163,8 @@ export class GBrainRL {
         this.last_input_array = input_array;
 
         let action = null;
-        let net_input = null;
+        let net_input = this.getNetInput(input_array);
         if(this.forward_passes > this.temporal_window) { // we have enough to actually do something reasonable
-            net_input = this.getNetInput(input_array);
             if(this.learning === true) {
                 let otr = Math.min(1, Math.max(0, this.latest_reward));
                 let rewardMultiplier = (otr > 0) ? 1.0-otr : otr*-1;
@@ -211,21 +189,21 @@ export class GBrainRL {
             if(rf < this.epsilon) {
                 // choose a random action with epsilon probability
                 action = this.random_action();
-                (this.learning === true) ? this.pushWindow(input_array, net_input, action) : this.pushWindowInfference(input_array, action);
+                this.pushWindow(input_array, net_input, action);
                 onAction(action);
             } else {
                 // otherwise use our policy to make decision
                 this.policy(net_input, (maxact) => {
-                    (this.learning === true) ? this.pushWindow(input_array, net_input, maxact[0].action) : this.pushWindowInfference(input_array, maxact[0].action);
+                    this.pushWindow(input_array, net_input, maxact[0].action);
                     onAction(maxact[0].action);
                 });
             }
         } else {
             // pathological case that happens first few iterations
             // before we accumulate window_size inputs
-            net_input = [];
+            //net_input = [];
             action = this.random_action();
-            (this.learning === true) ? this.pushWindow(input_array, net_input, action) : this.pushWindowInfference(input_array, action);
+            this.pushWindow(input_array, net_input, action);
             onAction(action);
         }
     };
@@ -279,14 +257,16 @@ export class GBrainRL {
     }
 
     backward(reward, _onLearned) {
-        if(this.learning === false)
+        this.onLearned = _onLearned;
+        this.latest_reward = reward;
+
+        if(this.learning === false || this.forward_passes === 0) {
             this.onLearned();
-        else {
-            this.latest_reward = reward;
-            this.onLearned = _onLearned;
+        } else {
             //this.average_reward_window.add(reward); TODO
             this.reward_window.shift();
             this.reward_window.push(reward);
+
             this.age++;
 
             // it is time t+1 and we have to store (s_t, a_t, r_t, s_{t+1}) as new experience
@@ -303,11 +283,12 @@ export class GBrainRL {
                     let e = Math.floor(Math.random()*this.experience.length);
                     this.experience[e] = e;
                 }
-            }
 
-            if(this.experience.length > this.start_learn_threshold) {
-                this.currentBatchRepeat = 0;
-                this.bb();
+                if(this.experience.length > this.start_learn_threshold) {
+                    this.currentBatchRepeat = 0;
+                    this.bb();
+                } else
+                    this.onLearned();
             } else
                 this.onLearned();
         }
