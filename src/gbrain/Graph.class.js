@@ -940,7 +940,7 @@ export class Graph {
         }
 
         // bias neuron
-        let position = [pos[0], pos[1], pos[2]+(((numY+3)-(numY/2))*nodSep), pos[3]];
+        let position = [pos[0], pos[1]-10.0, pos[2]+(((numY+3)-(numY/2))*nodSep), pos[3]];
         this.addNeuron(this.currHiddenNeuron.toString(), position, 1);
         arr.push(this.currHiddenNeuron);
         this.currHiddenNeuron++;
@@ -1187,7 +1187,7 @@ export class Graph {
 
         let state = jsonIn.state.slice(0);
         let length = jsonIn.state.length;
-        for(let n=length; n < this.afferentNodesCount; n++)
+        for(let n=length; n < this.afferentNodesCount*this.batch_size; n++)
             state[n] = 0.0;
 
         let lett = ["A","B","C","D","E","F","G"];
