@@ -12,7 +12,7 @@ April 2 2018
 <a href="http://stormcolour.appspot.com/gbrain/demos/gbrain-reinforcement-learning/"><img src="demos/graph-neuronal-network/capture.jpg" style="width:150px"/></a> 
 </p>
 <h2>How this work</h2>
-<p>The <a hef="https://en.wikipedia.org/wiki/Adjacency_matrix">Adjacency Matrix</a> is a texture which besides to have indicated the relations (by the Adjacency Matrix nature), on these is indicated the next properties too:</p>
+<p>The <a hef="https://en.wikipedia.org/wiki/Adjacency_matrix">Adjacency Matrix</a> is a texture which besides to have indicated the relations (by the Adjacency Matrix nature), on these is indicated the next properties inside channels too:</p>
     <ul>
     <li>1. neuron A (id)</li>
     <li>2. neuron B (id)</li>
@@ -21,3 +21,4 @@ April 2 2018
     </ul>
 <p>Of this manner is able to know and communicate the output function of one neuron with another neuron and propagate the error back too without we have send information to CPU on every layer result.</p>
 <p>On backpropagation the weight data is updated over the Adjacency Matrix</p>
+<p>Activation function is included inside own neuron, avoiding to have propagate it to any reluctance layer and so we gain better performance.</p>

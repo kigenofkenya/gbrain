@@ -120,12 +120,11 @@
     });
 
     document.getElementById("BTNID_STOP").addEventListener("click", function () {
-        brain.learning = false;
+        brain.stopLearning();
     });
 
     document.getElementById("BTNID_RESUME").addEventListener("click", function () {
-        brain.learning = true;
-        brain.forward_passes = 0;
+        brain.resumeLearning();
     });
 
     document.getElementById("BTNID_TOJSON").addEventListener("click", function () {

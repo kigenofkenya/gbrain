@@ -161,6 +161,24 @@ export class GBrainRL {
         this.action_windowI.push(action);
     };
 
+    stopLearning() {
+        this.learning = false;
+        this.forward_passes = 0;
+
+        this.state_windowI = new Array(this.window_size);
+        this.action_windowI = new Array(this.window_size);
+    };
+
+    resumeLearning() {
+        this.learning = true;
+        this.forward_passes = 0;
+
+        this.state_window = new Array(this.window_size);
+        this.action_window = new Array(this.window_size);
+        this.reward_window = new Array(this.window_size);
+        this.net_window = new Array(this.window_size);
+    };
+
     forward(input_array, onAction) {
         this.forward_passes++;
         this.last_input_array = input_array;
@@ -207,7 +225,7 @@ export class GBrainRL {
             // before we accumulate window_size inputs
             net_input = [];
             action = this.random_action();
-            (this.learning === true) ? this.pushWindow(input_array, net_input, action) : this.pushWindowInfference(input_array, net_input, action);
+            (this.learning === true) ? this.pushWindow(input_array, net_input, action) : this.pushWindowInfference(input_array, action);
             onAction(action);
         }
     };
