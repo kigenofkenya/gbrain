@@ -66,11 +66,11 @@ export class GBrain {
 
         let offsetX = -30;
         let lType = {   "input": (l) => {
-                            let offsetZ = -10.0*(l.depth/2);
+                            let offsetZ = -5.0*(l.depth/2);
                             for(let n=0; n < l.depth; n++) {
                                 this.graph.addAfferentNeuron("input"+this.inputCount, [offsetX, 0.0, offsetZ, 1.0]); // afferent neuron (input)
                                 this.inputCount++;
-                                offsetZ += 10.0;
+                                offsetZ += 5.0;
                             }
 
                             this.graph.layerCount++;
@@ -199,7 +199,7 @@ export class GBrain {
     };
 
     /**
-     * @param {Object} reward {dim: actionId for the reward , val: number}
+     * @param {Array<Object>} reward [{dim: actionId for the reward , val: number}]
      * @param {Function} onTrain
      */
     train(reward, onTrain) {
