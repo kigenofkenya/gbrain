@@ -17,6 +17,8 @@ import {GBrain} from "./gbrain";
  * @param {number} jsonIn.epsilon_test_time
  * @param {int} jsonIn.start_learn_threshold
  * @param {int} jsonIn.gpu_batch_repeats
+ * @param {int} jsonIn.learning_steps_total
+ * @param {int} jsonIn.learning_steps_burnin
  * @param {Array<Object>} jsonIn.layer_defs
  */
 
@@ -32,6 +34,8 @@ export class GBrainRL {
         this.epsilon_min = jsonIn.epsilon_min;
         this.epsilon_test_time = jsonIn.epsilon_test_time;
         this.start_learn_threshold = jsonIn.start_learn_threshold;
+        this.learning_steps_total = jsonIn.learning_steps_total;
+        this.learning_steps_burnin = jsonIn.learning_steps_burnin;
 
         this.net_inputs = this.num_inputs * this.temporal_window + this.num_actions * this.temporal_window + this.num_inputs;
         this.window_size = Math.max(this.temporal_window, 2);
@@ -58,9 +62,6 @@ export class GBrainRL {
         this.sweep = 0;
         this.sweepMax = 200;
         this.sweepDir = 0;
-
-        this.learning_steps_total = 60000;
-        this.learning_steps_burnin = 300;
 
         this.arrInputs = [];
         this.arrTargets = [];
