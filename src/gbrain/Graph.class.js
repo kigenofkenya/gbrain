@@ -1184,16 +1184,28 @@ export class Graph {
      */
     forward(jsonIn) {
         this.onAction = jsonIn.onAction;
+        let lett = ["A","B","C","D","E","F","G"];
+
 
         let state = jsonIn.state.slice(0);
-        let length = jsonIn.state.length;
-        for(let n=length; n < this.afferentNodesCount*this.batch_size; n++)
+        for(let n=jsonIn.state.length; n < this.afferentNodesCount*this.batch_size; n++)
             state[n] = 0.0;
 
-        let lett = ["A","B","C","D","E","F","G"];
-        let currLett = 0;
-        for(let i=0, j=state.length; i<j; i+=this.afferentNodesCount)
-            this.comp_renderer_nodes.setArg("afferentNodes"+lett[currLett++], () => {return state.slice(i,i+this.afferentNodesCount);});
+        for(let n=0; n < this.batch_size; n++) {
+            this.comp_renderer_nodes.setArg("afferentNodes"+lett[n], () => {return state.slice(0, this.afferentNodesCount);});
+            state = state.slice(this.afferentNodesCount);
+        }
+
+
+        let reward = [];
+        for(let n=0; n < this.afferentNodesCount*this.batch_size; n++)
+            reward[n] = 0.0;
+
+        for(let n=0; n < this.batch_size; n++) {
+            this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return reward.slice(0, this.efferentNodesCount);});
+            reward = reward.slice(this.efferentNodesCount);
+        }
+
 
         for(let n=0; n < (this.layerCount); n++)
             this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
@@ -1218,7 +1230,22 @@ export class Graph {
                     debugger;
                 o[currO].push({"output": u[ loc[currO][1] ]});
             }
-            this.onAction(o);
+
+            this.maxacts = [];
+            for(let n=0; n < o.length; n++) {
+                let maxk = 0;
+                let maxval = o[n][0].output;
+
+                for(let nb=1; nb < o[n].length; nb++) {
+                    if(o[n][nb].output > maxval) {
+                        maxk = nb;
+                        maxval = o[n][nb].output;
+                    }
+                }
+                this.maxacts.push({"action": maxk, "value": maxval});
+            }
+
+            this.onAction(this.maxacts);
         }
     };
 
@@ -1229,19 +1256,25 @@ export class Graph {
      */
     train(jsonIn) {
         this.onTrained = jsonIn.onTrained;
+        let lett = ["A","B","C","D","E","F","G"];
+
 
         let reward = jsonIn.arrReward.slice(0);
-        let length = jsonIn.arrReward.length;
-        for(let n=length; n < this.efferentNodesCount*this.batch_size; n++)
+        for(let n=jsonIn.arrReward.length; n < this.efferentNodesCount*this.batch_size; n++)
             reward[n] = 0.0;
 
-        let lett = ["A","B","C","D","E","F","G"];
-        let currLett = 0;
-        for(let i=0, j=reward.length; i<j; i+=this.efferentNodesCount)
-            this.comp_renderer_nodes.setArg("efferentNodes"+lett[currLett++], () => {return reward.slice(i,i+this.efferentNodesCount);});
+        for(let n=0; n < this.batch_size; n++) {
+            this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return reward.slice(0, this.efferentNodesCount);});
+            reward = reward.slice(this.efferentNodesCount);
+        }
+
 
         for(let n=0; n < (this.layerCount-1); n++)
             this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
+
+        //let u = this.getNeuronOutput(this.efferentNeuron[this.maxacts[0].action], ["dataB"]);
+        //if(isNaN(u[1]) === true)
+        //    debugger;
 
         //this.comp_renderer_nodes.gpufG.disableKernel(0);
         this.comp_renderer_nodes.gpufG.enableKernel(1);
@@ -1253,16 +1286,9 @@ export class Graph {
         this.comp_renderer_nodes.gpufG.disableKernel(1);
         //this.comp_renderer_nodes.gpufG.enableKernel(0);
 
-        if(this.onTrained !== null) {
-            let o = [];
-            for(let n=0; n < this.efferentNodesCount; n++) {
-                /*let u = this.getNeuronOutput(this.efferentNeuron[n]);
-                if(isNaN(u[2]) === true || isNaN(u[3]) === true)
-                    debugger;
-                o.push({"output": u[2], "error": u[3]});*/
-            }
-            this.onTrained(o);
-        }
+
+        if(this.onTrained !== null)
+            this.onTrained(/*u[1]*/);
     };
 
     getNeuronOutput(neuronName, loc) {

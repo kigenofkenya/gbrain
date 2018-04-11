@@ -193,8 +193,8 @@ export class GBrain {
      */
     forward(state, onAction) {
         this.graph.forward({"state": state,
-                            "onAction": (data) => {
-                                onAction(data);
+                            "onAction": (maxacts) => {
+                                onAction(maxacts);
                             }});
     };
 
@@ -205,7 +205,7 @@ export class GBrain {
     train(reward, onTrain) {
         let arrReward = [];
         for(let n=0; n < reward.length; n++) {
-            for(let nb=0; nb < (this.outputCount*this.batch_size); nb++) {
+            for(let nb=0; nb < (this.outputCount); nb++) {
                 if(nb === reward[n].dim)
                     arrReward.push(reward[n].val);
                 else
@@ -214,8 +214,8 @@ export class GBrain {
         }
 
         this.graph.train({  "arrReward": arrReward,
-                            "onTrained": (data) => {
-                                onTrain(data);
+                            "onTrained": (loss) => {
+                                onTrain(loss);
                             }});
     };
 

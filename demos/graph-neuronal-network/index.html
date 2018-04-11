@@ -60,7 +60,7 @@
                                         "dimensions": {"width": window.innerWidth*0.7, "height": window.innerHeight-100},
                                         "gpu_batch_repeats": 7});
             gbrain.makeLayers(layer_defs);
-
+            gbrain.setLearningRate(0.03);
             var render = function() {
                 gbrain.tick();
                 requestAnimFrame(render);
@@ -92,29 +92,20 @@
                 console.log("input: "+r+", "+g+", "+b);
 
                 gbrain.forward([r,g,b], function(data) {
-                    console.log("W output: "+data[0][0].output+" B output: "+data[0][1].output);
-                    if(data[0][1].output > data[0][0].output)
+                    console.log("action: "+data[0].action+", value: "+data[0].value);
+                    if(data[0].action === 1)
                         elem_fgColor.style.color = "rgb(0, 0, 0)";
-                    else
+                    else if(data[0].action === 0)
                         elem_fgColor.style.color = "rgb(255, 255, 255)";
                 });
             };
             newColor();
 
-            var lastTotalError = 0;
-            var calculate = function(data) {
-                //var cTotError = (data[0].error+data[1].error)-lastTotalError;
-                //console.log(cTotError+" W output: "+ data[0].output+"    W error: "+ data[0].error+"   B output: "+ data[1].output+"    B error: "+ data[1].error);
-                //console.log("W output: "+data[0].output+" B output: "+data[1].output);
-                //lastTotalError = data[0].error+data[1].error;
-                //newColor();
-            };
-
             document.getElementById("BTNID_WHITE").addEventListener("click", function() { // train white
                 let r = (elem_fgColor.style.color === "rgb(255, 255, 255)") ? [{dim: 0, val: 1.0}] : [{dim: 1, val: -1.0}];
 
-                gbrain.train(r, function(data) {
-                    calculate(data);
+                gbrain.train(r, function(loss) {
+                    console.log("loss: "+loss);
                 });
                 //elem_fgColor.style.color = "rgb(255, 255, 255)";
             });
@@ -122,8 +113,8 @@
             document.getElementById("BTNID_BLACK").addEventListener("click", function() { // train black
                 let r = (elem_fgColor.style.color === "rgb(0, 0, 0)") ? [{dim: 1, val: 1.0}] : [{dim: 0, val: -1.0}];
 
-                gbrain.train(r, function(data) {
-                    calculate(data);
+                gbrain.train(r, function(loss) {
+                    console.log("loss: "+loss);
                 });
                 //elem_fgColor.style.color = "rgb(0, 0, 0)";
             });

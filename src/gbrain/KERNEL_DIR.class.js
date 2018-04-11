@@ -194,10 +194,11 @@ export class KERNEL_DIR {
                 
                 
                 float currentBiasNode = dataB[xGeomCurrent].x;
+                float netLoss = 0.0;
                 
                 ${KERNEL_DIR.efferentNodesStr(afferentNodesCount, efferentStart, efferentNodesCount)}
                 
-                currentDataB = vec4(currentDataB.x, currentDataB.y, foutputA, netParentErrorWeightA);
+                currentDataB = vec4(currentDataB.x, netLoss, foutputA, netParentErrorWeightA);
                 currentDataF = vec4(foutputB, netParentErrorWeightB, foutputC, netParentErrorWeightC);
                 currentDataG = vec4(foutputD, netParentErrorWeightD, foutputE, netParentErrorWeightE);
                 currentDataH = vec4(foutputF, netParentErrorWeightF, foutputG, netParentErrorWeightG);
@@ -242,13 +243,13 @@ export class KERNEL_DIR {
                 }
             } else {
                 if(currentBiasNode == 0.0) {                                     
-                    foutputA = max(0.01*netChildInputSumA, netChildInputSumA); ${/* SIGM= sigm(netChildInputSumA)-0.5 ; TANH=tanh(netChildInputSumA) ; RELU=max(0.0, netChildInputSumA) */''}
-                    foutputB = max(0.01*netChildInputSumB, netChildInputSumB);
-                    foutputC = max(0.01*netChildInputSumC, netChildInputSumC);
-                    foutputD = max(0.01*netChildInputSumD, netChildInputSumD);
-                    foutputE = max(0.01*netChildInputSumE, netChildInputSumE);
-                    foutputF = max(0.01*netChildInputSumF, netChildInputSumF);
-                    foutputG = max(0.01*netChildInputSumG, netChildInputSumG);
+                    foutputA = (foutputA < 0.0) ? 0.01*netChildInputSumA : netChildInputSumA; ${/* SIGM= sigm(netChildInputSumA)-0.5 ; TANH=tanh(netChildInputSumA) ; RELU=max(0.0, netChildInputSumA) */''}
+                    foutputB = (foutputB < 0.0) ? 0.01*netChildInputSumB : netChildInputSumB;
+                    foutputC = (foutputC < 0.0) ? 0.01*netChildInputSumC : netChildInputSumC;
+                    foutputD = (foutputD < 0.0) ? 0.01*netChildInputSumD : netChildInputSumD;
+                    foutputE = (foutputE < 0.0) ? 0.01*netChildInputSumE : netChildInputSumE;
+                    foutputF = (foutputF < 0.0) ? 0.01*netChildInputSumF : netChildInputSumF;
+                    foutputG = (foutputG < 0.0) ? 0.01*netChildInputSumG : netChildInputSumG;
                 } else {
                     foutputA = 1.0;
                     foutputB = 1.0;
@@ -267,48 +268,28 @@ export class KERNEL_DIR {
             let cond = (n===efferentStart) ? "if" : "else if" ;
             str += `
             ${cond}(nodeId == `+n.toFixed(1)+`) {
-                netParentErrorWeightA = (efferentNodesA[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumA-efferentNodesA[`+Math.round(n-efferentStart)+`] : 0.0;
-                netParentErrorWeightB = (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumB-efferentNodesB[`+Math.round(n-efferentStart)+`] : 0.0;
-                netParentErrorWeightC = (efferentNodesC[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumC-efferentNodesC[`+Math.round(n-efferentStart)+`] : 0.0;
-                netParentErrorWeightD = (efferentNodesD[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumD-efferentNodesD[`+Math.round(n-efferentStart)+`] : 0.0;
-                netParentErrorWeightE = (efferentNodesE[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumE-efferentNodesE[`+Math.round(n-efferentStart)+`] : 0.0;
-                netParentErrorWeightF = (efferentNodesF[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumF-efferentNodesF[`+Math.round(n-efferentStart)+`] : 0.0;
-                netParentErrorWeightG = (efferentNodesG[`+Math.round(n-efferentStart)+`] != 0.0) ? netChildInputSumG-efferentNodesG[`+Math.round(n-efferentStart)+`] : 0.0;
-                ${/* netLossA = 0.5*netParentErrorWeightA*netParentErrorWeightA; */''}
-                ${/* netLossB = 0.5*netParentErrorWeightB*netParentErrorWeightB; */''}
-                ${/* netLossC = 0.5*netParentErrorWeightC*netParentErrorWeightC; */''}
-                ${/* netLossD = 0.5*netParentErrorWeightD*netParentErrorWeightD; */''}
-                ${/* netLossE = 0.5*netParentErrorWeightE*netParentErrorWeightE; */''}
-                ${/* netLossF = 0.5*netParentErrorWeightF*netParentErrorWeightF; */''}
-                ${/* netLossG = 0.5*netParentErrorWeightG*netParentErrorWeightG; */''}
+                netParentErrorWeightA = (efferentNodesA[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesA[`+Math.round(n-efferentStart)+`]-netChildInputSumA) : 0.0;
+                netLoss = (efferentNodesA[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightA*netParentErrorWeightA : 0.0;
+                
+                netParentErrorWeightB = (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesB[`+Math.round(n-efferentStart)+`]-netChildInputSumB) : 0.0;
+                netLoss += (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightB*netParentErrorWeightB : 0.0;
+            
+                netParentErrorWeightC = (efferentNodesC[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesC[`+Math.round(n-efferentStart)+`]-netChildInputSumC) : 0.0;
+                netLoss += (efferentNodesC[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightC*netParentErrorWeightC : 0.0;
+            
+                netParentErrorWeightD = (efferentNodesD[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesD[`+Math.round(n-efferentStart)+`]-netChildInputSumD) : 0.0;
+                netLoss += (efferentNodesD[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightD*netParentErrorWeightD : 0.0;
+            
+                netParentErrorWeightE = (efferentNodesE[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesE[`+Math.round(n-efferentStart)+`]-netChildInputSumE) : 0.0;
+                netLoss += (efferentNodesE[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightE*netParentErrorWeightE : 0.0;
+            
+                netParentErrorWeightF = (efferentNodesF[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesF[`+Math.round(n-efferentStart)+`]-netChildInputSumF) : 0.0;
+                netLoss += (efferentNodesF[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightF*netParentErrorWeightF : 0.0;
+            
+                netParentErrorWeightG = (efferentNodesG[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesG[`+Math.round(n-efferentStart)+`]-netChildInputSumG) : 0.0;
+                netLoss += (efferentNodesG[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightG*netParentErrorWeightG : 0.0;
             }`;
         }
-        str += `
-        else {
-            if(currentBiasNode == 0.0) {
-                if(foutputA <= 0.01) {
-                    netParentErrorWeightA = 0.01*netParentErrorWeightA;
-                }
-                if(foutputB <= 0.01) {
-                    netParentErrorWeightB = 0.01*netParentErrorWeightB;
-                }
-                if(foutputC <= 0.01) {
-                    netParentErrorWeightC = 0.01*netParentErrorWeightC;
-                }
-                if(foutputD <= 0.01) {
-                    netParentErrorWeightD = 0.01*netParentErrorWeightD;
-                }
-                if(foutputE <= 0.01) {
-                    netParentErrorWeightE = 0.01*netParentErrorWeightE;
-                }
-                if(foutputF <= 0.01) {
-                    netParentErrorWeightF = 0.01*netParentErrorWeightF;
-                }
-                if(foutputG <= 0.01) {
-                    netParentErrorWeightG = 0.01*netParentErrorWeightG;
-                }
-            }
-        }`;
 
         return str;
     };
