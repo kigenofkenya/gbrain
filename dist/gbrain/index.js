@@ -2939,7 +2939,6 @@ var Graph = exports.Graph = function () {
 }();
 
 global.Graph = Graph;
-module.exports.Graph = Graph;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./KERNEL_ADJMATRIX_UPDATE.class":3,"./KERNEL_DIR.class":4,"./ProccessImg.class":5,"./VFP_NODE.class":6,"./VFP_NODEPICKDRAG.class":7,"./resources":11,"scejs":1}],3:[function(require,module,exports){
 (function (global){
@@ -2974,7 +2973,6 @@ var KERNEL_ADJMATRIX_UPDATE = exports.KERNEL_ADJMATRIX_UPDATE = function () {
 }();
 
 global.KERNEL_ADJMATRIX_UPDATE = KERNEL_ADJMATRIX_UPDATE;
-module.exports.KERNEL_ADJMATRIX_UPDATE = KERNEL_ADJMATRIX_UPDATE;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],4:[function(require,module,exports){
 (function (global){
@@ -3035,7 +3033,6 @@ var KERNEL_DIR = exports.KERNEL_DIR = function () {
 }();
 
 global.KERNEL_DIR = KERNEL_DIR;
-module.exports.KERNEL_DIR = KERNEL_DIR;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],5:[function(require,module,exports){
 (function (global){
@@ -3182,7 +3179,6 @@ var ProccessImg = exports.ProccessImg = function () {
 }();
 
 global.ProccessImg = ProccessImg;
-module.exports.ProccessImg = ProccessImg;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"scejs":1}],6:[function(require,module,exports){
 (function (global){
@@ -3271,7 +3267,6 @@ var VFP_NODE = exports.VFP_NODE = function () {
 }();
 
 global.VFP_NODE = VFP_NODE;
-module.exports.VFP_NODE = VFP_NODE;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"scejs":1}],7:[function(require,module,exports){
 (function (global){
@@ -3319,7 +3314,6 @@ var VFP_NODEPICKDRAG = exports.VFP_NODEPICKDRAG = function () {
 }();
 
 global.VFP_NODEPICKDRAG = VFP_NODEPICKDRAG;
-module.exports.VFP_NODEPICKDRAG = VFP_NODEPICKDRAG;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"scejs":1}],8:[function(require,module,exports){
 (function (global){
@@ -3632,7 +3626,6 @@ var GBrainRL = exports.GBrainRL = function () {
 }();
 
 global.GBrainRL = GBrainRL;
-module.exports.GBrainRL = GBrainRL;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./gbrain":9}],9:[function(require,module,exports){
 (function (global){
@@ -3908,7 +3901,6 @@ var GBrain = exports.GBrain = function () {
 }();
 
 global.GBrain = GBrain;
-module.exports.GBrain = GBrain;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./Graph.class":2,"scejs":1}],10:[function(require,module,exports){
 (function (global){
@@ -3993,6 +3985,5 @@ var Resources = exports.Resources = function () {
 }();
 
 global.Resources = Resources;
-module.exports.Resources = Resources;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}]},{},[10]);

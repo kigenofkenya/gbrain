@@ -364,4 +364,3 @@ export class VFP_NODE {
     }
 }
 global.VFP_NODE = VFP_NODE;
-module.exports.VFP_NODE = VFP_NODE;

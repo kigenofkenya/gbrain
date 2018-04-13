@@ -236,4 +236,3 @@ export class GBrain {
     };
 }
 global.GBrain = GBrain;
-module.exports.GBrain = GBrain;
