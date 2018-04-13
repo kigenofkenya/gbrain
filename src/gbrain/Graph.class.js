@@ -2381,3 +2381,4 @@ export class Graph {
     };
 }
 global.Graph = Graph;
+module.exports.Graph = Graph;

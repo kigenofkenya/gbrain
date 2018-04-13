@@ -309,3 +309,4 @@ export class KERNEL_DIR {
     };
 }
 global.KERNEL_DIR = KERNEL_DIR;
+module.exports.KERNEL_DIR = KERNEL_DIR;

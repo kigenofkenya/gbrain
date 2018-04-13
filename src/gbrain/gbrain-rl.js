@@ -279,3 +279,4 @@ export class GBrainRL {
     };
 }
 global.GBrainRL = GBrainRL;
+module.exports.GBrainRL = GBrainRL;

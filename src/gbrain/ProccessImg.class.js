@@ -123,3 +123,4 @@ export class ProccessImg {
     };
 }
 global.ProccessImg = ProccessImg;
+module.exports.ProccessImg = ProccessImg;
