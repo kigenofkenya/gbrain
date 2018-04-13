@@ -68,13 +68,13 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 }
                 
                 float bsm = 0.0;
-                bsm = (parentGErrorA != 0.0) ? bsm+1. : bsm;
-                bsm = (parentGErrorB != 0.0) ? bsm+1. : bsm;
-                bsm = (parentGErrorC != 0.0) ? bsm+1. : bsm;
-                bsm = (parentGErrorD != 0.0) ? bsm+1. : bsm;
-                bsm = (parentGErrorE != 0.0) ? bsm+1. : bsm;
-                bsm = (parentGErrorF != 0.0) ? bsm+1. : bsm;
-                bsm = (parentGErrorG != 0.0) ? bsm+1. : bsm;
+                bsm = (childGOutputA != 0.0) ? bsm+1. : bsm;
+                bsm = (childGOutputB != 0.0) ? bsm+1. : bsm;
+                bsm = (childGOutputC != 0.0) ? bsm+1. : bsm;
+                bsm = (childGOutputD != 0.0) ? bsm+1. : bsm;
+                bsm = (childGOutputE != 0.0) ? bsm+1. : bsm;
+                bsm = (childGOutputF != 0.0) ? bsm+1. : bsm;
+                bsm = (childGOutputG != 0.0) ? bsm+1. : bsm;
                 
                 linkWeight += (-lr*parentGErrorA*derivA)/(bsm*br);
                 if(parentGErrorB != 0.0) {linkWeight += (-lr*parentGErrorB*derivB)/(bsm*br);}
