@@ -222,7 +222,7 @@ export class GBrainRL {
                     this.arrTargets = [];
 
                     if(this.currentBatchRepeat === this.maxBatchRepeat) {
-                        this.loss = this.avcost/(this.maxBatchRepeat);
+                        this.loss = this.avcost/(this.maxBatchRepeat*this.gbrain.batch_size);
                         //this.average_loss_window.add(this.loss); TODO
                         this.onLearned(this.loss);
                     } else {
@@ -231,7 +231,7 @@ export class GBrainRL {
                         this.bb();
                     }
                 });
-            });
+            }, false);
         });
     }
 

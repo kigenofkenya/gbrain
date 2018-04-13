@@ -56,7 +56,8 @@
         <div style="display:inline-block" id="el_gbrain"></div>
         <div id="el_info"></div>
         <div>
-            View weight*output<input title="weight*output" type="checkbox" id="elem_enableOutputWeighted"/>
+            View weight*neuron output<input title="weight*output" type="checkbox" id="elem_enableOutputWeighted"/><br />
+            View weight dynamics<input title="weight dynamics" type="checkbox" id="elem_enableWeightDynamics"/>
         </div>
         <button id="BTNID_STOP" style="display:inline-block;">stop train</button>
         <button id="BTNID_RESUME" style="display:inline-block;">resume train</button>
@@ -118,10 +119,15 @@
 
     var brain = null;
     var showOutputWeighted = false;
+    var showWD = false;
 
     document.getElementById("elem_enableOutputWeighted").addEventListener("click", function () {
         (showOutputWeighted === false) ? brain.gbrain.enableShowOutputWeighted() : brain.gbrain.disableShowOutputWeighted();
         showOutputWeighted = !showOutputWeighted;
+    });
+    document.getElementById("elem_enableWeightDynamics").addEventListener("click", function () {
+        (showWD === false) ? brain.gbrain.enableShowWeightDynamics() : brain.gbrain.disableShowWeightDynamics();
+        showWD = !showWD;
     });
 
     document.getElementById("BTNID_STOP").addEventListener("click", function () {

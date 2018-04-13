@@ -437,6 +437,7 @@ export class Graph {
             'float idToDrag': () => {return null;},
             'float idToHover': () => {return null;},
             "float enableForceLayout": () => {return null;},
+            'float layerCount': () => {return null;},
             "float learningRate": () => {return null;},
             "float gpu_batch_repeats": () => {return null;},
             'float afferentNodesCount': () => {return null;},
@@ -444,6 +445,7 @@ export class Graph {
             'float efferentStart': () => {return null;},
             'float enableTrain': () => {return null;},
             'float multiplyOutput': () => {return null;},
+            'float viewNeuronDynamics': () => {return null;},
             'float only2d': () => {return null;},
             'float nodeImgColumns': () => {return null;},
             'float fontImgColumns': () => {return null;},
@@ -1180,6 +1182,7 @@ export class Graph {
     /**
      * @param {Object} jsonIn
      * @param {Array<number>} jsonIn.state
+     * @param {boolean} [jsonIn.readOutput=true]
      * @param {Function} jsonIn.onAction
      */
     forward(jsonIn) {
@@ -1213,45 +1216,46 @@ export class Graph {
         this._sce.getLoadedProject().getActiveStage().tick();
 
         if(this.onAction !== null) {
-            let loc = [["dataB",2],
-                        ["dataF",0],["dataF",2],
-                        ["dataG",0],["dataG",2],
-                        ["dataH",0],["dataH",2]];
-            let o = [[]];
-            let currO = 0;
-            for(let n=0; n < this.efferentNodesCount*this.batch_size; n++) {
-                if(o[currO].length ===  this.efferentNodesCount) {
-                    o.push([]);
-                    currO++;
-                }
-
-                let u = this.getNeuronOutput(this.efferentNeuron[o[currO].length], loc[currO]);
-                if(isNaN(u[2]) === true)
-                    debugger;
-                o[currO].push({"output": u[ loc[currO][1] ]});
-            }
-
-            this.maxacts = [];
-            for(let n=0; n < o.length; n++) {
-                let maxk = 0;
-                let maxval = o[n][0].output;
-
-                for(let nb=1; nb < o[n].length; nb++) {
-                    if(o[n][nb].output > maxval) {
-                        maxk = nb;
-                        maxval = o[n][nb].output;
+            let maxacts = [];
+            if(jsonIn.readOutput === undefined || jsonIn.readOutput === null || (jsonIn.readOutput !== null && jsonIn.readOutput === true)) {
+                let loc = [["dataB",2],
+                            ["dataF",0],["dataF",2],
+                            ["dataG",0],["dataG",2],
+                            ["dataH",0],["dataH",2]];
+                let o = [[]];
+                let currO = 0;
+                for(let n=0; n < this.efferentNodesCount*this.batch_size; n++) {
+                    if(o[currO].length ===  this.efferentNodesCount) {
+                        o.push([]);
+                        currO++;
                     }
-                }
-                this.maxacts.push({"action": maxk, "value": maxval});
-            }
 
-            this.onAction(this.maxacts);
+                    let u = this.getNeuronOutput(this.efferentNeuron[o[currO].length], loc[currO]);
+                    if(isNaN(u[2]) === true)
+                        debugger;
+                    o[currO].push({"output": u[ loc[currO][1] ]});
+                }
+
+                for(let n=0; n < o.length; n++) {
+                    let maxk = 0;
+                    let maxval = o[n][0].output;
+
+                    for(let nb=1; nb < o[n].length; nb++) {
+                        if(o[n][nb].output > maxval) {
+                            maxk = nb;
+                            maxval = o[n][nb].output;
+                        }
+                    }
+                    maxacts.push({"action": maxk, "value": maxval});
+                }
+            }
+            this.onAction(maxacts);
         }
     };
 
     /**
      * @param {Object} jsonIn
-     * @param {Object} jsonIn.arrReward
+     * @param {Object} jsonIn.reward
      * @param {Function} jsonIn.onTrained
      */
     train(jsonIn) {
@@ -1259,22 +1263,37 @@ export class Graph {
         let lett = ["A","B","C","D","E","F","G"];
 
 
-        let reward = jsonIn.arrReward.slice(0);
-        for(let n=jsonIn.arrReward.length; n < this.efferentNodesCount*this.batch_size; n++)
-            reward[n] = 0.0;
+        let arrReward = [];
+        for(let key in jsonIn.reward) {
+            for(let nb=0; nb < (this.efferentNodesCount); nb++) {
+                if(nb === parseInt(jsonIn.reward[key].dim))
+                    arrReward.push(jsonIn.reward[key].val);
+                else
+                    arrReward.push(0.0);
+            }
+        }
+
+
+        for(let n=arrReward.length; n < this.efferentNodesCount*this.batch_size; n++)
+            arrReward[n] = 0.0;
 
         for(let n=0; n < this.batch_size; n++) {
-            this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return reward.slice(0, this.efferentNodesCount);});
-            reward = reward.slice(this.efferentNodesCount);
+            this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return arrReward.slice(0, this.efferentNodesCount);});
+            arrReward = arrReward.slice(this.efferentNodesCount);
         }
 
 
         for(let n=0; n < (this.layerCount-1); n++)
             this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
 
-        //let u = this.getNeuronOutput(this.efferentNeuron[this.maxacts[0].action], ["dataB"]);
-        //if(isNaN(u[1]) === true)
-        //    debugger;
+        let cost = 0;
+        for(let key in jsonIn.reward) {
+            let u = this.getNeuronOutput(this.efferentNeuron[parseInt(jsonIn.reward[key].dim)], ["dataB"]);
+            if(isNaN(u[1]) === true)
+                debugger;
+
+            cost += u[1];
+        }
 
         //this.comp_renderer_nodes.gpufG.disableKernel(0);
         this.comp_renderer_nodes.gpufG.enableKernel(1);
@@ -1288,7 +1307,7 @@ export class Graph {
 
 
         if(this.onTrained !== null)
-            this.onTrained(/*u[1]*/);
+            this.onTrained(cost);
     };
 
     getNeuronOutput(neuronName, loc) {
@@ -2105,7 +2124,9 @@ export class Graph {
         this.comp_renderer_nodes.setArg("nodeWMatrix", () => {return this.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;});
         this.comp_renderer_nodes.setArgUpdatable("nodeWMatrix", true);
 
+        this.comp_renderer_nodes.setArg("layerCount", () => {return this.layerCount;});
         this.comp_renderer_nodes.setArg("learningRate", () => {return 0.01;});
+        this.comp_renderer_nodes.setArg("viewNeuronDynamics", () => {return 0.0;});
         this.comp_renderer_nodes.setArg("gpu_batch_repeats", () => {return this.gpu_batch_repeats;});
         this.comp_renderer_nodes.setArg("enableTrain", () => {return this.enableTrain;});
         this.comp_renderer_nodes.setArg("afferentNodesCount", () => {return this.afferentNodesCount;});
@@ -2349,6 +2370,14 @@ export class Graph {
             this.linksObj[na].componentRenderer.setArg("multiplyOutput", () => {return 0.0;});
         for(let na=0; na < this.arrowsObj.length; na++)
             this.arrowsObj[na].componentRenderer.setArg("multiplyOutput", () => {return 0.0;});
+    };
+
+    enableShowWeightDynamics() {
+        this.comp_renderer_nodes.setArg("viewNeuronDynamics", () => {return 1.0;});
+    };
+
+    disableShowWeightDynamics() {
+        this.comp_renderer_nodes.setArg("viewNeuronDynamics", () => {return 0.0;});
     };
 }
 global.Graph = Graph;

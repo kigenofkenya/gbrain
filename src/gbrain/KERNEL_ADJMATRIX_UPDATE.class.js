@@ -56,6 +56,17 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float derivE = (childGOutputE < 0.0) ? 0.01 : childGOutputE;
                 float derivF = (childGOutputF < 0.0) ? 0.01 : childGOutputF;
                 float derivG = (childGOutputG < 0.0) ? 0.01 : childGOutputG;
+                
+                if(linkLayerNum == layerCount-1.0) {
+                    derivA = childGOutputA;
+                    derivB = childGOutputA;
+                    derivC = childGOutputA;
+                    derivD = childGOutputA;
+                    derivE = childGOutputA;
+                    derivF = childGOutputA;
+                    derivG = childGOutputA;
+                }
+                
                 linkWeight += (-lr*parentGErrorA*derivA)/(gpu_batch_size*br);
                 linkWeight += (-lr*parentGErrorB*derivB)/(gpu_batch_size*br);
                 linkWeight += (-lr*parentGErrorC*derivC)/(gpu_batch_size*br);

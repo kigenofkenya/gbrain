@@ -146,7 +146,7 @@ export class KERNEL_DIR {
                         float dist = distance(oppositePos, currentPos); ${/* near=0.0 ; far=1.0 */''}
                         float distN = max(0.0,dist)/100000.0;
             
-                        float mm = 30.0;
+                        float mm = 200.0;
                         float m1 = 400000.0/mm;
                         float m2 = 48.0/mm;
                         if(currentIsParent == 1.0) {
@@ -188,8 +188,10 @@ export class KERNEL_DIR {
                         acumAtraction += 1.0;
                     }
                 }
-                force += (atraction/acumAtraction);
-                force += (repulsion/acumAtraction);
+                
+                float vndm = (viewNeuronDynamics == 1.0) ? netChildInputSumA : 1.0;
+                force += (atraction/acumAtraction)*vndm;
+                force += (repulsion/acumAtraction)*vndm;
                 currentDir += force;
                 
                 
@@ -268,8 +270,8 @@ export class KERNEL_DIR {
             let cond = (n===efferentStart) ? "if" : "else if" ;
             str += `
             ${cond}(nodeId == `+n.toFixed(1)+`) {
-                netParentErrorWeightA = (efferentNodesA[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesA[`+Math.round(n-efferentStart)+`]-netChildInputSumA) : 0.0;
-                netLoss = (efferentNodesA[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightA*netParentErrorWeightA : 0.0;
+                netParentErrorWeightA = -(efferentNodesA[`+Math.round(n-efferentStart)+`]-netChildInputSumA);
+                netLoss += 0.5*netParentErrorWeightA*netParentErrorWeightA;
                 
                 netParentErrorWeightB = (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesB[`+Math.round(n-efferentStart)+`]-netChildInputSumB) : 0.0;
                 netLoss += (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightB*netParentErrorWeightB : 0.0;

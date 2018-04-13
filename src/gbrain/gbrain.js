@@ -190,9 +190,11 @@ export class GBrain {
     /**
      * @param {Array<number>} state
      * @param {Function} onAction
+     * @param {boolean} [readOutput]
      */
-    forward(state, onAction) {
+    forward(state, onAction, readOutput) {
         this.graph.forward({"state": state,
+                            "readOutput": readOutput,
                             "onAction": (maxacts) => {
                                 onAction(maxacts);
                             }});
@@ -203,17 +205,7 @@ export class GBrain {
      * @param {Function} onTrain
      */
     train(reward, onTrain) {
-        let arrReward = [];
-        for(let n=0; n < reward.length; n++) {
-            for(let nb=0; nb < (this.outputCount); nb++) {
-                if(nb === reward[n].dim)
-                    arrReward.push(reward[n].val);
-                else
-                    arrReward.push(0.0);
-            }
-        }
-
-        this.graph.train({  "arrReward": arrReward,
+        this.graph.train({  "reward": reward,
                             "onTrained": (loss) => {
                                 onTrain(loss);
                             }});
@@ -229,6 +221,14 @@ export class GBrain {
 
     disableShowOutputWeighted() {
         this.graph.disableShowOutputWeighted();
+    };
+
+    enableShowWeightDynamics() {
+        this.graph.enableShowWeightDynamics();
+    };
+
+    disableShowWeightDynamics() {
+        this.graph.disableShowWeightDynamics();
     };
 
     tick() {
