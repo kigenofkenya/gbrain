@@ -59,21 +59,30 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 
                 if(linkLayerNum == layerCount-1.0) {
                     derivA = childGOutputA;
-                    derivB = childGOutputA;
-                    derivC = childGOutputA;
-                    derivD = childGOutputA;
-                    derivE = childGOutputA;
-                    derivF = childGOutputA;
-                    derivG = childGOutputA;
+                    derivB = childGOutputB;
+                    derivC = childGOutputC;
+                    derivD = childGOutputD;
+                    derivE = childGOutputE;
+                    derivF = childGOutputF;
+                    derivG = childGOutputG;
                 }
                 
-                linkWeight += (-lr*parentGErrorA*derivA)/(gpu_batch_size*br);
-                linkWeight += (-lr*parentGErrorB*derivB)/(gpu_batch_size*br);
-                linkWeight += (-lr*parentGErrorC*derivC)/(gpu_batch_size*br);
-                linkWeight += (-lr*parentGErrorD*derivD)/(gpu_batch_size*br);
-                linkWeight += (-lr*parentGErrorE*derivE)/(gpu_batch_size*br);
-                linkWeight += (-lr*parentGErrorF*derivF)/(gpu_batch_size*br);
-                linkWeight += (-lr*parentGErrorG*derivG)/(gpu_batch_size*br);
+                float bsm = 0.0;
+                bsm = (parentGErrorA != 0.0) ? bsm+=1. : bsm;
+                bsm = (parentGErrorB != 0.0) ? bsm+=1. : bsm;
+                bsm = (parentGErrorC != 0.0) ? bsm+=1. : bsm;
+                bsm = (parentGErrorD != 0.0) ? bsm+=1. : bsm;
+                bsm = (parentGErrorE != 0.0) ? bsm+=1. : bsm;
+                bsm = (parentGErrorF != 0.0) ? bsm+=1. : bsm;
+                bsm = (parentGErrorG != 0.0) ? bsm+=1. : bsm;
+                
+                linkWeight += (-lr*parentGErrorA*derivA)/(bsm*br);
+                linkWeight += (-lr*parentGErrorB*derivB)/(bsm*br);
+                linkWeight += (-lr*parentGErrorC*derivC)/(bsm*br);
+                linkWeight += (-lr*parentGErrorD*derivD)/(bsm*br);
+                linkWeight += (-lr*parentGErrorE*derivE)/(bsm*br);
+                linkWeight += (-lr*parentGErrorF*derivF)/(bsm*br);
+                linkWeight += (-lr*parentGErrorG*derivG)/(bsm*br);
             }
             
             return [vec4(linkLayerNum, 0.0, linkWeight, linkTypeParent)];

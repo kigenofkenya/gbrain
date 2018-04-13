@@ -9,7 +9,14 @@ export class KERNEL_DIR {
 
         return ["x", outputArr,
             // head
-            "",
+            `float tanh(float val) {
+                float tmp = exp(val);
+                float tanH = (tmp - 1.0 / tmp) / (tmp + 1.0 / tmp);
+                return tanH;
+            }
+            float sigm(float val) {
+                return (1.0 / (1.0 + exp(-val)));
+            }`,
 
             // source
             `float nodeId = data[x].x;
@@ -190,8 +197,8 @@ export class KERNEL_DIR {
                 }
                 
                 float vndm = (viewNeuronDynamics == 1.0) ? netChildInputSumA : 1.0;
-                force += (atraction/acumAtraction)*vndm;
-                force += (repulsion/acumAtraction)*vndm;
+                force += (atraction/acumAtraction)*abs(vndm);
+                force += (repulsion/acumAtraction)*abs(vndm);
                 currentDir += force;
                 
                 
@@ -294,18 +301,6 @@ export class KERNEL_DIR {
         }
 
         return str;
-    };
-
-    static adjMatrix_ForceLayout_GLSLFunctionString() {
-        return `
-        float tanh(float val) {
-            float tmp = exp(val);
-            float tanH = (tmp - 1.0 / tmp) / (tmp + 1.0 / tmp);
-            return tanH;
-        }
-        float sigm(float val) {
-            return (1.0 / (1.0 + exp(-val)));
-        }`;
     };
 }
 global.KERNEL_DIR = KERNEL_DIR;

@@ -60,7 +60,7 @@
                                         "dimensions": {"width": window.innerWidth*0.7, "height": window.innerHeight-100},
                                         "gpu_batch_repeats": 7});
             gbrain.makeLayers(layer_defs);
-            gbrain.setLearningRate(0.03);
+            gbrain.setLearningRate(0.3);
             var render = function() {
                 gbrain.tick();
                 requestAnimFrame(render);
@@ -81,6 +81,7 @@
                 /*r = Math.random();
                 g = Math.random();
                 b = Math.random();*/
+
                 var arrC = [[1,0,0],[0,1,0],[0,0,1]];
                 inc = (inc === arrC.length-1) ? 0 : inc+=1;
                 var arrS = arrC[inc];
