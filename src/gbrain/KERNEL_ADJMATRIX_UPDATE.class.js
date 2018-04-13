@@ -68,21 +68,21 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 }
                 
                 float bsm = 0.0;
-                bsm = (parentGErrorA != 0.0) ? bsm+=1. : bsm;
-                bsm = (parentGErrorB != 0.0) ? bsm+=1. : bsm;
-                bsm = (parentGErrorC != 0.0) ? bsm+=1. : bsm;
-                bsm = (parentGErrorD != 0.0) ? bsm+=1. : bsm;
-                bsm = (parentGErrorE != 0.0) ? bsm+=1. : bsm;
-                bsm = (parentGErrorF != 0.0) ? bsm+=1. : bsm;
-                bsm = (parentGErrorG != 0.0) ? bsm+=1. : bsm;
+                bsm = (parentGErrorA != 0.0) ? bsm+1. : bsm;
+                bsm = (parentGErrorB != 0.0) ? bsm+1. : bsm;
+                bsm = (parentGErrorC != 0.0) ? bsm+1. : bsm;
+                bsm = (parentGErrorD != 0.0) ? bsm+1. : bsm;
+                bsm = (parentGErrorE != 0.0) ? bsm+1. : bsm;
+                bsm = (parentGErrorF != 0.0) ? bsm+1. : bsm;
+                bsm = (parentGErrorG != 0.0) ? bsm+1. : bsm;
                 
                 linkWeight += (-lr*parentGErrorA*derivA)/(bsm*br);
-                linkWeight += (-lr*parentGErrorB*derivB)/(bsm*br);
-                linkWeight += (-lr*parentGErrorC*derivC)/(bsm*br);
-                linkWeight += (-lr*parentGErrorD*derivD)/(bsm*br);
-                linkWeight += (-lr*parentGErrorE*derivE)/(bsm*br);
-                linkWeight += (-lr*parentGErrorF*derivF)/(bsm*br);
-                linkWeight += (-lr*parentGErrorG*derivG)/(bsm*br);
+                if(parentGErrorB != 0.0) {linkWeight += (-lr*parentGErrorB*derivB)/(bsm*br);}
+                if(parentGErrorC != 0.0) {linkWeight += (-lr*parentGErrorC*derivC)/(bsm*br);}
+                if(parentGErrorD != 0.0) {linkWeight += (-lr*parentGErrorD*derivD)/(bsm*br);}
+                if(parentGErrorE != 0.0) {linkWeight += (-lr*parentGErrorE*derivE)/(bsm*br);}
+                if(parentGErrorF != 0.0) {linkWeight += (-lr*parentGErrorF*derivF)/(bsm*br);}
+                if(parentGErrorG != 0.0) {linkWeight += (-lr*parentGErrorG*derivG)/(bsm*br);}
             }
             
             return [vec4(linkLayerNum, 0.0, linkWeight, linkTypeParent)];
