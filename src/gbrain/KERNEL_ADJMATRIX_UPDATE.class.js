@@ -49,22 +49,22 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float gpu_batch_size = 7.0;
                 float br = gpu_batch_repeats;
                 
-                float derivA = (childGOutputA < 0.0) ? 0.01 : 1.0;
-                float derivB = (childGOutputB < 0.0) ? 0.01 : 1.0;
-                float derivC = (childGOutputC < 0.0) ? 0.01 : 1.0;
-                float derivD = (childGOutputD < 0.0) ? 0.01 : 1.0;
-                float derivE = (childGOutputE < 0.0) ? 0.01 : 1.0;
-                float derivF = (childGOutputF < 0.0) ? 0.01 : 1.0;
-                float derivG = (childGOutputG < 0.0) ? 0.01 : 1.0;
+                float derivA = (childGOutputA < 0.0) ? 0.01 : childGOutputA;
+                float derivB = (childGOutputB < 0.0) ? 0.01 : childGOutputB;
+                float derivC = (childGOutputC < 0.0) ? 0.01 : childGOutputC;
+                float derivD = (childGOutputD < 0.0) ? 0.01 : childGOutputD;
+                float derivE = (childGOutputE < 0.0) ? 0.01 : childGOutputE;
+                float derivF = (childGOutputF < 0.0) ? 0.01 : childGOutputF;
+                float derivG = (childGOutputG < 0.0) ? 0.01 : childGOutputG;
                 
                 if(linkLayerNum == layerCount-1.0) {
-                    derivA = 1.0;
-                    derivB = 1.0;
-                    derivC = 1.0;
-                    derivD = 1.0;
-                    derivE = 1.0;
-                    derivF = 1.0;
-                    derivG = 1.0;
+                    derivA = childGOutputA;
+                    derivB = childGOutputB;
+                    derivC = childGOutputC;
+                    derivD = childGOutputD;
+                    derivE = childGOutputE;
+                    derivF = childGOutputF;
+                    derivG = childGOutputG;
                 }
                 
                 float bsm = 0.0;
