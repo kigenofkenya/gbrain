@@ -28,7 +28,7 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float parentGErrorA = dataB[xGeometryParent].w;
                 
                 float childGOutputB = dataF[xGeometryCurrentChild].x;
-                float parentGOutputB = dataF[xGeometryParent].z;
+                float parentGOutputB = dataF[xGeometryParent].x;
                 float parentGErrorB = dataF[xGeometryParent].y;
                 
                 float childGOutputC = dataF[xGeometryCurrentChild].z;
@@ -36,7 +36,7 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float parentGErrorC = dataF[xGeometryParent].w;
                 
                 float childGOutputD = dataG[xGeometryCurrentChild].x;
-                float parentGOutputD = dataG[xGeometryParent].z;
+                float parentGOutputD = dataG[xGeometryParent].x;
                 float parentGErrorD = dataG[xGeometryParent].y;
                 
                 float childGOutputE = dataG[xGeometryCurrentChild].z;
@@ -44,7 +44,7 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float parentGErrorE = dataG[xGeometryParent].w;
                 
                 float childGOutputF = dataH[xGeometryCurrentChild].x;
-                float parentGOutputF = dataH[xGeometryParent].z;
+                float parentGOutputF = dataH[xGeometryParent].x;
                 float parentGErrorF = dataH[xGeometryParent].y;
                 
                 float childGOutputG = dataH[xGeometryCurrentChild].z;
@@ -72,14 +72,6 @@ export class KERNEL_ADJMATRIX_UPDATE {
                     derivF = 1.0;
                     derivG = 1.0;
                 }
-                
-                parentGErrorA += linkWeight*l2_decay;
-                parentGErrorB += linkWeight*l2_decay;
-                parentGErrorC += linkWeight*l2_decay;
-                parentGErrorD += linkWeight*l2_decay;
-                parentGErrorE += linkWeight*l2_decay;
-                parentGErrorF += linkWeight*l2_decay;
-                parentGErrorG += linkWeight*l2_decay;
                 
                 linkWeight += -lr*(parentGErrorA/(gpu_batch_size*br))*derivA*childGOutputA;
                 linkWeight += -lr*(parentGErrorB/(gpu_batch_size*br))*derivB*childGOutputB;
