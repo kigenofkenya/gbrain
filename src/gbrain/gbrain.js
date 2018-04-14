@@ -76,6 +76,9 @@ export class GBrain {
                                 offsetZ += 5.0;
                             }
 
+                            offsetZ += 25.0;
+                            this.graph.addNeuron("bias0", [offsetX, -10.0, offsetZ, 1.0], 1.0); // bias neuron
+
                             this.graph.layerCount++;
                             offsetX += 30.0;
                         },
@@ -96,6 +99,13 @@ export class GBrain {
                                     if(l.weights !== undefined && l.weights !== null)
                                         we = we.slice(l.num_neurons);
                                 }
+                                this.graph.connectNeuronWithNeuronLayer({   "neuron": "bias0",
+                                                                            "neuronLayer": this.neuronLayers[this.neuronLayers.length-1],
+                                                                            "activationFunc": 0,
+                                                                            "weight": ((l.weights !== undefined && l.weights !== null) ? we : null),
+                                                                            "layer_neurons_count": this.inputCount,
+                                                                            "multiplier": 1,
+                                                                            "layerNum": this.graph.layerCount-1});
                             } else
                                 this.graph.connectNeuronLayerWithNeuronLayer({  "neuronLayerOrigin": this.neuronLayers[this.neuronLayers.length-2],
                                                                                 "neuronLayerTarget": this.neuronLayers[this.neuronLayers.length-1],

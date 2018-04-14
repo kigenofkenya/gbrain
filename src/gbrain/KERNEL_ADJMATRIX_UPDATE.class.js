@@ -63,7 +63,7 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float derivE = (parentGOutputE < 0.0) ? 0.01 : 1.0;
                 float derivF = (parentGOutputF < 0.0) ? 0.01 : 1.0;
                 float derivG = (parentGOutputG < 0.0) ? 0.01 : 1.0;
-                if(linkLayerNum == layerCount-2.0) {
+                if(linkLayerNum == layerCount-1.0) {
                     derivA = 1.0;
                     derivB = 1.0;
                     derivC = 1.0;
