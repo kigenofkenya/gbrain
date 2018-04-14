@@ -58,9 +58,9 @@
 
             var gbrain = new GBrain({   "target": document.getElementById("el_gbrain"),
                                         "dimensions": {"width": window.innerWidth*0.7, "height": window.innerHeight-100},
-                                        "gpu_batch_repeats": 7});
+                                        "gpu_batch_repeats": 7,
+                                        "learning_rate": 0.3});
             gbrain.makeLayers(layer_defs);
-            gbrain.setLearningRate(0.3);
             var render = function() {
                 gbrain.tick();
                 requestAnimFrame(render);

@@ -51,6 +51,8 @@ export class GBrainRL {
         this.onLearned = null;
 
         this.age = 0;
+        this.ageEpoch = 0;
+        this.epoch = 0;
         this.epsilon = 1.0;
         this.avcost = 0.0;
         this.loss = 0.0;
@@ -74,7 +76,8 @@ export class GBrainRL {
         if(jsonIn.layer_defs !== undefined && jsonIn.layer_defs !== null) {
             this.gbrain = new GBrain({  "target": jsonIn.target,
                                         "dimensions": jsonIn.dimensions,
-                                        "gpu_batch_repeats": jsonIn.gpu_batch_repeats});
+                                        "gpu_batch_repeats": jsonIn.gpu_batch_repeats,
+                                        "learning_rate": jsonIn.learning_rate});
             this.gbrain.makeLayers(jsonIn.layer_defs);
         }
     }
@@ -246,7 +249,15 @@ export class GBrainRL {
             this.reward_window.shift();
             this.reward_window.push(reward);
 
+            if(this.ageEpoch === this.experience_size) {
+                this.epoch++;
+                this.ageEpoch = 0;
+                let dec_rate = 1.0;
+                this.gbrain.setLearningRate((1.0/(1.0+dec_rate*this.epoch))*this.gbrain.initialLearningRate);
+            }
             this.age++;
+            this.ageEpoch++;
+
 
             // it is time t+1 and we have to store (s_t, a_t, r_t, s_{t+1}) as new experience
             // (given that an appropriate number of state measurements already exist, of course)
@@ -272,10 +283,6 @@ export class GBrainRL {
             } else
                 this.onLearned();
         }
-    };
-
-    setLearningRate(v) {
-        this.gbrain.setLearningRate(v);
     };
 }
 global.GBrainRL = GBrainRL;

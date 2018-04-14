@@ -21,7 +21,8 @@ export class GBrain {
      * @param {Object} jsonIn
      * @param {HTMLElement} jsonIn.target
      * @param {Object} [jsonIn.dimensions={width: Int, height: Int}]
-     * @param {boolean} [jsonIn.enableUI=false]
+     * @param {int} jsonIn.gpu_batch_repeats
+     * @param {number} jsonIn.learning_rate
      * @param {WebGLRenderingContext} [jsonIn.gl=undefined]
      */
     ini(jsonIn) {
@@ -53,6 +54,8 @@ export class GBrain {
         this.neuronLayers = [];
         this.graph.batch_size = this.batch_size;
         this.graph.gpu_batch_repeats = jsonIn.gpu_batch_repeats;
+        this.initialLearningRate = jsonIn.learning_rate;
+        this.currentLearningRate = jsonIn.learning_rate;
 
         let mesh_point = new Mesh().loadPoint();
         //this.graph.setNodeMesh(mesh_point);
@@ -135,6 +138,8 @@ export class GBrain {
 
         this.graph.createWebGLBuffers();
         this.graph.enableForceLayout();
+
+        this.graph.setLearningRate(this.currentLearningRate);
     };
 
     fromJson(jsonIn) {
@@ -212,6 +217,7 @@ export class GBrain {
     };
 
     setLearningRate(v) {
+        this.currentLearningRate = v;
         this.graph.setLearningRate(v);
     };
 
