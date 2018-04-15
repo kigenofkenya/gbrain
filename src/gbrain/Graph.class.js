@@ -1049,7 +1049,7 @@ export class Graph {
             "directed": true,
             "showArrow": false,
             "activationFunc": _activationFunc,
-            "weight": ((this._nodesByName[jsonIn.neuronNameA].biasNeuron === 1.0) ? 0.1 :_weight),
+            "weight": ((_weight === null && this._nodesByName[jsonIn.neuronNameA].biasNeuron === 1.0) ? 0.1 :_weight),
             "linkMultiplier": _linkMultiplier,
             "layerNum": jsonIn.layerNum});
     };
@@ -1112,11 +1112,11 @@ export class Graph {
                                                 "neuronLayer": jsonIn.neuronLayerTarget,
                                                 "layerNum": jsonIn.layerNum,
                                                 "hasBias": jsonIn.hasBias,
-                                                "weight": ((jsonIn.weights !== undefined && jsonIn.weights !== null) ? we.slice(0, jsonIn.neuronLayerTarget.length-1) : null),
+                                                "weight": ((jsonIn.weights !== undefined && jsonIn.weights !== null) ? we.slice(0, jsonIn.neuronLayerTarget.length) : null),
                                                 "layer_neurons_count": jsonIn.layer_neurons_count});
 
             if(jsonIn.weights !== undefined && jsonIn.weights !== null)
-                we = we.slice(jsonIn.neuronLayerTarget.length-1);
+                we = we.slice(jsonIn.neuronLayerTarget.length);
         }
     };
 
@@ -1127,19 +1127,16 @@ export class Graph {
         outJson.layers = [];
 
         outJson.layers.push({   "out_depth": this.layer_defs[0].depth,
-                                "out_sx": 1,
-                                "out_sy": 1,
                                 "layer_type": "input"});
-        let currStartN = this.layer_defs[0].depth;
+        let currStartN = this.layer_defs[0].depth+this.layer_defs[0].hasBias;
 
         for(let n=1; n < this.layer_defs.length; n++) {
-            let currLayerDepth = this.layer_defs[n].num_neurons;
+            let currLayerDepthU = (this.layer_defs[n].depth !== undefined) ? this.layer_defs[n].depth : this.layer_defs[n].num_neurons;
+            let currLayerDepth = (this.layer_defs[n].depth !== undefined) ? (this.layer_defs[n].depth+this.layer_defs[n].hasBias) : (this.layer_defs[n].num_neurons+this.layer_defs[n].hasBias);
             let lastLayerDepthU = (this.layer_defs[n-1].depth !== undefined) ? this.layer_defs[n-1].depth : (this.layer_defs[n-1].num_neurons);
-            let lastLayerDepth = (this.layer_defs[n-1].depth !== undefined) ? this.layer_defs[n-1].depth : (this.layer_defs[n-1].num_neurons+1);
+            let lastLayerDepth = (this.layer_defs[n-1].depth !== undefined) ? (this.layer_defs[n-1].depth+this.layer_defs[n-1].hasBias) : (this.layer_defs[n-1].num_neurons+this.layer_defs[n-1].hasBias);
 
             outJson.layers.push({   "out_depth": this.layer_defs[n].num_neurons,
-                                    "out_sx": 1,
-                                    "out_sy": 1,
                                     "layer_type": ((n === this.layer_defs.length-1) ? "regression" : "fc"),
                                     "num_inputs": lastLayerDepthU,
                                     "l1_decay_mul": 0,
@@ -1148,10 +1145,8 @@ export class Graph {
             let lastL = outJson.layers[outJson.layers.length-1];
 
             // filters minus bias
-            for(let p=currStartN; p < (currStartN+this.layer_defs[n].num_neurons); p++) {
+            for(let p=currStartN; p < (currStartN+currLayerDepthU); p++) {
                 lastL.filters.push({
-                    "sx": 1,
-                    "sy": 1,
                     "depth": lastLayerDepthU,
                     "w": {},
                     "activation": "relu"});
@@ -1159,28 +1154,26 @@ export class Graph {
                 let c_w = 0;
                 for(let c=(currStartN-lastLayerDepth); c < ( (currStartN-lastLayerDepth) +(lastLayerDepthU)); c++) {
                     let pixelChild = this.getPixelChild(p, c)*4;
-                    lastL.filters[lastL.filters.length-1].w[c_w] = adjMA[pixelChild+2];
+                    lastL.filters[lastL.filters.length-1].w[c_w] = adjMA[pixelChild+2]; // c+" "+p
                     c_w++;
                 }
             }
 
             // bias
-            if((n < this.layer_defs.length-1)) {
+            if(this.layer_defs[n-1].hasBias === 1.0) {
                 lastL.biases = {
-                    "sx": 1,
-                    "sy": 1,
-                    "depth": this.layer_defs[n+1].num_neurons,
+                    "depth": this.layer_defs[n].num_neurons,
                     "w": {}};
-                let c = (currStartN+(currLayerDepth));
+                let c = (currStartN-1.0);
                 let c_w = 0;
-                for(let p=(currStartN+(currLayerDepth+1)); p < ( (currStartN+(currLayerDepth+1)) +(this.layer_defs[n+1].num_neurons)); p++) {
+                for(let p=currStartN; p < (currStartN+currLayerDepthU); p++) {
                     let pixelChild = this.getPixelChild(p, c)*4;
-                    lastL.biases.w[c_w] = adjMA[pixelChild+2];
+                    lastL.biases.w[c_w] = adjMA[pixelChild+2]; // c+" "+p
                     c_w++;
                 }
             }
 
-            currStartN += this.layer_defs[n].num_neurons+1;
+            currStartN += currLayerDepth;
         }
         console.log(JSON.stringify(outJson));
     };
