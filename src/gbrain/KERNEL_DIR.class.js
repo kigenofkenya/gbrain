@@ -180,13 +180,13 @@ export class KERNEL_DIR {
                             if(oppositeLayerNum != layerCount-1.0) {oppositeNetErrorG = (oppositeNetOutputG < 0.0) ? 0.01 : oppositeNetErrorG;}
                             
                             if(oppositeBiasNode == 0.0) {
-                                netParentErrorWeightA += oppositeNetErrorA*currentWeight+(0.01*currentWeight);
-                                netParentErrorWeightB += oppositeNetErrorB*currentWeight+(0.01*currentWeight);
-                                netParentErrorWeightC += oppositeNetErrorC*currentWeight+(0.01*currentWeight);
-                                netParentErrorWeightD += oppositeNetErrorD*currentWeight+(0.01*currentWeight);
-                                netParentErrorWeightE += oppositeNetErrorE*currentWeight+(0.01*currentWeight);
-                                netParentErrorWeightF += oppositeNetErrorF*currentWeight+(0.01*currentWeight);
-                                netParentErrorWeightG += oppositeNetErrorG*currentWeight+(0.01*currentWeight);
+                                netParentErrorWeightA += oppositeNetErrorA*currentWeight;
+                                netParentErrorWeightB += oppositeNetErrorB*currentWeight;
+                                netParentErrorWeightC += oppositeNetErrorC*currentWeight;
+                                netParentErrorWeightD += oppositeNetErrorD*currentWeight;
+                                netParentErrorWeightE += oppositeNetErrorE*currentWeight;
+                                netParentErrorWeightF += oppositeNetErrorF*currentWeight;
+                                netParentErrorWeightG += oppositeNetErrorG*currentWeight;
                             } else {
                                 netParentErrorWeightA += oppositeNetErrorA;
                                 netParentErrorWeightB += oppositeNetErrorB;
