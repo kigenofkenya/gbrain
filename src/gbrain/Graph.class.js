@@ -928,8 +928,9 @@ export class Graph {
      * @param {int} numY
      * @param {Array<number>} pos
      * @param {number} nodSep
+     * @param {int} [hasBias]
      */
-    createNeuronLayer(numX, numY, pos, nodSep) {
+    createNeuronLayer(numX, numY, pos, nodSep, hasBias) {
         let arr = [];
         for(let x=0; x < numX; x++) {
             for(let y=0; y < numY; y++) {
@@ -942,10 +943,12 @@ export class Graph {
         }
 
         // bias neuron
-        let position = [pos[0], pos[1]-10.0, pos[2]+(((numY+3)-(numY/2))*nodSep), pos[3]];
-        this.addNeuron(this.currHiddenNeuron.toString(), position, 1);
-        arr.push(this.currHiddenNeuron);
-        this.currHiddenNeuron++;
+        if(hasBias === 1.0) {
+            let position = [pos[0], pos[1]-10.0, pos[2]+(((numY+3)-(numY/2))*nodSep), pos[3]];
+            this.addNeuron(this.currHiddenNeuron.toString(), position, hasBias);
+            arr.push(this.currHiddenNeuron);
+            this.currHiddenNeuron++;
+        }
 
         return arr;
     };
@@ -1060,9 +1063,10 @@ export class Graph {
      * @param {int} [jsonIn.layer_neurons_count]
      * @param {number} [jsonIn.multiplier=1.0]
      * @param {int} jsonIn.layerNum
+     * @param {int} jsonIn.hasBias
      */
     connectNeuronWithNeuronLayer(jsonIn) {
-        for(let n=0; n < jsonIn.neuronLayer.length-1; n++)
+        for(let n=0; n < ((jsonIn.hasBias === 1.0) ? jsonIn.neuronLayer.length-1 : jsonIn.neuronLayer.length); n++)
             this.addSinapsis({  "neuronNameA": jsonIn.neuron.toString(),
                                 "neuronNameB": jsonIn.neuronLayer[n].toString(),
                                 "activationFunc": jsonIn.activationFunc,
@@ -1097,6 +1101,7 @@ export class Graph {
      * @param {Array<number>} jsonIn.weights
      * @param {int} [jsonIn.layer_neurons_count]
      * @param {int} jsonIn.layerNum
+     * @param {int} jsonIn.hasBias
      */
     connectNeuronLayerWithNeuronLayer(jsonIn) {
         let we = jsonIn.weights;
@@ -1106,6 +1111,7 @@ export class Graph {
             this.connectNeuronWithNeuronLayer({ "neuron": neuronOrigin.toString(),
                                                 "neuronLayer": jsonIn.neuronLayerTarget,
                                                 "layerNum": jsonIn.layerNum,
+                                                "hasBias": jsonIn.hasBias,
                                                 "weight": ((jsonIn.weights !== undefined && jsonIn.weights !== null) ? we.slice(0, jsonIn.neuronLayerTarget.length-1) : null),
                                                 "layer_neurons_count": jsonIn.layer_neurons_count});
 

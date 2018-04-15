@@ -83,7 +83,9 @@ export class GBrain {
                             offsetX += 30.0;
                         },
                         "fc": (l) => {
-                            let neuronLayer = this.graph.createNeuronLayer(1, l.num_neurons, [offsetX, 0.0, 0.0, 1.0], 5.0); // numX, numY, visible position
+                            let hasBias = (this.graph.layerCount < this.graph.layer_defs.length-2) ? 1.0 : 0.0;
+
+                            let neuronLayer = this.graph.createNeuronLayer(1, l.num_neurons, [offsetX, 0.0, 0.0, 1.0], 5.0, hasBias); // numX, numY, visible position
                             this.neuronLayers.push(neuronLayer);
 
                             if(this.graph.layerCount === 1) {
@@ -95,7 +97,8 @@ export class GBrain {
                                                                                 "weight": ((l.weights !== undefined && l.weights !== null) ? we.slice(0, l.num_neurons) : null),
                                                                                 "layer_neurons_count": this.inputCount,
                                                                                 "multiplier": 1,
-                                                                                "layerNum": this.graph.layerCount-1});
+                                                                                "layerNum": this.graph.layerCount-1,
+                                                                                "hasBias": hasBias});
                                     if(l.weights !== undefined && l.weights !== null)
                                         we = we.slice(l.num_neurons);
                                 }
@@ -105,13 +108,15 @@ export class GBrain {
                                                                             "weight": ((l.weights !== undefined && l.weights !== null) ? we : null),
                                                                             "layer_neurons_count": this.inputCount,
                                                                             "multiplier": 1,
-                                                                            "layerNum": this.graph.layerCount-1});
+                                                                            "layerNum": this.graph.layerCount-1,
+                                                                            "hasBias": hasBias});
                             } else
                                 this.graph.connectNeuronLayerWithNeuronLayer({  "neuronLayerOrigin": this.neuronLayers[this.neuronLayers.length-2],
                                                                                 "neuronLayerTarget": this.neuronLayers[this.neuronLayers.length-1],
                                                                                 "weights": ((l.weights !== undefined && l.weights !== null) ? l.weights : null),
                                                                                 "layer_neurons_count": this.neuronLayers[this.neuronLayers.length-2].length,
-                                                                                "layerNum": this.graph.layerCount-1}); // TODO l.activation
+                                                                                "layerNum": this.graph.layerCount-1,
+                                                                                "hasBias": hasBias}); // TODO l.activation
 
                             this.graph.layerCount++;
                             offsetX += 30.0;
