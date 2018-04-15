@@ -140,9 +140,9 @@ export class VFP_NODE {
                 }
 
                 if(error > 0.0) {
-                    nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);
-                } else if(error < 0.0) {
                     nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);
+                } else if(error < 0.0) {
+                    nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);
                 } else {
                     nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);
                 }

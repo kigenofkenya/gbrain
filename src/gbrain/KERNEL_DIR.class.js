@@ -279,25 +279,25 @@ export class KERNEL_DIR {
             let cond = (n===efferentStart) ? "if" : "else if" ;
             str += `
             ${cond}(nodeId == `+n.toFixed(1)+`) {
-                netParentErrorWeightA = -(efferentNodesA[`+Math.round(n-efferentStart)+`]-netChildInputSumA);
+                netParentErrorWeightA = (efferentNodesA[`+Math.round(n-efferentStart)+`]-netChildInputSumA);
                 netLoss += 0.5*netParentErrorWeightA*netParentErrorWeightA;
                 
-                netParentErrorWeightB = (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesB[`+Math.round(n-efferentStart)+`]-netChildInputSumB) : 0.0;
+                netParentErrorWeightB = (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesB[`+Math.round(n-efferentStart)+`]-netChildInputSumB) : 0.0;
                 netLoss += (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightB*netParentErrorWeightB : 0.0;
             
-                netParentErrorWeightC = (efferentNodesC[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesC[`+Math.round(n-efferentStart)+`]-netChildInputSumC) : 0.0;
+                netParentErrorWeightC = (efferentNodesC[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesC[`+Math.round(n-efferentStart)+`]-netChildInputSumC) : 0.0;
                 netLoss += (efferentNodesC[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightC*netParentErrorWeightC : 0.0;
             
-                netParentErrorWeightD = (efferentNodesD[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesD[`+Math.round(n-efferentStart)+`]-netChildInputSumD) : 0.0;
+                netParentErrorWeightD = (efferentNodesD[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesD[`+Math.round(n-efferentStart)+`]-netChildInputSumD) : 0.0;
                 netLoss += (efferentNodesD[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightD*netParentErrorWeightD : 0.0;
             
-                netParentErrorWeightE = (efferentNodesE[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesE[`+Math.round(n-efferentStart)+`]-netChildInputSumE) : 0.0;
+                netParentErrorWeightE = (efferentNodesE[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesE[`+Math.round(n-efferentStart)+`]-netChildInputSumE) : 0.0;
                 netLoss += (efferentNodesE[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightE*netParentErrorWeightE : 0.0;
             
-                netParentErrorWeightF = (efferentNodesF[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesF[`+Math.round(n-efferentStart)+`]-netChildInputSumF) : 0.0;
+                netParentErrorWeightF = (efferentNodesF[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesF[`+Math.round(n-efferentStart)+`]-netChildInputSumF) : 0.0;
                 netLoss += (efferentNodesF[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightF*netParentErrorWeightF : 0.0;
             
-                netParentErrorWeightG = (efferentNodesG[`+Math.round(n-efferentStart)+`] != 0.0) ? -(efferentNodesG[`+Math.round(n-efferentStart)+`]-netChildInputSumG) : 0.0;
+                netParentErrorWeightG = (efferentNodesG[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesG[`+Math.round(n-efferentStart)+`]-netChildInputSumG) : 0.0;
                 netLoss += (efferentNodesG[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightG*netParentErrorWeightG : 0.0;
             }`;
         }

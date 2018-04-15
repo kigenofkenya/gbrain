@@ -56,7 +56,7 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float gpu_batch_size = 7.0;
                 float br = gpu_batch_repeats;
                 
-                if(linkLayerNum != layerCount-1.0) {
+                if(linkLayerNum != layerCount-2.0) {
                     parentGErrorA = (parentGOutputA < 0.0) ? 0.01 : parentGErrorA;
                     parentGErrorB = (parentGOutputB < 0.0) ? 0.01 : parentGErrorB;
                     parentGErrorC = (parentGOutputC < 0.0) ? 0.01 : parentGErrorC;
@@ -74,13 +74,13 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 parentGErrorF += linkWeight*l2_decay;
                 parentGErrorG += linkWeight*l2_decay;*/''}
                 
-                linkWeight += -lr*(parentGErrorA/(gpu_batch_size*br))*childGOutputA;
-                linkWeight += -lr*(parentGErrorB/(gpu_batch_size*br))*childGOutputB;
-                linkWeight += -lr*(parentGErrorC/(gpu_batch_size*br))*childGOutputC;
-                linkWeight += -lr*(parentGErrorD/(gpu_batch_size*br))*childGOutputD;
-                linkWeight += -lr*(parentGErrorE/(gpu_batch_size*br))*childGOutputE;
-                linkWeight += -lr*(parentGErrorF/(gpu_batch_size*br))*childGOutputF;
-                linkWeight += -lr*(parentGErrorG/(gpu_batch_size*br))*childGOutputG;
+                linkWeight += lr*(parentGErrorA/(gpu_batch_size*br))*childGOutputA;
+                linkWeight += lr*(parentGErrorB/(gpu_batch_size*br))*childGOutputB;
+                linkWeight += lr*(parentGErrorC/(gpu_batch_size*br))*childGOutputC;
+                linkWeight += lr*(parentGErrorD/(gpu_batch_size*br))*childGOutputD;
+                linkWeight += lr*(parentGErrorE/(gpu_batch_size*br))*childGOutputE;
+                linkWeight += lr*(parentGErrorF/(gpu_batch_size*br))*childGOutputF;
+                linkWeight += lr*(parentGErrorG/(gpu_batch_size*br))*childGOutputG;
             }
             
             return [vec4(linkLayerNum, 0.0, linkWeight, linkTypeParent)];
