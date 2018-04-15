@@ -170,15 +170,7 @@ export class KERNEL_DIR {
                             atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));
                             repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));
                             acumAtraction += 1.0;
-                        } else if(currentIsParent == 0.5) {
-                            if(oppositeLayerNum != layerCount-1.0) {oppositeNetErrorA = (oppositeNetOutputA < 0.0) ? 0.01 : oppositeNetErrorA;}
-                            if(oppositeLayerNum != layerCount-1.0) {oppositeNetErrorB = (oppositeNetOutputB < 0.0) ? 0.01 : oppositeNetErrorB;}
-                            if(oppositeLayerNum != layerCount-1.0) {oppositeNetErrorC = (oppositeNetOutputC < 0.0) ? 0.01 : oppositeNetErrorC;}
-                            if(oppositeLayerNum != layerCount-1.0) {oppositeNetErrorD = (oppositeNetOutputD < 0.0) ? 0.01 : oppositeNetErrorD;}
-                            if(oppositeLayerNum != layerCount-1.0) {oppositeNetErrorE = (oppositeNetOutputE < 0.0) ? 0.01 : oppositeNetErrorE;}
-                            if(oppositeLayerNum != layerCount-1.0) {oppositeNetErrorF = (oppositeNetOutputF < 0.0) ? 0.01 : oppositeNetErrorF;}
-                            if(oppositeLayerNum != layerCount-1.0) {oppositeNetErrorG = (oppositeNetOutputG < 0.0) ? 0.01 : oppositeNetErrorG;}
-                            
+                        } else if(currentIsParent == 0.5) {                            
                             if(oppositeBiasNode == 0.0) {
                                 netParentErrorWeightA += oppositeNetErrorA*currentWeight;
                                 netParentErrorWeightB += oppositeNetErrorB*currentWeight;

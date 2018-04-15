@@ -56,6 +56,16 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float gpu_batch_size = 7.0;
                 float br = gpu_batch_repeats;
                 
+                if(linkLayerNum != layerCount-1.0) {
+                    parentGErrorA = (parentGOutputA < 0.0) ? 0.01 : parentGErrorA;
+                    parentGErrorB = (parentGOutputB < 0.0) ? 0.01 : parentGErrorB;
+                    parentGErrorC = (parentGOutputC < 0.0) ? 0.01 : parentGErrorC;
+                    parentGErrorD = (parentGOutputD < 0.0) ? 0.01 : parentGErrorD;
+                    parentGErrorE = (parentGOutputE < 0.0) ? 0.01 : parentGErrorE;
+                    parentGErrorF = (parentGOutputF < 0.0) ? 0.01 : parentGErrorF;
+                    parentGErrorG = (parentGOutputG < 0.0) ? 0.01 : parentGErrorG;
+                }
+                
                 ${/* parentGErrorA += linkWeight*l2_decay;
                 parentGErrorB += linkWeight*l2_decay;
                 parentGErrorC += linkWeight*l2_decay;
