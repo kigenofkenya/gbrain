@@ -1131,10 +1131,13 @@ export class Graph {
         let currStartN = this.layer_defs[0].depth+this.layer_defs[0].hasBias;
 
         for(let n=1; n < this.layer_defs.length; n++) {
-            let currLayerDepthU = (this.layer_defs[n].depth !== undefined) ? this.layer_defs[n].depth : this.layer_defs[n].num_neurons;
-            let currLayerDepth = (this.layer_defs[n].depth !== undefined) ? (this.layer_defs[n].depth+this.layer_defs[n].hasBias) : (this.layer_defs[n].num_neurons+this.layer_defs[n].hasBias);
-            let lastLayerDepthU = (this.layer_defs[n-1].depth !== undefined) ? this.layer_defs[n-1].depth : (this.layer_defs[n-1].num_neurons);
-            let lastLayerDepth = (this.layer_defs[n-1].depth !== undefined) ? (this.layer_defs[n-1].depth+this.layer_defs[n-1].hasBias) : (this.layer_defs[n-1].num_neurons+this.layer_defs[n-1].hasBias);
+            let currHasBias = (this.layer_defs[n].hasBias !== undefined && this.layer_defs[n].hasBias !== null) ? this.layer_defs[n].hasBias : 0.0;
+            let currLayerDepthU = (this.layer_defs[n].depth !== undefined && this.layer_defs[n].depth !== null) ? this.layer_defs[n].depth : this.layer_defs[n].num_neurons;
+            let currLayerDepth = (this.layer_defs[n].depth !== undefined && this.layer_defs[n].depth !== null) ? (this.layer_defs[n].depth+currHasBias) : (this.layer_defs[n].num_neurons+currHasBias);
+
+            let lastHasBias = (this.layer_defs[n-1].hasBias !== undefined && this.layer_defs[n-1].hasBias !== null) ? this.layer_defs[n-1].hasBias : 0.0;
+            let lastLayerDepthU = (this.layer_defs[n-1].depth !== undefined && this.layer_defs[n-1].depth !== null) ? this.layer_defs[n-1].depth : (this.layer_defs[n-1].num_neurons);
+            let lastLayerDepth = (this.layer_defs[n-1].depth !== undefined && this.layer_defs[n-1].depth !== null) ? (this.layer_defs[n-1].depth+lastHasBias) : (this.layer_defs[n-1].num_neurons+lastHasBias);
 
             outJson.layers.push({   "out_depth": this.layer_defs[n].num_neurons,
                                     "layer_type": ((n === this.layer_defs.length-1) ? "regression" : "fc"),

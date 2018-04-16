@@ -80,13 +80,14 @@ export class GBrain {
                             if(nextHasBias === 1.0) {
                                 offsetZ += 25.0;
                                 this.graph.addNeuron("bias0", [offsetX, -10.0, offsetZ, 1.0], nextHasBias); // bias neuron
+                                this.graph.layer_defs[this.graph.layerCount].hasBias = 1.0;
                             }
                             this.graph.layerCount++;
                             offsetX += 30.0;
                         },
                         "fc": (l) => {
                             let hasBias = (this.graph.layer_defs[this.graph.layerCount].activation === "relu") ? 1.0 : 0.0;
-                            this.graph.layer_defs[this.graph.layerCount].hasBias = hasBias;
+                            this.graph.layer_defs[this.graph.layerCount-1].hasBias = hasBias;
 
                             let nextHasBias = (this.graph.layer_defs[this.graph.layerCount+1].activation === "relu") ? 1.0 : 0.0;
                             //this.graph.layer_defs[this.graph.layerCount+1].hasBias = nextHasBias;
