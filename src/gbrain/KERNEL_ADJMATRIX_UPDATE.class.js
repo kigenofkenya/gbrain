@@ -62,7 +62,7 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float gpu_batch_size =5.0;
                 float br = gpu_batch_repeats;
                 
-                if(linkLayerNum < layerCount-1.0) { 
+                if(linkLayerNum < layerCount-2.0) { 
                     parentGOutputDerivA = (parentGInputsumA <= 0.0) ? 0.01 : 1.0;                    
                     parentGOutputDerivB = (parentGInputsumB <= 0.0) ? 0.01 : 1.0;
                     parentGOutputDerivC = (parentGInputsumC <= 0.0) ? 0.01 : 1.0;

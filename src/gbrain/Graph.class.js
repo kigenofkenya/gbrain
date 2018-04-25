@@ -1364,7 +1364,7 @@ export class Graph {
         for(let n=0; n < this.maxacts.length; n++) {
             for(let nb=0; nb < this.efferentNodesCount; nb++) {
                 //let cc = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? cost*0.5 : 0.0;
-                let cc = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? this.maxacts[n].o[nb] : 0.0; 
+                let cc = this.maxacts[n].o[nb];
                 dd.push(cc);
             }
         }
