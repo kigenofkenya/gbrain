@@ -1049,7 +1049,7 @@ export class Graph {
             "directed": true,
             "showArrow": false,
             "activationFunc": _activationFunc,
-            "weight": ((_weight === null && this._nodesByName[jsonIn.neuronNameA].biasNeuron === 1.0) ? 0.1 :_weight),
+            "weight": ((_weight === null && this._nodesByName[jsonIn.neuronNameA].biasNeuron === 1.0) ? 0.1 : _weight),
             "linkMultiplier": _linkMultiplier,
             "layerNum": jsonIn.layerNum});
     };
@@ -1189,7 +1189,7 @@ export class Graph {
      */
     forward(jsonIn) {
         this.onAction = jsonIn.onAction;
-        let lett = ["A","B","C","D","E","F","G"];
+        let lett = ["A","B","C","D","E"];
 
 
         let state = jsonIn.state.slice(0);
@@ -1218,12 +1218,11 @@ export class Graph {
         this._sce.getLoadedProject().getActiveStage().tick();
 
         if(this.onAction !== null) {
-            let maxacts = [];
-            if(jsonIn.readOutput === undefined || jsonIn.readOutput === null || (jsonIn.readOutput !== null && jsonIn.readOutput === true)) {
+            this.maxacts = [];
+            //if(jsonIn.readOutput === undefined || jsonIn.readOutput === null || (jsonIn.readOutput !== null && jsonIn.readOutput === true)) {
                 let loc = [["dataB",2],
-                            ["dataF",0],["dataF",2],
-                            ["dataG",0],["dataG",2],
-                            ["dataH",0],["dataH",2]];
+                            ["dataF",1],["dataG",0],
+                            ["dataG",3],["dataH",2]];
                 let o = [[]];
                 let currO = 0;
                 for(let n=0; n < this.efferentNodesCount*this.batch_size; n++) {
@@ -1242,16 +1241,45 @@ export class Graph {
                     let maxk = 0;
                     let maxval = o[n][0].output;
 
+                    let vals = [maxval];
+                    let y = [0];
+                    let outs = [0];
+                    let sm = [0];
+                    let ced = [0];
+                    let smd = [0];
+
                     for(let nb=1; nb < o[n].length; nb++) {
+                        vals.push(o[n][nb].output);
+                        y.push(0);
+                        outs.push(0);
+                        sm.push(0);
+                        ced.push(0);
+                        smd.push(0);
+
                         if(o[n][nb].output > maxval) {
                             maxk = nb;
                             maxval = o[n][nb].output;
                         }
                     }
-                    maxacts.push({"action": maxk, "value": maxval});
+                    this.maxacts.push({"action": maxk, "value": maxval, "values": vals, "y": y, "o": outs, "sm": sm, "ced": ced, "smd": smd});
                 }
-            }
-            this.onAction(maxacts);
+
+                // softmax
+                /*for(let n=0; n < this.maxacts.length; n++) {
+                    let sm = 0.0;
+                    for(let nb=0; nb < this.efferentNodesCount; nb++)
+                        sm += Math.exp(this.maxacts[n].values[nb]);
+
+                    for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                        this.maxacts[n].sm[nb] = Math.exp(this.maxacts[n].values[nb])/sm;
+
+                        if(nb === this.maxacts[n].action)
+                            this.maxacts[n].value = this.maxacts[n].sm[nb];
+                    }
+                }*/
+
+                this.onAction(this.maxacts);
+            //}
         }
     };
 
@@ -1262,44 +1290,102 @@ export class Graph {
      */
     train(jsonIn) {
         this.onTrained = jsonIn.onTrained;
-        let lett = ["A","B","C","D","E","F","G"];
+        let lett = ["A","B","C","D","E"];
+
+        // softmax regression
+        /*let cost = 0.0;
+        for(let n=0; n < this.maxacts.length; n++) {
+            for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                //let rr = (jsonIn.reward[n].val >= 0) ? Math.exp(1.0) : Math.exp(-1);
+                this.maxacts[n].y[nb] = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? jsonIn.reward[n].val/10 : 0.0;
+            }
+        }
+
+        for(let n=0; n < this.maxacts.length; n++) {
+            for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                // cross-entropy cost
+                cost += -1.0*((this.maxacts[n].y[nb]*Math.log(this.maxacts[n].sm[nb])) + ((1.0-this.maxacts[n].y[nb])*Math.log(1.0-this.maxacts[n].sm[nb])));
+            }
+        }
+
+        for(let n=0; n < this.maxacts.length; n++) {
+            for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                // cross-entropy derivative (CED)
+                this.maxacts[n].ced[nb] = ((this.maxacts[n].y[nb]*(1.0/this.maxacts[n].sm[nb])) + ((1.0-this.maxacts[n].y[nb])*(1.0/(1.0-this.maxacts[n].sm[nb]))));
+            }
+        }
+
+        for(let n=0; n < this.maxacts.length; n++) {
+            let sm = 0.0;
+            for(let nb=0; nb < this.efferentNodesCount; nb++)
+                sm += Math.exp(this.maxacts[n].values[nb]);
+            sm = sm*sm;
+
+            // softmax derivative
+            for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                let sumOpposites = 0.0;
+                for(let nc=0; nc < this.efferentNodesCount; nc++) {
+                    if(nb !== nc)
+                        sumOpposites += Math.exp(this.maxacts[n].values[nc]);
+                }
+                this.maxacts[n].smd[nb] = (Math.exp(this.maxacts[n].values[nb])*sumOpposites)/sm;
+            }
+        }
+
+        let dd = [];
+        for(let n=0; n < this.maxacts.length; n++) {
+            for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                let cc = this.maxacts[n].ced[nb]*this.maxacts[n].smd[nb];
+                dd.push(cc);
+            }
+        }*/
 
 
-        let arrReward = [];
-        for(let key in jsonIn.reward) {
-            for(let nb=0; nb < (this.efferentNodesCount); nb++) {
-                if(nb === parseInt(jsonIn.reward[key].dim))
-                    arrReward.push(jsonIn.reward[key].val);
-                else
-                    arrReward.push(0.0);
+
+        // linear regression
+        let cost = 0.0;
+        for(let n=0; n < this.maxacts.length; n++) {
+            for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                this.maxacts[n].y[nb] = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? jsonIn.reward[n].val : 0.0;
+            }
+        }
+
+        for(let n=0; n < this.maxacts.length; n++) {
+            for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                // output
+                this.maxacts[n].o[nb] = (this.maxacts[n].values[nb]-this.maxacts[n].y[nb]);
+
+                // l2 cost
+                cost += this.maxacts[n].o[nb]*this.maxacts[n].o[nb];
+            }
+        }
+
+        let dd = [];
+        for(let n=0; n < this.maxacts.length; n++) {
+            for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                //let cc = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? cost*0.5 : 0.0;
+                let cc = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? this.maxacts[n].o[nb] : 0.0; 
+                dd.push(cc);
             }
         }
 
 
-        for(let n=arrReward.length; n < this.efferentNodesCount*this.batch_size; n++)
-            arrReward[n] = 0.0;
 
+        // send
         for(let n=0; n < this.batch_size; n++) {
-            this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return arrReward.slice(0, this.efferentNodesCount);});
-            arrReward = arrReward.slice(this.efferentNodesCount);
+            this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return dd.slice(0, this.efferentNodesCount);});
+            dd = dd.slice(this.efferentNodesCount);
         }
 
 
-        for(let n=0; n < (this.layerCount-1); n++)
+        for(let n=0; n < (this.layerCount); n++)
             this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
 
-        let cost = 0;
-        for(let key in jsonIn.reward) {
-            let u = this.getNeuronOutput(this.efferentNeuron[parseInt(jsonIn.reward[key].dim)], ["dataB"]);
-            if(isNaN(u[1]) === true)
-                debugger;
-
-            cost += u[1];
-        }
 
         //this.comp_renderer_nodes.gpufG.disableKernel(0);
         this.comp_renderer_nodes.gpufG.enableKernel(1);
         this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
+        this._sce.getLoadedProject().getActiveStage().tick();
         this._sce.getLoadedProject().getActiveStage().tick();
         //this.comp_renderer_nodes.tick();
         //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
@@ -1309,7 +1395,7 @@ export class Graph {
 
 
         if(this.onTrained !== null)
-            this.onTrained(cost);
+            this.onTrained(0.5*cost);
     };
 
     getNeuronOutput(neuronName, loc) {

@@ -4,6 +4,58 @@
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],2:[function(require,module,exports){
 (function (global){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+// Average Window class from CONVNETJS
+var AvgWin = exports.AvgWin = function () {
+    function AvgWin(size, minsize) {
+        _classCallCheck(this, AvgWin);
+
+        this.v = [];
+        this.size = typeof size === 'undefined' ? 100 : size;
+        this.minsize = typeof minsize === 'undefined' ? 20 : minsize;
+        this.sum = 0;
+    }
+
+    _createClass(AvgWin, [{
+        key: 'add',
+        value: function add(x) {
+            this.v.push(x);
+            this.sum += x;
+            if (this.v.length > this.size) {
+                var xold = this.v.shift();
+                this.sum -= xold;
+            }
+        }
+    }, {
+        key: 'get_average',
+        value: function get_average() {
+            if (this.v.length < this.minsize) return -1;else return this.sum / this.v.length;
+        }
+    }, {
+        key: 'reset',
+        value: function reset(x) {
+            this.v = [];
+            this.sum = 0;
+        }
+    }]);
+
+    return AvgWin;
+}();
+
+global.AvgWin = AvgWin;
+module.exports.AvgWin = AvgWin;
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],3:[function(require,module,exports){
+(function (global){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1245,24 +1297,27 @@ var Graph = exports.Graph = function () {
          * @param {int} numY
          * @param {Array<number>} pos
          * @param {number} nodSep
+         * @param {int} [hasBias]
          */
-        value: function createNeuronLayer(numX, numY, pos, nodSep) {
+        value: function createNeuronLayer(numX, numY, pos, nodSep, hasBias) {
             var arr = [];
             for (var x = 0; x < numX; x++) {
                 for (var y = 0; y < numY; y++) {
-                    var _position = [pos[0] + (x - numX / 2) * nodSep, pos[1], pos[2] + (y - numY / 2) * nodSep, pos[3]];
+                    var position = [pos[0] + (x - numX / 2) * nodSep, pos[1], pos[2] + (y - numY / 2) * nodSep, pos[3]];
 
-                    this.addNeuron(this.currHiddenNeuron.toString(), _position);
+                    this.addNeuron(this.currHiddenNeuron.toString(), position);
                     arr.push(this.currHiddenNeuron);
                     this.currHiddenNeuron++;
                 }
             }
 
             // bias neuron
-            var position = [pos[0], pos[1] - 10.0, pos[2] + (numY + 3 - numY / 2) * nodSep, pos[3]];
-            this.addNeuron(this.currHiddenNeuron.toString(), position, 1);
-            arr.push(this.currHiddenNeuron);
-            this.currHiddenNeuron++;
+            if (hasBias === 1.0) {
+                var _position = [pos[0], pos[1] - 10.0, pos[2] + (numY + 3 - numY / 2) * nodSep, pos[3]];
+                this.addNeuron(this.currHiddenNeuron.toString(), _position, hasBias);
+                arr.push(this.currHiddenNeuron);
+                this.currHiddenNeuron++;
+            }
 
             return arr;
         }
@@ -1363,7 +1418,7 @@ var Graph = exports.Graph = function () {
             var randn = function randn(mu, std) {
                 return mu + gaussRandom() * std;
             };
-            var scale = jsonIn.layer_neurons_count !== undefined && jsonIn.layer_neurons_count !== null ? Math.sqrt(1.0 / (jsonIn.layer_neurons_count + 1)) : Math.sqrt(1.0 / 50);
+            var scale = jsonIn.layer_neurons_count !== undefined && jsonIn.layer_neurons_count !== null ? Math.sqrt(2.0 / (jsonIn.layer_neurons_count + 1)) : Math.sqrt(1.0 / 50);
 
             var _activationFunc = jsonIn.activationFunc !== undefined && jsonIn.activationFunc !== null ? jsonIn.activationFunc : 1.0;
             var _weight = jsonIn.weight !== undefined && jsonIn.weight !== null ? jsonIn.weight : randn(0.0, scale);
@@ -1375,7 +1430,7 @@ var Graph = exports.Graph = function () {
                 "directed": true,
                 "showArrow": false,
                 "activationFunc": _activationFunc,
-                "weight": this._nodesByName[jsonIn.neuronNameA].biasNeuron === 1.0 ? 0.1 : _weight,
+                "weight": _weight === null && this._nodesByName[jsonIn.neuronNameA].biasNeuron === 1.0 ? 0.1 : _weight,
                 "linkMultiplier": _linkMultiplier,
                 "layerNum": jsonIn.layerNum });
         }
@@ -1392,9 +1447,10 @@ var Graph = exports.Graph = function () {
          * @param {int} [jsonIn.layer_neurons_count]
          * @param {number} [jsonIn.multiplier=1.0]
          * @param {int} jsonIn.layerNum
+         * @param {int} jsonIn.hasBias
          */
         value: function connectNeuronWithNeuronLayer(jsonIn) {
-            for (var n = 0; n < jsonIn.neuronLayer.length - 1; n++) {
+            for (var n = 0; n < (jsonIn.hasBias === 1.0 ? jsonIn.neuronLayer.length - 1 : jsonIn.neuronLayer.length); n++) {
                 this.addSinapsis({ "neuronNameA": jsonIn.neuron.toString(),
                     "neuronNameB": jsonIn.neuronLayer[n].toString(),
                     "activationFunc": jsonIn.activationFunc,
@@ -1437,6 +1493,7 @@ var Graph = exports.Graph = function () {
          * @param {Array<number>} jsonIn.weights
          * @param {int} [jsonIn.layer_neurons_count]
          * @param {int} jsonIn.layerNum
+         * @param {int} jsonIn.hasBias
          */
         value: function connectNeuronLayerWithNeuronLayer(jsonIn) {
             var we = jsonIn.weights;
@@ -1446,10 +1503,11 @@ var Graph = exports.Graph = function () {
                 this.connectNeuronWithNeuronLayer({ "neuron": neuronOrigin.toString(),
                     "neuronLayer": jsonIn.neuronLayerTarget,
                     "layerNum": jsonIn.layerNum,
-                    "weight": jsonIn.weights !== undefined && jsonIn.weights !== null ? we.slice(0, jsonIn.neuronLayerTarget.length - 1) : null,
+                    "hasBias": jsonIn.hasBias,
+                    "weight": jsonIn.weights !== undefined && jsonIn.weights !== null ? we.slice(0, jsonIn.neuronLayerTarget.length) : null,
                     "layer_neurons_count": jsonIn.layer_neurons_count });
 
-                if (jsonIn.weights !== undefined && jsonIn.weights !== null) we = we.slice(jsonIn.neuronLayerTarget.length - 1);
+                if (jsonIn.weights !== undefined && jsonIn.weights !== null) we = we.slice(jsonIn.neuronLayerTarget.length);
             }
         }
     }, {
@@ -1461,19 +1519,19 @@ var Graph = exports.Graph = function () {
             outJson.layers = [];
 
             outJson.layers.push({ "out_depth": this.layer_defs[0].depth,
-                "out_sx": 1,
-                "out_sy": 1,
                 "layer_type": "input" });
-            var currStartN = this.layer_defs[0].depth;
+            var currStartN = this.layer_defs[0].depth + this.layer_defs[0].hasBias;
 
             for (var n = 1; n < this.layer_defs.length; n++) {
-                var currLayerDepth = this.layer_defs[n].num_neurons;
-                var lastLayerDepthU = this.layer_defs[n - 1].depth !== undefined ? this.layer_defs[n - 1].depth : this.layer_defs[n - 1].num_neurons;
-                var lastLayerDepth = this.layer_defs[n - 1].depth !== undefined ? this.layer_defs[n - 1].depth : this.layer_defs[n - 1].num_neurons + 1;
+                var currHasBias = this.layer_defs[n].hasBias !== undefined && this.layer_defs[n].hasBias !== null ? this.layer_defs[n].hasBias : 0.0;
+                var currLayerDepthU = this.layer_defs[n].depth !== undefined && this.layer_defs[n].depth !== null ? this.layer_defs[n].depth : this.layer_defs[n].num_neurons;
+                var currLayerDepth = this.layer_defs[n].depth !== undefined && this.layer_defs[n].depth !== null ? this.layer_defs[n].depth + currHasBias : this.layer_defs[n].num_neurons + currHasBias;
+
+                var lastHasBias = this.layer_defs[n - 1].hasBias !== undefined && this.layer_defs[n - 1].hasBias !== null ? this.layer_defs[n - 1].hasBias : 0.0;
+                var lastLayerDepthU = this.layer_defs[n - 1].depth !== undefined && this.layer_defs[n - 1].depth !== null ? this.layer_defs[n - 1].depth : this.layer_defs[n - 1].num_neurons;
+                var lastLayerDepth = this.layer_defs[n - 1].depth !== undefined && this.layer_defs[n - 1].depth !== null ? this.layer_defs[n - 1].depth + lastHasBias : this.layer_defs[n - 1].num_neurons + lastHasBias;
 
                 outJson.layers.push({ "out_depth": this.layer_defs[n].num_neurons,
-                    "out_sx": 1,
-                    "out_sy": 1,
                     "layer_type": n === this.layer_defs.length - 1 ? "regression" : "fc",
                     "num_inputs": lastLayerDepthU,
                     "l1_decay_mul": 0,
@@ -1482,10 +1540,8 @@ var Graph = exports.Graph = function () {
                 var lastL = outJson.layers[outJson.layers.length - 1];
 
                 // filters minus bias
-                for (var p = currStartN; p < currStartN + this.layer_defs[n].num_neurons; p++) {
+                for (var p = currStartN; p < currStartN + currLayerDepthU; p++) {
                     lastL.filters.push({
-                        "sx": 1,
-                        "sy": 1,
                         "depth": lastLayerDepthU,
                         "w": {},
                         "activation": "relu" });
@@ -1493,28 +1549,26 @@ var Graph = exports.Graph = function () {
                     var c_w = 0;
                     for (var c = currStartN - lastLayerDepth; c < currStartN - lastLayerDepth + lastLayerDepthU; c++) {
                         var pixelChild = this.getPixelChild(p, c) * 4;
-                        lastL.filters[lastL.filters.length - 1].w[c_w] = adjMA[pixelChild + 2];
+                        lastL.filters[lastL.filters.length - 1].w[c_w] = adjMA[pixelChild + 2]; // c+" "+p
                         c_w++;
                     }
                 }
 
                 // bias
-                if (n < this.layer_defs.length - 1) {
+                if (this.layer_defs[n - 1].hasBias === 1.0) {
                     lastL.biases = {
-                        "sx": 1,
-                        "sy": 1,
-                        "depth": this.layer_defs[n + 1].num_neurons,
+                        "depth": this.layer_defs[n].num_neurons,
                         "w": {} };
-                    var _c = currStartN + currLayerDepth;
+                    var _c = currStartN - 1.0;
                     var _c_w = 0;
-                    for (var _p = currStartN + (currLayerDepth + 1); _p < currStartN + (currLayerDepth + 1) + this.layer_defs[n + 1].num_neurons; _p++) {
+                    for (var _p = currStartN; _p < currStartN + currLayerDepthU; _p++) {
                         var _pixelChild = this.getPixelChild(_p, _c) * 4;
-                        lastL.biases.w[_c_w] = adjMA[_pixelChild + 2];
+                        lastL.biases.w[_c_w] = adjMA[_pixelChild + 2]; // c+" "+p
                         _c_w++;
                     }
                 }
 
-                currStartN += this.layer_defs[n].num_neurons + 1;
+                currStartN += currLayerDepth;
             }
             console.log(JSON.stringify(outJson));
         }
@@ -1532,7 +1586,7 @@ var Graph = exports.Graph = function () {
             var _this5 = this;
 
             this.onAction = jsonIn.onAction;
-            var lett = ["A", "B", "C", "D", "E", "F", "G"];
+            var lett = ["A", "B", "C", "D", "E"];
 
             var state = jsonIn.state.slice(0);
             for (var n = jsonIn.state.length; n < this.afferentNodesCount * this.batch_size; n++) {
@@ -1559,36 +1613,62 @@ var Graph = exports.Graph = function () {
             }this._sce.getLoadedProject().getActiveStage().tick();
 
             if (this.onAction !== null) {
-                var maxacts = [];
-                if (jsonIn.readOutput === undefined || jsonIn.readOutput === null || jsonIn.readOutput !== null && jsonIn.readOutput === true) {
-                    var loc = [["dataB", 2], ["dataF", 0], ["dataF", 2], ["dataG", 0], ["dataG", 2], ["dataH", 0], ["dataH", 2]];
-                    var o = [[]];
-                    var currO = 0;
-                    for (var _n6 = 0; _n6 < this.efferentNodesCount * this.batch_size; _n6++) {
-                        if (o[currO].length === this.efferentNodesCount) {
-                            o.push([]);
-                            currO++;
-                        }
+                this.maxacts = [];
 
-                        var u = this.getNeuronOutput(this.efferentNeuron[o[currO].length], loc[currO]);
-                        if (isNaN(u[2]) === true) debugger;
-                        o[currO].push({ "output": u[loc[currO][1]] });
+                var loc = [["dataB", 2], ["dataF", 1], ["dataG", 0], ["dataG", 3], ["dataH", 2]];
+                var o = [[]];
+                var currO = 0;
+                for (var _n6 = 0; _n6 < this.efferentNodesCount * this.batch_size; _n6++) {
+                    if (o[currO].length === this.efferentNodesCount) {
+                        o.push([]);
+                        currO++;
                     }
 
-                    for (var _n7 = 0; _n7 < o.length; _n7++) {
-                        var maxk = 0;
-                        var maxval = o[_n7][0].output;
-
-                        for (var nb = 1; nb < o[_n7].length; nb++) {
-                            if (o[_n7][nb].output > maxval) {
-                                maxk = nb;
-                                maxval = o[_n7][nb].output;
-                            }
-                        }
-                        maxacts.push({ "action": maxk, "value": maxval });
-                    }
+                    var u = this.getNeuronOutput(this.efferentNeuron[o[currO].length], loc[currO]);
+                    if (isNaN(u[2]) === true) debugger;
+                    o[currO].push({ "output": u[loc[currO][1]] });
                 }
-                this.onAction(maxacts);
+
+                for (var _n7 = 0; _n7 < o.length; _n7++) {
+                    var maxk = 0;
+                    var maxval = o[_n7][0].output;
+
+                    var vals = [maxval];
+                    var y = [0];
+                    var outs = [0];
+                    var sm = [0];
+                    var ced = [0];
+                    var smd = [0];
+
+                    for (var nb = 1; nb < o[_n7].length; nb++) {
+                        vals.push(o[_n7][nb].output);
+                        y.push(0);
+                        outs.push(0);
+                        sm.push(0);
+                        ced.push(0);
+                        smd.push(0);
+
+                        if (o[_n7][nb].output > maxval) {
+                            maxk = nb;
+                            maxval = o[_n7][nb].output;
+                        }
+                    }
+                    this.maxacts.push({ "action": maxk, "value": maxval, "values": vals, "y": y, "o": outs, "sm": sm, "ced": ced, "smd": smd });
+                }
+
+                // softmax
+                /*for(let n=0; n < this.maxacts.length; n++) {
+                    let sm = 0.0;
+                    for(let nb=0; nb < this.efferentNodesCount; nb++)
+                        sm += Math.exp(this.maxacts[n].values[nb]);
+                      for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                        this.maxacts[n].sm[nb] = Math.exp(this.maxacts[n].values[nb])/sm;
+                          if(nb === this.maxacts[n].action)
+                            this.maxacts[n].value = this.maxacts[n].sm[nb];
+                    }
+                }*/
+
+                this.onAction(this.maxacts);
             }
         }
     }, {
@@ -1604,35 +1684,88 @@ var Graph = exports.Graph = function () {
             var _this6 = this;
 
             this.onTrained = jsonIn.onTrained;
-            var lett = ["A", "B", "C", "D", "E", "F", "G"];
+            var lett = ["A", "B", "C", "D", "E"];
 
-            var arrReward = [];
-            for (var key in jsonIn.reward) {
+            // softmax regression
+            /*let cost = 0.0;
+            for(let n=0; n < this.maxacts.length; n++) {
+                for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                    //let rr = (jsonIn.reward[n].val >= 0) ? Math.exp(1.0) : Math.exp(-1);
+                    this.maxacts[n].y[nb] = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? jsonIn.reward[n].val/10 : 0.0;
+                }
+            }
+              for(let n=0; n < this.maxacts.length; n++) {
+                for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                    // cross-entropy loss
+                    cost += -1.0*((this.maxacts[n].y[nb]*Math.log(this.maxacts[n].sm[nb])) + ((1.0-this.maxacts[n].y[nb])*Math.log(1.0-this.maxacts[n].sm[nb])));
+                }
+            }
+              for(let n=0; n < this.maxacts.length; n++) {
+                for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                    // cross-entropy derivative (CED)
+                    this.maxacts[n].ced[nb] = ((this.maxacts[n].y[nb]*(1.0/this.maxacts[n].sm[nb])) + ((1.0-this.maxacts[n].y[nb])*(1.0/(1.0-this.maxacts[n].sm[nb]))));
+                }
+            }
+              for(let n=0; n < this.maxacts.length; n++) {
+                let sm = 0.0;
+                for(let nb=0; nb < this.efferentNodesCount; nb++)
+                    sm += Math.exp(this.maxacts[n].values[nb]);
+                sm = sm*sm;
+                  // softmax derivative
+                for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                    let sumOpposites = 0.0;
+                    for(let nc=0; nc < this.efferentNodesCount; nc++) {
+                        if(nb !== nc)
+                            sumOpposites += Math.exp(this.maxacts[n].values[nc]);
+                    }
+                    this.maxacts[n].smd[nb] = (Math.exp(this.maxacts[n].values[nb])*sumOpposites)/sm;
+                }
+            }
+              let dd = [];
+            for(let n=0; n < this.maxacts.length; n++) {
+                for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                    let cc = this.maxacts[n].ced[nb]*this.maxacts[n].smd[nb];
+                    dd.push(cc);
+                }
+            }*/
+
+            // linear regression
+            var cost = 0.0;
+            for (var n = 0; n < this.maxacts.length; n++) {
                 for (var nb = 0; nb < this.efferentNodesCount; nb++) {
-                    if (nb === parseInt(jsonIn.reward[key].dim)) arrReward.push(jsonIn.reward[key].val);else arrReward.push(0.0);
+                    this.maxacts[n].y[nb] = jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb ? jsonIn.reward[n].val : 0.0;
                 }
             }
 
-            for (var n = arrReward.length; n < this.efferentNodesCount * this.batch_size; n++) {
-                arrReward[n] = 0.0;
-            }for (var _n8 = 0; _n8 < this.batch_size; _n8++) {
-                this.comp_renderer_nodes.setArg("efferentNodes" + lett[_n8], function () {
-                    return arrReward.slice(0, _this6.efferentNodesCount);
+            for (var _n8 = 0; _n8 < this.maxacts.length; _n8++) {
+                for (var _nb = 0; _nb < this.efferentNodesCount; _nb++) {
+                    // output
+                    this.maxacts[_n8].o[_nb] = this.maxacts[_n8].values[_nb] - this.maxacts[_n8].y[_nb];
+
+                    // loss
+                    cost += this.maxacts[_n8].o[_nb] * this.maxacts[_n8].o[_nb];
+                }
+            }
+
+            var dd = [];
+            for (var _n9 = 0; _n9 < this.maxacts.length; _n9++) {
+                for (var _nb2 = 0; _nb2 < this.efferentNodesCount; _nb2++) {
+                    var cc = this.maxacts[_n9].o[_nb2];
+                    dd.push(cc);
+                }
+            }
+
+            // send
+            for (var _n10 = 0; _n10 < this.batch_size; _n10++) {
+                this.comp_renderer_nodes.setArg("efferentNodes" + lett[_n10], function () {
+                    return dd.slice(0, _this6.efferentNodesCount);
                 });
-                arrReward = arrReward.slice(this.efferentNodesCount);
+                dd = dd.slice(this.efferentNodesCount);
             }
 
-            for (var _n9 = 0; _n9 < this.layerCount - 1; _n9++) {
+            for (var _n11 = 0; _n11 < this.layerCount - 1; _n11++) {
                 this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
-            }var cost = 0;
-            for (var _key in jsonIn.reward) {
-                var u = this.getNeuronOutput(this.efferentNeuron[parseInt(jsonIn.reward[_key].dim)], ["dataB"]);
-                if (isNaN(u[1]) === true) debugger;
-
-                cost += u[1];
-            }
-
-            //this.comp_renderer_nodes.gpufG.disableKernel(0);
+            } //this.comp_renderer_nodes.gpufG.disableKernel(0);
             this.comp_renderer_nodes.gpufG.enableKernel(1);
             this.comp_renderer_nodes.setArg("enableTrain", function () {
                 return 1.0;
@@ -1773,11 +1906,11 @@ var Graph = exports.Graph = function () {
 
             // link id
             for (var na = 0; na < this.linksObj.length; na++) {
-                for (var _n10 = 0; _n10 < this.linksObj[na].arrayLinkData.length / 4; _n10++) {
-                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.linksObj[na].arrayLinkData[_n10 * 4] === node.nodeId) setVal(type, jsonIn.argName, "links_array_value", _n10, jsonIn.value);else {
-                        var _id2 = type === "float" ? _n10 : _n10 * 4;
+                for (var _n12 = 0; _n12 < this.linksObj[na].arrayLinkData.length / 4; _n12++) {
+                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.linksObj[na].arrayLinkData[_n12 * 4] === node.nodeId) setVal(type, jsonIn.argName, "links_array_value", _n12, jsonIn.value);else {
+                        var _id2 = type === "float" ? _n12 : _n12 * 4;
                         if (this._customArgs[jsonIn.argName]["links_array_value"][_id2] === undefined && this._customArgs[jsonIn.argName]["links_array_value"][_id2] === null && jsonIn.update === false) {
-                            if (type === "float") setVal(type, jsonIn.argName, "links_array_value", _n10, 0.0);else setVal(type, jsonIn.argName, "links_array_value", _n10, [0.0, 0.0, 0.0, 0.0]);
+                            if (type === "float") setVal(type, jsonIn.argName, "links_array_value", _n12, 0.0);else setVal(type, jsonIn.argName, "links_array_value", _n12, [0.0, 0.0, 0.0, 0.0]);
                         }
                     }
                 }
@@ -1788,11 +1921,11 @@ var Graph = exports.Graph = function () {
 
             // arrow id
             for (var _na9 = 0; _na9 < this.arrowsObj.length; _na9++) {
-                for (var _n11 = 0; _n11 < this.arrowsObj[_na9].arrayArrowData.length / 4; _n11++) {
-                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrowsObj[_na9].arrayArrowData[_n11 * 4] === node.nodeId) setVal(type, jsonIn.argName, "arrows_array_value", _n11, jsonIn.value);else {
-                        var _id3 = type === "float" ? _n11 : _n11 * 4;
+                for (var _n13 = 0; _n13 < this.arrowsObj[_na9].arrayArrowData.length / 4; _n13++) {
+                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrowsObj[_na9].arrayArrowData[_n13 * 4] === node.nodeId) setVal(type, jsonIn.argName, "arrows_array_value", _n13, jsonIn.value);else {
+                        var _id3 = type === "float" ? _n13 : _n13 * 4;
                         if (this._customArgs[jsonIn.argName]["arrows_array_value"][_id3] === undefined && this._customArgs[jsonIn.argName]["arrows_array_value"][_id3] === null && jsonIn.update === false) {
-                            if (type === "float") setVal(type, jsonIn.argName, "arrows_array_value", _n11, 0.0);else setVal(type, jsonIn.argName, "arrows_array_value", _n11, [0.0, 0.0, 0.0, 0.0]);
+                            if (type === "float") setVal(type, jsonIn.argName, "arrows_array_value", _n13, 0.0);else setVal(type, jsonIn.argName, "arrows_array_value", _n13, [0.0, 0.0, 0.0, 0.0]);
                         }
                     }
                 }
@@ -1803,11 +1936,11 @@ var Graph = exports.Graph = function () {
 
             if (this._enableFont === true) {
                 // nodeText id
-                for (var _n12 = 0; _n12 < this.arrayNodeTextData.length / 4; _n12++) {
-                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrayNodeTextData[_n12 * 4] === node.nodeId) setVal(type, jsonIn.argName, "nodestext_array_value", _n12, jsonIn.value);else {
-                        var _id4 = type === "float" ? _n12 : _n12 * 4;
+                for (var _n14 = 0; _n14 < this.arrayNodeTextData.length / 4; _n14++) {
+                    if (jsonIn.nodeName === undefined || jsonIn.nodeName === null || jsonIn.nodeName !== undefined && jsonIn.nodeName !== null && this.arrayNodeTextData[_n14 * 4] === node.nodeId) setVal(type, jsonIn.argName, "nodestext_array_value", _n14, jsonIn.value);else {
+                        var _id4 = type === "float" ? _n14 : _n14 * 4;
                         if (this._customArgs[jsonIn.argName]["nodestext_array_value"][_id4] === undefined && this._customArgs[jsonIn.argName]["nodestext_array_value"][_id4] === null && jsonIn.update === false) {
-                            if (type === "float") setVal(type, jsonIn.argName, "nodestext_array_value", _n12, 0.0);else setVal(type, jsonIn.argName, "nodestext_array_value", _n12, [0.0, 0.0, 0.0, 0.0]);
+                            if (type === "float") setVal(type, jsonIn.argName, "nodestext_array_value", _n14, 0.0);else setVal(type, jsonIn.argName, "nodestext_array_value", _n14, [0.0, 0.0, 0.0, 0.0]);
                         }
                     }
                 }
@@ -1863,8 +1996,8 @@ var Graph = exports.Graph = function () {
             // links
             this._customArgs[jsonIn.argName].links_array_value = [];
             for (var na = 0; na < this.linksObj.length; na++) {
-                for (var _n13 = 0; _n13 < this.linksObj[na].arrayLinkNodeName.length; _n13++) {
-                    var currentLinkNodeName = this.linksObj[na].arrayLinkNodeName[_n13];
+                for (var _n15 = 0; _n15 < this.linksObj[na].arrayLinkNodeName.length; _n15++) {
+                    var currentLinkNodeName = this.linksObj[na].arrayLinkNodeName[_n15];
                     var nodeNameItemStart = this._nodesByName[currentLinkNodeName].itemStart;
 
                     if (type === "float") {
@@ -1881,8 +2014,8 @@ var Graph = exports.Graph = function () {
             // arrows
             this._customArgs[jsonIn.argName].arrows_array_value = [];
             for (var _na10 = 0; _na10 < this.arrowsObj.length; _na10++) {
-                for (var _n14 = 0; _n14 < this.arrowsObj[_na10].arrayArrowNodeName.length; _n14++) {
-                    var currentArrowNodeName = this.arrowsObj[_na10].arrayArrowNodeName[_n14];
+                for (var _n16 = 0; _n16 < this.arrowsObj[_na10].arrayArrowNodeName.length; _n16++) {
+                    var currentArrowNodeName = this.arrowsObj[_na10].arrayArrowNodeName[_n16];
                     var _nodeNameItemStart = this._nodesByName[currentArrowNodeName].itemStart;
 
                     if (type === "float") {
@@ -1899,8 +2032,8 @@ var Graph = exports.Graph = function () {
             // nodestext
             if (this._enableFont === true) {
                 this._customArgs[jsonIn.argName].nodestext_array_value = [];
-                for (var _n15 = 0; _n15 < this.arrayNodeTextNodeName.length; _n15++) {
-                    var currentNodeTextNodeName = this.arrayNodeTextNodeName[_n15];
+                for (var _n17 = 0; _n17 < this.arrayNodeTextNodeName.length; _n17++) {
+                    var currentNodeTextNodeName = this.arrayNodeTextNodeName[_n17];
                     var _nodeNameItemStart2 = this._nodesByName[currentNodeTextNodeName].itemStart;
 
                     if (type === "float") {
@@ -2018,8 +2151,8 @@ var Graph = exports.Graph = function () {
             }
 
             var maxNodeIndexId = 0;
-            for (var _n16 = 0; _n16 < this.mesh_nodes.indexArray.length; _n16++) {
-                var idxIndex = _n16;
+            for (var _n18 = 0; _n18 < this.mesh_nodes.indexArray.length; _n18++) {
+                var idxIndex = _n18;
 
                 this.arrayNodeIndices.push(this.startIndexId + this.mesh_nodes.indexArray[idxIndex]);
 
@@ -2082,8 +2215,8 @@ var Graph = exports.Graph = function () {
             }
             var maxNodeIndexId = 0;
             for (var _i = 0; _i < this.nodesTextPlanes; _i++) {
-                for (var _n17 = 0; _n17 < this.mesh_nodesText.indexArray.length; _n17++) {
-                    var idxIndex = _n17;
+                for (var _n19 = 0; _n19 < this.mesh_nodesText.indexArray.length; _n19++) {
+                    var idxIndex = _n19;
 
                     var b = _i * 4; // 4 = indices length of quad (0, 1, 2, 0, 2, 3)
                     var ii = this.mesh_nodesText.indexArray[idxIndex] + b;
@@ -2276,7 +2409,7 @@ var Graph = exports.Graph = function () {
                 }
             }
 
-            for (var _n18 = 0; _n18 < this.lineVertexCount * 2; _n18++) {
+            for (var _n20 = 0; _n20 < this.lineVertexCount * 2; _n20++) {
                 this.linksObj[this.currentLinksObjItem].arrayLinkIndices.push(this.linksObj[this.currentLinksObjItem].startIndexId_link++);
             }this.currentLinkId += 2; // augment link id
 
@@ -2352,8 +2485,8 @@ var Graph = exports.Graph = function () {
                 }
 
                 var maxArrowIndexId = 0;
-                for (var _n19 = 0; _n19 < this.mesh_arrows.indexArray.length; _n19++) {
-                    var idxIndex = _n19;
+                for (var _n21 = 0; _n21 < this.mesh_arrows.indexArray.length; _n21++) {
+                    var idxIndex = _n21;
 
                     this.arrowsObj[this.currentArrowsObjItem].arrayArrowIndices.push(this.arrowsObj[this.currentArrowsObjItem].startIndexId_arrow + this.mesh_arrows.indexArray[idxIndex]);
 
@@ -2941,7 +3074,7 @@ var Graph = exports.Graph = function () {
 global.Graph = Graph;
 module.exports.Graph = Graph;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./KERNEL_ADJMATRIX_UPDATE.class":3,"./KERNEL_DIR.class":4,"./ProccessImg.class":5,"./VFP_NODE.class":6,"./VFP_NODEPICKDRAG.class":7,"./resources":11,"scejs":1}],3:[function(require,module,exports){
+},{"./KERNEL_ADJMATRIX_UPDATE.class":4,"./KERNEL_DIR.class":5,"./ProccessImg.class":7,"./VFP_NODE.class":8,"./VFP_NODEPICKDRAG.class":9,"./resources":13,"scejs":1}],4:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -2966,7 +3099,7 @@ var KERNEL_ADJMATRIX_UPDATE = exports.KERNEL_ADJMATRIX_UPDATE = function () {
             "",
 
             // source
-            "vec4 adjMat = adjacencyMatrix[x]; \n            vec4 adjMatB = adjacencyMatrixB[x];\n\n            float linkLayerNum = adjMat.x;\n            float linkWeight = adjMat.z;\n            float linkTypeParent = adjMat.w;\n            \n            if(linkTypeParent == 0.5 && linkLayerNum > 0.0) {\n                float id = adjMatB.z;\n                float idInv = adjMatB.w;\n            \n                vec2 xGeometryCurrentChild = get_global_id(id, bufferNodesWidth, " + geometryLength.toFixed(1) + ");\n                vec2 xGeometryParent = get_global_id(idInv, bufferNodesWidth, " + geometryLength.toFixed(1) + ");\n\n                float childGOutputA = dataB[xGeometryCurrentChild].z;\n                float parentGErrorA = dataB[xGeometryParent].w;\n                \n                float childGOutputB = dataF[xGeometryCurrentChild].x;\n                float parentGErrorB = dataF[xGeometryParent].y;\n                \n                float childGOutputC = dataF[xGeometryCurrentChild].z;\n                float parentGErrorC = dataF[xGeometryParent].w;\n                \n                float childGOutputD = dataG[xGeometryCurrentChild].x;\n                float parentGErrorD = dataG[xGeometryParent].y;\n                \n                float childGOutputE = dataG[xGeometryCurrentChild].z;\n                float parentGErrorE = dataG[xGeometryParent].w;\n                \n                float childGOutputF = dataH[xGeometryCurrentChild].x;\n                float parentGErrorF = dataH[xGeometryParent].y;\n                \n                float childGOutputG = dataH[xGeometryCurrentChild].z;\n                float parentGErrorG = dataH[xGeometryParent].w;\n            \n                float lr = learningRate;\n                float l2_decay = 0.01;\n                float gpu_batch_size = 7.0;\n                float br = gpu_batch_repeats;\n                \n                float derivA = (childGOutputA < 0.0) ? 0.01 : childGOutputA;\n                float derivB = (childGOutputB < 0.0) ? 0.01 : childGOutputB;\n                float derivC = (childGOutputC < 0.0) ? 0.01 : childGOutputC;\n                float derivD = (childGOutputD < 0.0) ? 0.01 : childGOutputD;\n                float derivE = (childGOutputE < 0.0) ? 0.01 : childGOutputE;\n                float derivF = (childGOutputF < 0.0) ? 0.01 : childGOutputF;\n                float derivG = (childGOutputG < 0.0) ? 0.01 : childGOutputG;\n                \n                if(linkLayerNum == layerCount-1.0) {\n                    derivA = childGOutputA;\n                    derivB = childGOutputB;\n                    derivC = childGOutputC;\n                    derivD = childGOutputD;\n                    derivE = childGOutputE;\n                    derivF = childGOutputF;\n                    derivG = childGOutputG;\n                }\n                \n                float bsm = 0.0;\n                bsm = (parentGErrorA != 0.0) ? bsm+1. : bsm;\n                bsm = (parentGErrorB != 0.0) ? bsm+1. : bsm;\n                bsm = (parentGErrorC != 0.0) ? bsm+1. : bsm;\n                bsm = (parentGErrorD != 0.0) ? bsm+1. : bsm;\n                bsm = (parentGErrorE != 0.0) ? bsm+1. : bsm;\n                bsm = (parentGErrorF != 0.0) ? bsm+1. : bsm;\n                bsm = (parentGErrorG != 0.0) ? bsm+1. : bsm;\n                \n                linkWeight += (-lr*parentGErrorA*derivA)/(bsm*br);\n                if(parentGErrorB != 0.0) {linkWeight += (-lr*parentGErrorB*derivB)/(bsm*br);}\n                if(parentGErrorC != 0.0) {linkWeight += (-lr*parentGErrorC*derivC)/(bsm*br);}\n                if(parentGErrorD != 0.0) {linkWeight += (-lr*parentGErrorD*derivD)/(bsm*br);}\n                if(parentGErrorE != 0.0) {linkWeight += (-lr*parentGErrorE*derivE)/(bsm*br);}\n                if(parentGErrorF != 0.0) {linkWeight += (-lr*parentGErrorF*derivF)/(bsm*br);}\n                if(parentGErrorG != 0.0) {linkWeight += (-lr*parentGErrorG*derivG)/(bsm*br);}\n            }\n            \n            return [vec4(linkLayerNum, 0.0, linkWeight, linkTypeParent)];\n            "];
+            "vec4 adjMat = adjacencyMatrix[x]; \n            vec4 adjMatB = adjacencyMatrixB[x];\n\n            float linkLayerNum = adjMat.x;\n            float linkWeight = adjMat.z;\n            float linkTypeParent = adjMat.w;\n            \n            if(linkTypeParent == 0.5 && linkLayerNum > 0.0) {\n                float id = adjMatB.z;\n                float idInv = adjMatB.w;\n            \n                vec2 xGeometryCurrentChild = get_global_id(id, bufferNodesWidth, " + geometryLength.toFixed(1) + ");\n                vec2 xGeometryParent = get_global_id(idInv, bufferNodesWidth, " + geometryLength.toFixed(1) + (");\n\n                float childGDeltaA = dataB[xGeometryCurrentChild].y;\n                float childGOutputA = dataB[xGeometryCurrentChild].z;\n                float parentGOutputA = dataB[xGeometryParent].z;\n                float parentGInputsumA = dataB[xGeometryParent].w;\n                float parentGOutputDerivA = 1.0;\n                \n                float childGDeltaB = dataF[xGeometryCurrentChild].x;\n                float childGOutputB = dataF[xGeometryCurrentChild].y;\n                float parentGOutputB = dataF[xGeometryParent].y;\n                float parentGInputsumB = dataF[xGeometryParent].z;\n                float parentGOutputDerivB = 1.0;\n                \n                float childGDeltaC = dataF[xGeometryCurrentChild].w;\n                float childGOutputC = dataG[xGeometryCurrentChild].x;\n                float parentGOutputC = dataG[xGeometryParent].x;\n                float parentGInputsumC = dataG[xGeometryParent].y;\n                float parentGOutputDerivC = 1.0;\n                \n                float childGDeltaD = dataG[xGeometryCurrentChild].z;\n                float childGOutputD = dataG[xGeometryCurrentChild].w;\n                float parentGOutputD = dataG[xGeometryParent].w;\n                float parentGInputsumD = dataH[xGeometryParent].x;\n                float parentGOutputDerivD = 1.0;\n                \n                float childGDeltaE = dataH[xGeometryCurrentChild].y;\n                float childGOutputE = dataH[xGeometryCurrentChild].z;\n                float parentGOutputE = dataH[xGeometryParent].z;\n                float parentGInputsumE = dataH[xGeometryParent].w;\n                float parentGOutputDerivE = 1.0;\n            \n                float lr = learningRate;\n                float l2_decay = 0.01;\n                float gpu_batch_size =5.0;\n                float br = gpu_batch_repeats;\n                \n                if(linkLayerNum < layerCount-1.0) { \n                    parentGOutputDerivA = (parentGInputsumA <= 0.0) ? 0.01 : 1.0;                    \n                    parentGOutputDerivB = (parentGInputsumB <= 0.0) ? 0.01 : 1.0;\n                    parentGOutputDerivC = (parentGInputsumC <= 0.0) ? 0.01 : 1.0;\n                    parentGOutputDerivD = (parentGInputsumD <= 0.0) ? 0.01 : 1.0;\n                    parentGOutputDerivE = (parentGInputsumE <= 0.0) ? 0.01 : 1.0;\n                }\n                \n                linkWeight = linkWeight-lr* ((childGDeltaA*parentGOutputDerivA*childGOutputA)/(gpu_batch_size*br));\n                linkWeight = linkWeight-lr* ((childGDeltaB*parentGOutputDerivB*childGOutputB)/(gpu_batch_size*br));\n                linkWeight = linkWeight-lr* ((childGDeltaC*parentGOutputDerivC*childGOutputC)/(gpu_batch_size*br));\n                linkWeight = linkWeight-lr* ((childGDeltaD*parentGOutputDerivD*childGOutputD)/(gpu_batch_size*br));\n                linkWeight = linkWeight-lr* ((childGDeltaE*parentGOutputDerivE*childGOutputE)/(gpu_batch_size*br));\n                \n                " + "\n                \n                \n            }\n            \n            return [vec4(linkLayerNum, 0.0, linkWeight, linkTypeParent)];\n            ")];
         }
     }]);
 
@@ -2976,7 +3109,7 @@ var KERNEL_ADJMATRIX_UPDATE = exports.KERNEL_ADJMATRIX_UPDATE = function () {
 global.KERNEL_ADJMATRIX_UPDATE = KERNEL_ADJMATRIX_UPDATE;
 module.exports.KERNEL_ADJMATRIX_UPDATE = KERNEL_ADJMATRIX_UPDATE;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -3004,7 +3137,7 @@ var KERNEL_DIR = exports.KERNEL_DIR = function () {
             "float tanh(float val) {\n                float tmp = exp(val);\n                float tanH = (tmp - 1.0 / tmp) / (tmp + 1.0 / tmp);\n                return tanH;\n            }\n            float sigm(float val) {\n                return (1.0 / (1.0 + exp(-val)));\n            }",
 
             // source
-            "float nodeId = data[x].x;\n            vec2 xGeometry = get_global_id(nodeId, uBufferWidth, " + geometryLength.toFixed(1) + ");\n\n\n            vec3 currentPos = posXYZW[xGeometry].xyz;\n            vec3 currentDir = dir[xGeometry].xyz;\n\n\n            vec4 currentDataB = dataB[xGeometry];\n            vec4 currentDataF = dataF[xGeometry];\n            vec4 currentDataG = dataG[xGeometry];\n            vec4 currentDataH = dataH[xGeometry];\n\n            currentDir = vec3(0.0, 0.0, 0.0);\n\n            \n            vec3 atraction = vec3(0.0, 0.0, 0.0);\n            float acumAtraction = 1.0;\n            vec3 repulsion = vec3(0.0, 0.0, 0.0);\n\n            vec3 force = vec3(0.0, 0.0, 0.0);\n\n\n            float netChildInputSumA = 0.0;\n            float foutputA = 0.0;\n            float netParentErrorWeightA = 0.0;\n            \n            float netChildInputSumB = 0.0;\n            float foutputB = 0.0;\n            float netParentErrorWeightB = 0.0;\n            \n            float netChildInputSumC = 0.0;\n            float foutputC = 0.0;\n            float netParentErrorWeightC = 0.0;\n            \n            float netChildInputSumD = 0.0;\n            float foutputD = 0.0;\n            float netParentErrorWeightD = 0.0;\n            \n            float netChildInputSumE = 0.0;\n            float foutputE = 0.0;\n            float netParentErrorWeightE = 0.0;\n            \n            float netChildInputSumF = 0.0;\n            float foutputF = 0.0;\n            float netParentErrorWeightF = 0.0;\n            \n            float netChildInputSumG = 0.0;\n            float foutputG = 0.0;\n            float netParentErrorWeightG = 0.0;\n            \n\n            if(nodeId < nodesCount && enableTrain == 0.0) {\n                float currentActivationFn = 0.0;\n                vec2 xGeomCurrent = get_global_id(nodeId, uBufferWidth, " + geometryLength.toFixed(1) + ");\n                for(int n=0; n < 4096; n++) {\n                    if(float(n) >= nodesCount) {break;}\n                    if(float(n) != nodeId) {\n                        vec2 xGeomOpposite = get_global_id(float(n), uBufferWidth, " + geometryLength.toFixed(1) + ");\n\n\n                        vec2 xAdjMatCurrent = get_global_id(vec2(float(n), nodeId), widthAdjMatrix);\n                        vec2 xAdjMatOpposite = get_global_id(vec2(nodeId, float(n)), widthAdjMatrix);\n\n                        vec4 pixAdjMatACurrent = adjacencyMatrix[xAdjMatCurrent];\n                        vec4 pixAdjMatAOpposite = adjacencyMatrix[xAdjMatOpposite];\n\n                        vec4 pixAdjMatBCurrent = adjacencyMatrixB[xAdjMatCurrent];\n                        vec4 pixAdjMatBOpposite = adjacencyMatrixB[xAdjMatOpposite];\n\n\n                                                                    \n                        " + "\n                        float currentWeight = pixAdjMatACurrent.z;\n                        float currentIsParent = pixAdjMatACurrent.w;\n            \n                        " + "\n                        float oppositeWeight = pixAdjMatAOpposite.z;\n                        float oppositeIsParent = pixAdjMatAOpposite.w;\n            \n            \n                        " + "\n                        float currentLinkMultiplier = pixAdjMatBCurrent.x;\n                        float currentActivationFn = pixAdjMatBCurrent.y;\n            \n                        " + "\n                        float oppositeLinkMultiplier = pixAdjMatBOpposite.x;\n                        float oppositeActivationFn = pixAdjMatBOpposite.y;\n            \n            \n                        " + "\n                        " + "\n                        " + "\n                        " + "\n            \n                        " + "\n                        float oppositeBiasNode = dataB[xGeomOpposite].x;\n                        float oppositeNetOutputA = dataB[xGeomOpposite].z;\n                        float oppositeNetErrorA = dataB[xGeomOpposite].w;\n            \n                        float oppositeNetOutputB = dataF[xGeomOpposite].x;\n                        float oppositeNetErrorB = dataF[xGeomOpposite].y;\n                    \n                        float oppositeNetOutputC = dataF[xGeomOpposite].z;\n                        float oppositeNetErrorC = dataF[xGeomOpposite].w;\n                    \n                        float oppositeNetOutputD = dataG[xGeomOpposite].x;\n                        float oppositeNetErrorD = dataG[xGeomOpposite].y;\n                    \n                        float oppositeNetOutputE = dataG[xGeomOpposite].z;\n                        float oppositeNetErrorE = dataG[xGeomOpposite].w;\n                    \n                        float oppositeNetOutputF = dataH[xGeomOpposite].x;\n                        float oppositeNetErrorF = dataH[xGeomOpposite].y;\n                    \n                        float oppositeNetOutputG = dataH[xGeomOpposite].z;\n                        float oppositeNetErrorG = dataH[xGeomOpposite].w;\n            \n            \n                        " + "\n                        " + "\n                        " + "\n            \n                        " + "\n                        vec3 oppositePos = posXYZW[xGeomOpposite].xyz;\n                        vec3 oppositeDir = dir[xGeomOpposite].xyz;\n            \n                        " + "\n                        vec3 dirToOpposite = (oppositePos-currentPos);\n                        vec3 dirToOppositeN = normalize(dirToOpposite);\n            \n                        float dist = distance(oppositePos, currentPos); " + "\n                        float distN = max(0.0,dist)/100000.0;\n            \n                        float mm = 200.0;\n                        float m1 = 400000.0/mm;\n                        float m2 = 48.0/mm;\n                        if(currentIsParent == 1.0) {\n                            netChildInputSumA += oppositeNetOutputA*oppositeWeight;\n                            netChildInputSumB += oppositeNetOutputB*oppositeWeight;\n                            netChildInputSumC += oppositeNetOutputC*oppositeWeight;\n                            netChildInputSumD += oppositeNetOutputD*oppositeWeight;\n                            netChildInputSumE += oppositeNetOutputE*oppositeWeight;\n                            netChildInputSumF += oppositeNetOutputF*oppositeWeight;\n                            netChildInputSumG += oppositeNetOutputG*oppositeWeight;\n                            \n                            atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));\n                            repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));\n                            acumAtraction += 1.0;\n                        } else if(currentIsParent == 0.5) {\n                            if(oppositeBiasNode == 0.0) {\n                                netParentErrorWeightA += oppositeNetErrorA*currentWeight;\n                                netParentErrorWeightB += oppositeNetErrorB*currentWeight;\n                                netParentErrorWeightC += oppositeNetErrorC*currentWeight;\n                                netParentErrorWeightD += oppositeNetErrorD*currentWeight;\n                                netParentErrorWeightE += oppositeNetErrorE*currentWeight;\n                                netParentErrorWeightF += oppositeNetErrorF*currentWeight;\n                                netParentErrorWeightG += oppositeNetErrorG*currentWeight;\n                            } else {\n                                netParentErrorWeightA += oppositeNetErrorA;\n                                netParentErrorWeightB += oppositeNetErrorB;\n                                netParentErrorWeightC += oppositeNetErrorC;\n                                netParentErrorWeightD += oppositeNetErrorD;\n                                netParentErrorWeightE += oppositeNetErrorE;\n                                netParentErrorWeightF += oppositeNetErrorF;\n                                netParentErrorWeightG += oppositeNetErrorG;\n                            }\n                            atraction += dirToOppositeN*max(1.0, distN*abs(currentWeight)*m1);\n                            repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*m2);\n                            acumAtraction += 1.0;\n                        }\n            \n                        repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*(m2/8.0));\n                        acumAtraction += 1.0;\n                    }\n                }\n                \n                float vndm = (viewNeuronDynamics == 1.0) ? netChildInputSumA : 1.0;\n                force += (atraction/acumAtraction)*abs(vndm);\n                force += (repulsion/acumAtraction)*abs(vndm);\n                currentDir += force;\n                \n                \n                float currentBiasNode = dataB[xGeomCurrent].x;\n                float netLoss = 0.0;\n                \n                " + KERNEL_DIR.efferentNodesStr(afferentNodesCount, efferentStart, efferentNodesCount) + "\n                \n                currentDataB = vec4(currentDataB.x, netLoss, foutputA, netParentErrorWeightA);\n                currentDataF = vec4(foutputB, netParentErrorWeightB, foutputC, netParentErrorWeightC);\n                currentDataG = vec4(foutputD, netParentErrorWeightD, foutputE, netParentErrorWeightE);\n                currentDataH = vec4(foutputF, netParentErrorWeightF, foutputG, netParentErrorWeightG);\n            }\n\n            " + (customCode !== undefined ? customCode : '') + "\n\n            if(enableDrag == 1.0) {\n                if(nodeId == idToDrag) {\n                    currentPos = vec3(MouseDragTranslationX, MouseDragTranslationY, MouseDragTranslationZ);\n                }\n            }\n\n            currentPos += currentDir;\n            if(only2d == 1.0) {\n                currentPos.y = 0.0;\n            }\n\n            " + returnStr];
+            "float nodeId = data[x].x;\n            vec2 xGeometry = get_global_id(nodeId, uBufferWidth, " + geometryLength.toFixed(1) + ");\n\n\n            vec3 currentPos = posXYZW[xGeometry].xyz;\n            vec3 currentDir = dir[xGeometry].xyz;\n\n\n            vec4 currentDataB = dataB[xGeometry];\n            vec4 currentDataF = dataF[xGeometry];\n            vec4 currentDataG = dataG[xGeometry];\n            vec4 currentDataH = dataH[xGeometry];\n\n            currentDir = vec3(0.0, 0.0, 0.0);\n\n            \n            vec3 atraction = vec3(0.0, 0.0, 0.0);\n            float acumAtraction = 1.0;\n            vec3 repulsion = vec3(0.0, 0.0, 0.0);\n\n            vec3 force = vec3(0.0, 0.0, 0.0);\n\n\n            float netChildInputSumA = 0.0;\n            float foutputA = 0.0;\n            float netParentErrorWeightA = 0.0;\n            \n            float netChildInputSumB = 0.0;\n            float foutputB = 0.0;\n            float netParentErrorWeightB = 0.0;\n            \n            float netChildInputSumC = 0.0;\n            float foutputC = 0.0;\n            float netParentErrorWeightC = 0.0;\n            \n            float netChildInputSumD = 0.0;\n            float foutputD = 0.0;\n            float netParentErrorWeightD = 0.0;\n            \n            float netChildInputSumE = 0.0;\n            float foutputE = 0.0;\n            float netParentErrorWeightE = 0.0;\n            \n\n            if(nodeId < nodesCount && enableTrain == 0.0) {\n                float currentActivationFn = 0.0;\n                vec2 xGeomCurrent = get_global_id(nodeId, uBufferWidth, " + geometryLength.toFixed(1) + ");\n                for(int n=0; n < 4096; n++) {\n                    if(float(n) >= nodesCount) {break;}\n                    if(float(n) != nodeId) {\n                        vec2 xGeomOpposite = get_global_id(float(n), uBufferWidth, " + geometryLength.toFixed(1) + ");\n\n\n                        vec2 xAdjMatCurrent = get_global_id(vec2(float(n), nodeId), widthAdjMatrix);\n                        vec2 xAdjMatOpposite = get_global_id(vec2(nodeId, float(n)), widthAdjMatrix);\n\n                        vec4 pixAdjMatACurrent = adjacencyMatrix[xAdjMatCurrent];\n                        vec4 pixAdjMatAOpposite = adjacencyMatrix[xAdjMatOpposite];\n\n                        vec4 pixAdjMatBCurrent = adjacencyMatrixB[xAdjMatCurrent];\n                        vec4 pixAdjMatBOpposite = adjacencyMatrixB[xAdjMatOpposite];\n\n\n                                                                    \n                        " + "\n                        float currentLayerNum = pixAdjMatACurrent.x;\n                        float currentWeight = pixAdjMatACurrent.z;\n                        float currentIsParent = pixAdjMatACurrent.w;\n            \n                        " + "\n                        float oppositeLayerNum = pixAdjMatAOpposite.x;\n                        float oppositeWeight = pixAdjMatAOpposite.z;\n                        float oppositeIsParent = pixAdjMatAOpposite.w;\n            \n            \n                        " + "\n                        float currentLinkMultiplier = pixAdjMatBCurrent.x;\n                        float currentActivationFn = pixAdjMatBCurrent.y;\n            \n                        " + "\n                        float oppositeLinkMultiplier = pixAdjMatBOpposite.x;\n                        float oppositeActivationFn = pixAdjMatBOpposite.y;\n            \n            \n                        " + "\n                        " + "\n                        " + "\n                        " + "\n            \n                        " + "\n                        float oppositeBiasNode = dataB[xGeomOpposite].x;\n                        \n                        float oppositeNetErrorA = dataB[xGeomOpposite].y;\n                        float oppositeNetOutputA = dataB[xGeomOpposite].z;\n                        \n                        float oppositeNetErrorB = dataF[xGeomOpposite].x;\n                        float oppositeNetOutputB = dataF[xGeomOpposite].y;\n                    \n                        float oppositeNetErrorC = dataF[xGeomOpposite].w;\n                        float oppositeNetOutputC = dataG[xGeomOpposite].x;\n                    \n                        float oppositeNetErrorD = dataG[xGeomOpposite].z;\n                        float oppositeNetOutputD = dataG[xGeomOpposite].w;\n                    \n                        float oppositeNetErrorE = dataH[xGeomOpposite].y;\n                        float oppositeNetOutputE = dataH[xGeomOpposite].z;\n            \n            \n                        " + "\n                        " + "\n                        " + "\n            \n                        " + "\n                        vec3 oppositePos = posXYZW[xGeomOpposite].xyz;\n                        vec3 oppositeDir = dir[xGeomOpposite].xyz;\n            \n                        " + "\n                        vec3 dirToOpposite = (oppositePos-currentPos);\n                        vec3 dirToOppositeN = normalize(dirToOpposite);\n            \n                        float dist = distance(oppositePos, currentPos); " + "\n                        float distN = max(0.0,dist)/100000.0;\n            \n                        float mm = 200.0;\n                        float m1 = 400000.0/mm;\n                        float m2 = 48.0/mm;\n                        if(currentIsParent == 1.0) {\n                            netChildInputSumA += oppositeNetOutputA*oppositeWeight;\n                            netChildInputSumB += oppositeNetOutputB*oppositeWeight;\n                            netChildInputSumC += oppositeNetOutputC*oppositeWeight;\n                            netChildInputSumD += oppositeNetOutputD*oppositeWeight;\n                            netChildInputSumE += oppositeNetOutputE*oppositeWeight;\n                            \n                            atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));\n                            repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));\n                            acumAtraction += 1.0;\n                        } else if(currentIsParent == 0.5) {                            \n                            if(oppositeBiasNode == 0.0) {\n                                netParentErrorWeightA += oppositeNetErrorA*currentWeight;\n                                netParentErrorWeightB += oppositeNetErrorB*currentWeight;\n                                netParentErrorWeightC += oppositeNetErrorC*currentWeight;\n                                netParentErrorWeightD += oppositeNetErrorD*currentWeight;\n                                netParentErrorWeightE += oppositeNetErrorE*currentWeight;\n                            } else {\n                                netParentErrorWeightA += oppositeNetErrorA*currentWeight;\n                                netParentErrorWeightB += oppositeNetErrorB*currentWeight;\n                                netParentErrorWeightC += oppositeNetErrorC*currentWeight;\n                                netParentErrorWeightD += oppositeNetErrorD*currentWeight;\n                                netParentErrorWeightE += oppositeNetErrorE*currentWeight;\n                            }\n                            atraction += dirToOppositeN*max(1.0, distN*abs(currentWeight)*m1);\n                            repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*m2);\n                            acumAtraction += 1.0;\n                        }\n            \n                        repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*(m2/8.0));\n                        acumAtraction += 1.0;\n                    }\n                }\n                \n                float vndm = (viewNeuronDynamics == 1.0) ? netChildInputSumA : 1.0;\n                force += (atraction/acumAtraction)*abs(vndm);\n                force += (repulsion/acumAtraction)*abs(vndm);\n                currentDir += force;\n                \n                \n                float currentBiasNode = dataB[xGeomCurrent].x;\n                \n                " + KERNEL_DIR.efferentNodesStr(afferentNodesCount, efferentStart, efferentNodesCount) + "\n                \n                currentDataB = vec4(currentDataB.x, netParentErrorWeightA, foutputA, netChildInputSumA);\n                currentDataF = vec4(netParentErrorWeightB, foutputB, netChildInputSumB, netParentErrorWeightC);\n                currentDataG = vec4(foutputC, netChildInputSumC, netParentErrorWeightD, foutputD);\n                currentDataH = vec4(netChildInputSumD, netParentErrorWeightE, foutputE, netChildInputSumE);\n            }\n\n            " + (customCode !== undefined ? customCode : '') + "\n\n            if(enableDrag == 1.0) {\n                if(nodeId == idToDrag) {\n                    currentPos = vec3(MouseDragTranslationX, MouseDragTranslationY, MouseDragTranslationZ);\n                }\n            }\n\n            currentPos += currentDir;\n            if(only2d == 1.0) {\n                currentPos.y = 0.0;\n            }\n\n            " + returnStr];
         }
     }, {
         key: "efferentNodesStr",
@@ -3012,16 +3145,15 @@ var KERNEL_DIR = exports.KERNEL_DIR = function () {
             /////////////////////////////////////////////////
             // OUTPUT
             /////////////////////////////////////////////////
-            var str = "\n            if(nodeId < afferentNodesCount) {\n                for(float n=0.0; n < 1024.0; n+=1.0) {\n                    if(n >= afferentNodesCount) {\n                        break;\n                    }\n                    if(nodeId == n) {\n                        foutputA = afferentNodesA[int(n)];\n                        foutputB = afferentNodesB[int(n)];\n                        foutputC = afferentNodesC[int(n)];\n                        foutputD = afferentNodesD[int(n)];\n                        foutputE = afferentNodesE[int(n)];\n                        foutputF = afferentNodesF[int(n)];\n                        foutputG = afferentNodesG[int(n)];\n                        break;\n                    }\n                }\n            } else {\n                if(currentBiasNode == 0.0) {                                     \n                    foutputA = (foutputA < 0.0) ? 0.01*netChildInputSumA : netChildInputSumA; " + "\n                    foutputB = (foutputB < 0.0) ? 0.01*netChildInputSumB : netChildInputSumB;\n                    foutputC = (foutputC < 0.0) ? 0.01*netChildInputSumC : netChildInputSumC;\n                    foutputD = (foutputD < 0.0) ? 0.01*netChildInputSumD : netChildInputSumD;\n                    foutputE = (foutputE < 0.0) ? 0.01*netChildInputSumE : netChildInputSumE;\n                    foutputF = (foutputF < 0.0) ? 0.01*netChildInputSumF : netChildInputSumF;\n                    foutputG = (foutputG < 0.0) ? 0.01*netChildInputSumG : netChildInputSumG;\n                } else {\n                    foutputA = 1.0;\n                    foutputB = 1.0;\n                    foutputC = 1.0;\n                    foutputD = 1.0;\n                    foutputE = 1.0;\n                    foutputF = 1.0;\n                    foutputG = 1.0;\n                }\n            }";
+            var str = "\n            if(nodeId < afferentNodesCount) {\n                for(float n=0.0; n < 1024.0; n+=1.0) {\n                    if(n >= afferentNodesCount) {\n                        break;\n                    }\n                    if(nodeId == n) {\n                        foutputA = afferentNodesA[int(n)];\n                        foutputB = afferentNodesB[int(n)];\n                        foutputC = afferentNodesC[int(n)];\n                        foutputD = afferentNodesD[int(n)];\n                        foutputE = afferentNodesE[int(n)];\n                        break;\n                    }\n                }\n            } else {\n                if(currentBiasNode == 0.0) {                                     \n                    foutputA = (netChildInputSumA <= 0.0) ? 0.01*netChildInputSumA : netChildInputSumA; " + "\n                    foutputB = (netChildInputSumB <= 0.0) ? 0.01*netChildInputSumB : netChildInputSumB;\n                    foutputC = (netChildInputSumC <= 0.0) ? 0.01*netChildInputSumC : netChildInputSumC;\n                    foutputD = (netChildInputSumD <= 0.0) ? 0.01*netChildInputSumD : netChildInputSumD;\n                    foutputE = (netChildInputSumE <= 0.0) ? 0.01*netChildInputSumE : netChildInputSumE;\n                } else {\n                    foutputA = 1.0;\n                    foutputB = 1.0;\n                    foutputC = 1.0;\n                    foutputD = 1.0;\n                    foutputE = 1.0;\n                }\n            }";
 
             /////////////////////////////////////////////////
             // ERROR
             /////////////////////////////////////////////////
             for (var n = efferentStart; n < efferentStart + efferentNodesCount; n++) {
                 var cond = n === efferentStart ? "if" : "else if";
-                str += "\n            " + cond + "(nodeId == " + n.toFixed(1) + ") {\n                netParentErrorWeightA = -(efferentNodesA[" + Math.round(n - efferentStart) + "]-netChildInputSumA);\n                netLoss += 0.5*netParentErrorWeightA*netParentErrorWeightA;\n                \n                netParentErrorWeightB = (efferentNodesB[" + Math.round(n - efferentStart) + "] != 0.0) ? -(efferentNodesB[" + Math.round(n - efferentStart) + "]-netChildInputSumB) : 0.0;\n                netLoss += (efferentNodesB[" + Math.round(n - efferentStart) + "] != 0.0) ? 0.5*netParentErrorWeightB*netParentErrorWeightB : 0.0;\n            \n                netParentErrorWeightC = (efferentNodesC[" + Math.round(n - efferentStart) + "] != 0.0) ? -(efferentNodesC[" + Math.round(n - efferentStart) + "]-netChildInputSumC) : 0.0;\n                netLoss += (efferentNodesC[" + Math.round(n - efferentStart) + "] != 0.0) ? 0.5*netParentErrorWeightC*netParentErrorWeightC : 0.0;\n            \n                netParentErrorWeightD = (efferentNodesD[" + Math.round(n - efferentStart) + "] != 0.0) ? -(efferentNodesD[" + Math.round(n - efferentStart) + "]-netChildInputSumD) : 0.0;\n                netLoss += (efferentNodesD[" + Math.round(n - efferentStart) + "] != 0.0) ? 0.5*netParentErrorWeightD*netParentErrorWeightD : 0.0;\n            \n                netParentErrorWeightE = (efferentNodesE[" + Math.round(n - efferentStart) + "] != 0.0) ? -(efferentNodesE[" + Math.round(n - efferentStart) + "]-netChildInputSumE) : 0.0;\n                netLoss += (efferentNodesE[" + Math.round(n - efferentStart) + "] != 0.0) ? 0.5*netParentErrorWeightE*netParentErrorWeightE : 0.0;\n            \n                netParentErrorWeightF = (efferentNodesF[" + Math.round(n - efferentStart) + "] != 0.0) ? -(efferentNodesF[" + Math.round(n - efferentStart) + "]-netChildInputSumF) : 0.0;\n                netLoss += (efferentNodesF[" + Math.round(n - efferentStart) + "] != 0.0) ? 0.5*netParentErrorWeightF*netParentErrorWeightF : 0.0;\n            \n                netParentErrorWeightG = (efferentNodesG[" + Math.round(n - efferentStart) + "] != 0.0) ? -(efferentNodesG[" + Math.round(n - efferentStart) + "]-netChildInputSumG) : 0.0;\n                netLoss += (efferentNodesG[" + Math.round(n - efferentStart) + "] != 0.0) ? 0.5*netParentErrorWeightG*netParentErrorWeightG : 0.0;\n            }";
+                str += "\n            " + cond + "(nodeId == " + n.toFixed(1) + (") {\n                foutputA = netChildInputSumA; " + " \n                foutputB = netChildInputSumB;\n                foutputC = netChildInputSumC;\n                foutputD = netChildInputSumD;\n                foutputE = netChildInputSumE;\n                    \n                netParentErrorWeightA = efferentNodesA[") + Math.round(n - efferentStart) + "];\n                netParentErrorWeightB = efferentNodesB[" + Math.round(n - efferentStart) + "];\n                netParentErrorWeightC = efferentNodesC[" + Math.round(n - efferentStart) + "];\n                netParentErrorWeightD = efferentNodesD[" + Math.round(n - efferentStart) + "];\n                netParentErrorWeightE = efferentNodesE[" + Math.round(n - efferentStart) + "];\n            }";
             }
-
             return str;
         }
     }]);
@@ -3032,7 +3164,110 @@ var KERNEL_DIR = exports.KERNEL_DIR = function () {
 global.KERNEL_DIR = KERNEL_DIR;
 module.exports.KERNEL_DIR = KERNEL_DIR;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
+(function (global){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+// VIS library from CONVNETJS
+var Plot = exports.Plot = function () {
+    function Plot(options) {
+        _classCallCheck(this, Plot);
+
+        options = options || {};
+        this.step_horizon = options.step_horizon || 1000;
+
+        this.pts = [];
+
+        this.maxy = -9999;
+        this.miny = 9999;
+    }
+
+    // canv is the canvas we wish to update with this new datapoint
+
+
+    _createClass(Plot, [{
+        key: 'add',
+        value: function add(step, y) {
+            var time = new Date().getTime(); // in ms
+            if (y > this.maxy * 0.99) this.maxy = y * 1.05;
+            if (y < this.miny * 1.01) this.miny = y * 0.95;
+
+            this.pts.push({ step: step, time: time, y: y });
+            if (step > this.step_horizon) this.step_horizon *= 2;
+        }
+        // elt is a canvas we wish to draw into
+
+    }, {
+        key: 'drawSelf',
+        value: function drawSelf(canv) {
+            var pad = 25;
+            var H = canv.height;
+            var W = canv.width;
+            var ctx = canv.getContext('2d');
+
+            ctx.clearRect(0, 0, W, H);
+            ctx.font = "10px Georgia";
+
+            var f2t = function f2t(x) {
+                var dd = 1.0 * Math.pow(10, 2);
+                return '' + Math.floor(x * dd) / dd;
+            };
+
+            // draw guidelines and values
+            ctx.strokeStyle = "#999";
+            ctx.beginPath();
+            var ng = 10;
+            for (var i = 0; i <= ng; i++) {
+                var xpos = i / ng * (W - 2 * pad) + pad;
+                ctx.moveTo(xpos, pad);
+                ctx.lineTo(xpos, H - pad);
+                ctx.fillText(f2t(i / ng * this.step_horizon / 1000) + 'k', xpos, H - pad + 14);
+            }
+            for (var _i = 0; _i <= ng; _i++) {
+                var ypos = _i / ng * (H - 2 * pad) + pad;
+                ctx.moveTo(pad, ypos);
+                ctx.lineTo(W - pad, ypos);
+                ctx.fillText(f2t((ng - _i) / ng * (this.maxy - this.miny) + this.miny), 0, ypos);
+            }
+            ctx.stroke();
+
+            var N = this.pts.length;
+            if (N < 2) return;
+
+            // draw the actual curve
+            var t = function t(x, y, s) {
+                var tx = x / s.step_horizon * (W - pad * 2) + pad;
+                var ty = H - ((y - s.miny) / (s.maxy - s.miny) * (H - pad * 2) + pad);
+                return { tx: tx, ty: ty };
+            };
+
+            ctx.strokeStyle = "red";
+            ctx.beginPath();
+            for (var _i2 = 0; _i2 < N; _i2++) {
+                // draw line from i-1 to i
+                var p = this.pts[_i2];
+                var pt = t(p.step, p.y, this);
+                if (_i2 === 0) ctx.moveTo(pt.tx, pt.ty);else ctx.lineTo(pt.tx, pt.ty);
+            }
+            ctx.stroke();
+        }
+    }]);
+
+    return Plot;
+}();
+
+global.Plot = Plot;
+module.exports.Plot = Plot;
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],7:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -3179,7 +3414,7 @@ var ProccessImg = exports.ProccessImg = function () {
 global.ProccessImg = ProccessImg;
 module.exports.ProccessImg = ProccessImg;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"scejs":1}],6:[function(require,module,exports){
+},{"scejs":1}],8:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -3220,7 +3455,7 @@ var VFP_NODE = exports.VFP_NODE = function () {
             //╚██╗ ██╔╝██╔══╝  ██╔══██╗   ██║   ██╔══╝   ██╔██╗     ╚════██║██║   ██║██║   ██║██╔══██╗██║     ██╔══╝
             // ╚████╔╝ ███████╗██║  ██║   ██║   ███████╗██╔╝ ██╗    ███████║╚██████╔╝╚██████╔╝██║  ██║╚██████╗███████╗
             //  ╚═══╝  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝    ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚══════╝
-            "\n            mat4 nodepos = nodeWMatrix;\n            \n            vec4 nodeVertexPosition = nodeVertexPos[];\n            vec4 nodeVertexTex = nodeVertexTexture[];\n            \n            float nodeId = data[].x;            \n            vec2 xGeometryNode = get_global_id(nodeId, bufferNodesWidth, " + geometryLength.toFixed(1) + ("); " + "\n\n            vec4 currentPosition = posXYZW[xGeometryNode];\n            vec3 oppositePosition = vec3(0.0, 0.0, 0.0);\n            \n\n            float currentLineVertex = data[].z; " + "\n            float vertexCount = 1.0;\n                \n            vec4 nodeVertexColor = vec4(1.0, 1.0, 1.0, 1.0);\n            vec4 nodeVertexColorNetError = vec4(1.0, 1.0, 1.0, 1.0);\n            vVertexUV = vec2(-1.0, -1.0);\n\n            if(isNode == 1.0) {\n                float foutput = dataB[xGeometryNode].z;\n                float error = dataB[xGeometryNode].w;\n            \n                currentPosition += vec4(0.0, 0.1, 0.0, 1.0);\n\n                mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);\n                nodepos = nodepos*mm;\n                float nodeImgId = nodeImgId[];\n\n                if(nodeImgId != -1.0) {\n                    vUseTex = 1.0;\n                    vVertexUV = get2Dfrom1D(nodeImgId, nodeImgColumns)+vec2(nodeVertexTexture.x/nodeImgColumns,nodeVertexTexture.y/nodeImgColumns);\n                }\n\n                nodeVertexColor = vec4(0.0, 0.0, 0.0, 1.0);\n                if(foutput > 0.0) {\n                    nodeVertexColor = vec4(abs(foutput), abs(foutput), abs(foutput), 1.0);\n                } else if(foutput < 0.0) {\n                    nodeVertexColor = vec4(abs(foutput), 0.0, 0.0, 1.0);\n                }\n\n                if(error > 0.0) {\n                    nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);\n                } else if(error < 0.0) {\n                    nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);\n                } else {\n                    nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);\n                }\n\n                vIsSelected = (idToDrag == data[].x) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x) ? 1.0 : 0.0;\n            }\n            if(isLink == 1.0) {        \n                float foutput = dataB[xGeometryNode].z;\n                float error = dataB[xGeometryNode].w;\n                \n                float nodeIdOpposite = data[].y;\n                \n                vec2 xGeometryNode_opposite = get_global_id(nodeIdOpposite, bufferNodesWidth, ") + geometryLength.toFixed(1) + (");\n                vec3 oppositePosition = posXYZW[xGeometryNode_opposite].xyz;\n                \n                " + VFP_NODE.linkStr() + "\n            \n                currentPosition += vec4(dirN*(lineIncrements*currentLineVertex), 1.0); " + "\n\n                vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;\n                \n                nodeVertexColor = vec4(abs(foutput), abs(foutput), abs(foutput), 1.0);\n\n                if(error > 0.0) {\n                    nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);\n                } else if(error < 0.0) {\n                    nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);\n                } else {\n                    nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);\n                }\n                        \n                vNodeIdOpposite = nodeIdOpposite;\n            }\n            if(isArrow == 1.0) {\n                float nodeIdOpposite = data[].y;\n                \n                vec2 xGeometryNode_opposite = get_global_id(nodeIdOpposite, bufferNodesWidth, ") + geometryLength.toFixed(1) + (");\n                vec3 oppositePosition = posXYZW[xGeometryNode_opposite].xyz;\n                \n                " + VFP_NODE.linkStr() + "                \n            \n                vec3 currentPositionTMP;\n                " + "\n                float currentLineVertexU = vertexCount-1.0;\n                currentPositionTMP = oppositePosition+((dirN*-1.0)*(lineIncrements*currentLineVertexU));\n\n                mat4 pp = lookAt(currentPositionTMP, vec3(currentPosition.x, currentPosition.y, currentPosition.z), vec3(0.0, 1.0, 0.0));\n                pp = transpose(pp);\n                nodepos[0][0] = pp[0][0];\n                nodepos[0][1] = pp[1][0];\n                nodepos[0][2] = pp[2][0];\n\n                nodepos[1][0] = pp[0][1];\n                nodepos[1][1] = pp[1][1];\n                nodepos[1][2] = pp[2][1];\n\n                nodepos[2][0] = pp[0][2];\n                nodepos[2][1] = pp[1][2];\n                nodepos[2][2] = pp[2][2];\n\n                " + "\n                dir = currentPositionTMP-vec3(currentPosition.x, currentPosition.y, currentPosition.z);\n                currentPosition += vec4(normalize(dir),1.0)*2.0;\n\n                vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;\n                \n                vNodeIdOpposite = nodeIdOpposite;\n            }\n            if(isNodeText == 1.0) {            \n                float letId = letterId[];\n                mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);\n                nodepos = nodepos*mm;\n\n                vVertexUV = get2Dfrom1D(letId, fontImgColumns)+vec2(nodeVertexTexture.x/fontImgColumns,nodeVertexTexture.y/fontImgColumns);\n                nodeVertexPosition = vec4(nodeVertexPosition.x*0.1, nodeVertexPosition.y*0.1, nodeVertexPosition.z*0.1, 1.0);\n                currentPosition.z += 2.5;\n\n                vIsSelected = (idToDrag == data[].x) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x) ? 1.0 : 0.0;\n                \n                vIstarget = (currentLineVertex == 1.0) ? 1.0 : 0.0;\n            }\n            nodepos[3][0] = currentPosition.x;\n            nodepos[3][1] = currentPosition.y;\n            nodepos[3][2] = currentPosition.z;\n\n            mat4 nodeposG = nodeWMatrix;\n            vWNMatrix = nodeposG * nodeVertexNormal[];\n\n            vUseCrosshair = 0.0;\n            \n\n            " + customCode + "\n            \n            vDist = max(0.3, 1.0-(distance(currentPosition.xyz, oppositePosition)*0.01)); " + "\n            vVertexColor = nodeVertexColor;\n            vVertexColorNetError = nodeVertexColorNetError;\n            vUV = nodeVertexTexture;\n            vNodeId = nodeId;\n\n\n            gl_Position = PMatrix * cameraWMatrix * nodepos * nodeVertexPosition;"),
+            "\n            mat4 nodepos = nodeWMatrix;\n            \n            vec4 nodeVertexPosition = nodeVertexPos[];\n            vec4 nodeVertexTex = nodeVertexTexture[];\n            \n            float nodeId = data[].x;            \n            vec2 xGeometryNode = get_global_id(nodeId, bufferNodesWidth, " + geometryLength.toFixed(1) + ("); " + "\n\n            vec4 currentPosition = posXYZW[xGeometryNode];\n            vec3 oppositePosition = vec3(0.0, 0.0, 0.0);\n            \n\n            float currentLineVertex = data[].z; " + "\n            float vertexCount = 1.0;\n                \n            vec4 nodeVertexColor = vec4(1.0, 1.0, 1.0, 1.0);\n            vec4 nodeVertexColorNetError = vec4(1.0, 1.0, 1.0, 1.0);\n            vVertexUV = vec2(-1.0, -1.0);\n\n            if(isNode == 1.0) {\n                float foutput = dataB[xGeometryNode].z;\n                float error = dataB[xGeometryNode].y;\n            \n                currentPosition += vec4(0.0, 0.1, 0.0, 1.0);\n\n                mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);\n                nodepos = nodepos*mm;\n                float nodeImgId = nodeImgId[];\n\n                if(nodeImgId != -1.0) {\n                    vUseTex = 1.0;\n                    vVertexUV = get2Dfrom1D(nodeImgId, nodeImgColumns)+vec2(nodeVertexTexture.x/nodeImgColumns,nodeVertexTexture.y/nodeImgColumns);\n                }\n\n                nodeVertexColor = vec4(0.0, 0.0, 0.0, 1.0);\n                if(foutput > 0.0) {\n                    nodeVertexColor = vec4(abs(foutput), abs(foutput), abs(foutput), 1.0);\n                } else if(foutput < 0.0) {\n                    nodeVertexColor = vec4(abs(foutput), 0.0, 0.0, 1.0);\n                }\n\n                if(error > 0.0) {\n                    nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);\n                } else if(error < 0.0) {\n                    nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);\n                } else {\n                    nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);\n                }\n\n                vIsSelected = (idToDrag == data[].x) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x) ? 1.0 : 0.0;\n            }\n            if(isLink == 1.0) {        \n                float foutput = dataB[xGeometryNode].z;\n                float error = dataB[xGeometryNode].w;\n                \n                float nodeIdOpposite = data[].y;\n                \n                vec2 xGeometryNode_opposite = get_global_id(nodeIdOpposite, bufferNodesWidth, ") + geometryLength.toFixed(1) + (");\n                vec3 oppositePosition = posXYZW[xGeometryNode_opposite].xyz;\n                \n                " + VFP_NODE.linkStr() + "\n            \n                currentPosition += vec4(dirN*(lineIncrements*currentLineVertex), 1.0); " + "\n\n                vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;\n                \n                nodeVertexColor = vec4(abs(foutput), abs(foutput), abs(foutput), 1.0);\n\n                if(error > 0.0) {\n                    nodeVertexColorNetError = vec4(0.0, abs(error), 0.0, 1.0);\n                } else if(error < 0.0) {\n                    nodeVertexColorNetError = vec4(abs(error), 0.0, 0.0, 1.0);\n                } else {\n                    nodeVertexColorNetError = vec4(0.0,0.0,0.0, 0.0);\n                }\n                        \n                vNodeIdOpposite = nodeIdOpposite;\n            }\n            if(isArrow == 1.0) {\n                float nodeIdOpposite = data[].y;\n                \n                vec2 xGeometryNode_opposite = get_global_id(nodeIdOpposite, bufferNodesWidth, ") + geometryLength.toFixed(1) + (");\n                vec3 oppositePosition = posXYZW[xGeometryNode_opposite].xyz;\n                \n                " + VFP_NODE.linkStr() + "                \n            \n                vec3 currentPositionTMP;\n                " + "\n                float currentLineVertexU = vertexCount-1.0;\n                currentPositionTMP = oppositePosition+((dirN*-1.0)*(lineIncrements*currentLineVertexU));\n\n                mat4 pp = lookAt(currentPositionTMP, vec3(currentPosition.x, currentPosition.y, currentPosition.z), vec3(0.0, 1.0, 0.0));\n                pp = transpose(pp);\n                nodepos[0][0] = pp[0][0];\n                nodepos[0][1] = pp[1][0];\n                nodepos[0][2] = pp[2][0];\n\n                nodepos[1][0] = pp[0][1];\n                nodepos[1][1] = pp[1][1];\n                nodepos[1][2] = pp[2][1];\n\n                nodepos[2][0] = pp[0][2];\n                nodepos[2][1] = pp[1][2];\n                nodepos[2][2] = pp[2][2];\n\n                " + "\n                dir = currentPositionTMP-vec3(currentPosition.x, currentPosition.y, currentPosition.z);\n                currentPosition += vec4(normalize(dir),1.0)*2.0;\n\n                vIsSelected = (idToDrag == data[].x || idToDrag == data[].y) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x || idToHover == data[].y) ? 1.0 : 0.0;\n                \n                vNodeIdOpposite = nodeIdOpposite;\n            }\n            if(isNodeText == 1.0) {            \n                float letId = letterId[];\n                mat4 mm = rotationMatrix(vec3(1.0,0.0,0.0), (3.1416/2.0)*3.0);\n                nodepos = nodepos*mm;\n\n                vVertexUV = get2Dfrom1D(letId, fontImgColumns)+vec2(nodeVertexTexture.x/fontImgColumns,nodeVertexTexture.y/fontImgColumns);\n                nodeVertexPosition = vec4(nodeVertexPosition.x*0.1, nodeVertexPosition.y*0.1, nodeVertexPosition.z*0.1, 1.0);\n                currentPosition.z += 2.5;\n\n                vIsSelected = (idToDrag == data[].x) ? 1.0 : 0.0;\n                vIsHover = (idToHover == data[].x) ? 1.0 : 0.0;\n                \n                vIstarget = (currentLineVertex == 1.0) ? 1.0 : 0.0;\n            }\n            nodepos[3][0] = currentPosition.x;\n            nodepos[3][1] = currentPosition.y;\n            nodepos[3][2] = currentPosition.z;\n\n            mat4 nodeposG = nodeWMatrix;\n            vWNMatrix = nodeposG * nodeVertexNormal[];\n\n            vUseCrosshair = 0.0;\n            \n\n            " + customCode + "\n            \n            vDist = max(0.3, 1.0-(distance(currentPosition.xyz, oppositePosition)*0.01)); " + "\n            vVertexColor = nodeVertexColor;\n            vVertexColorNetError = nodeVertexColorNetError;\n            vUV = nodeVertexTexture;\n            vNodeId = nodeId;\n\n\n            gl_Position = PMatrix * cameraWMatrix * nodepos * nodeVertexPosition;"),
 
             //███████╗██████╗  █████╗  ██████╗ ███╗   ███╗███████╗███╗   ██╗████████╗    ██╗  ██╗███████╗ █████╗ ██████╗
             //██╔════╝██╔══██╗██╔══██╗██╔════╝ ████╗ ████║██╔════╝████╗  ██║╚══██╔══╝    ██║  ██║██╔════╝██╔══██╗██╔══██╗
@@ -3268,7 +3503,7 @@ var VFP_NODE = exports.VFP_NODE = function () {
 global.VFP_NODE = VFP_NODE;
 module.exports.VFP_NODE = VFP_NODE;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"scejs":1}],7:[function(require,module,exports){
+},{"scejs":1}],9:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -3316,7 +3551,7 @@ var VFP_NODEPICKDRAG = exports.VFP_NODEPICKDRAG = function () {
 global.VFP_NODEPICKDRAG = VFP_NODEPICKDRAG;
 module.exports.VFP_NODEPICKDRAG = VFP_NODEPICKDRAG;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"scejs":1}],8:[function(require,module,exports){
+},{"scejs":1}],10:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -3328,6 +3563,10 @@ exports.GBrainRL = undefined;
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _gbrain = require("./gbrain");
+
+var _Plot = require("./Plot.class");
+
+var _AvgWin = require("./AvgWin.class");
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -3383,6 +3622,8 @@ var GBrainRL = exports.GBrainRL = function () {
         this.onLearned = null;
 
         this.age = 0;
+        this.ageEpoch = 0;
+        this.epoch = 0;
         this.epsilon = 1.0;
         this.avcost = 0.0;
         this.loss = 0.0;
@@ -3406,9 +3647,16 @@ var GBrainRL = exports.GBrainRL = function () {
         if (jsonIn.layer_defs !== undefined && jsonIn.layer_defs !== null) {
             this.gbrain = new _gbrain.GBrain({ "target": jsonIn.target,
                 "dimensions": jsonIn.dimensions,
-                "gpu_batch_repeats": jsonIn.gpu_batch_repeats });
+                "gpu_batch_repeats": jsonIn.gpu_batch_repeats,
+                "learning_rate": jsonIn.learning_rate });
             this.gbrain.makeLayers(jsonIn.layer_defs);
         }
+
+        this.avgLossWin = new _AvgWin.AvgWin();
+        this.costPlot = new _Plot.Plot();
+        this.canvas = document.createElement("canvas");
+        jsonIn.target.appendChild(this.canvas);
+        this.clock = 0;
     }
 
     _createClass(GBrainRL, [{
@@ -3438,7 +3686,7 @@ var GBrainRL = exports.GBrainRL = function () {
                 var action1ofk = new Array(this.num_actions);
                 for (var q = 0; q < this.num_actions; q++) {
                     action1ofk[q] = 0.0;
-                }action1ofk[this.action_window[n - 1 - k]] = 1.0 * this.num_inputs;
+                }action1ofk[this.action_window[n - 1 - k]] = 1.0 /* *this.num_inputs*/;
                 w = w.concat(action1ofk);
             }
             return w;
@@ -3568,8 +3816,12 @@ var GBrainRL = exports.GBrainRL = function () {
                         _this2.arrTargets = [];
 
                         if (_this2.currentBatchRepeat === _this2.maxBatchRepeat) {
-                            _this2.loss = _this2.avcost / (_this2.maxBatchRepeat * _this2.gbrain.batch_size);
-                            //this.average_loss_window.add(this.loss); TODO
+                            _this2.loss = _this2.avcost / (_this2.maxBatchRepeat * _this2.gbrain.batch_size * 2);
+
+                            _this2.avgLossWin.add(_this2.loss);
+                            _this2.costPlot.add(_this2.clock, _this2.avgLossWin.get_average());
+                            _this2.costPlot.drawSelf(_this2.canvas);
+
                             _this2.onLearned(_this2.loss);
                         } else {
                             _this2.avcost += loss;
@@ -3586,6 +3838,8 @@ var GBrainRL = exports.GBrainRL = function () {
             this.onLearned = _onLearned;
             this.latest_reward = reward;
 
+            this.clock++;
+
             if (this.learning === false || this.forward_passes === 0) {
                 this.onLearned();
             } else {
@@ -3593,7 +3847,14 @@ var GBrainRL = exports.GBrainRL = function () {
                 this.reward_window.shift();
                 this.reward_window.push(reward);
 
+                if (this.ageEpoch === this.experience_size) {
+                    this.epoch++;
+                    this.ageEpoch = 0;
+                    var dec_rate = 1.0;
+                    //this.gbrain.setLearningRate((1.0/(1.0+dec_rate*this.epoch))*this.gbrain.initialLearningRate);
+                }
                 this.age++;
+                this.ageEpoch++;
 
                 // it is time t+1 and we have to store (s_t, a_t, r_t, s_{t+1}) as new experience
                 // (given that an appropriate number of state measurements already exist, of course)
@@ -3616,11 +3877,6 @@ var GBrainRL = exports.GBrainRL = function () {
                 } else this.onLearned();
             }
         }
-    }, {
-        key: "setLearningRate",
-        value: function setLearningRate(v) {
-            this.gbrain.setLearningRate(v);
-        }
     }]);
 
     return GBrainRL;
@@ -3629,7 +3885,7 @@ var GBrainRL = exports.GBrainRL = function () {
 global.GBrainRL = GBrainRL;
 module.exports.GBrainRL = GBrainRL;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./gbrain":9}],9:[function(require,module,exports){
+},{"./AvgWin.class":2,"./Plot.class":6,"./gbrain":11}],11:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -3660,7 +3916,7 @@ var GBrain = exports.GBrain = function () {
         this.project = null;
         this.graph = null;
 
-        this.batch_size = 7;
+        this.batch_size = 5;
 
         this.ini(jsonIn);
     }
@@ -3669,7 +3925,8 @@ var GBrain = exports.GBrain = function () {
      * @param {Object} jsonIn
      * @param {HTMLElement} jsonIn.target
      * @param {Object} [jsonIn.dimensions={width: Int, height: Int}]
-     * @param {boolean} [jsonIn.enableUI=false]
+     * @param {int} jsonIn.gpu_batch_repeats
+     * @param {number} jsonIn.learning_rate
      * @param {WebGLRenderingContext} [jsonIn.gl=undefined]
      */
 
@@ -3705,6 +3962,8 @@ var GBrain = exports.GBrain = function () {
             this.neuronLayers = [];
             this.graph.batch_size = this.batch_size;
             this.graph.gpu_batch_repeats = jsonIn.gpu_batch_repeats;
+            this.initialLearningRate = jsonIn.learning_rate;
+            this.currentLearningRate = jsonIn.learning_rate;
 
             var mesh_point = new Mesh().loadPoint();
             //this.graph.setNodeMesh(mesh_point);
@@ -3730,11 +3989,23 @@ var GBrain = exports.GBrain = function () {
                         offsetZ += 5.0;
                     }
 
+                    var nextHasBias = _this.graph.layer_defs[_this.graph.layerCount + 1].activation === "relu" ? 1.0 : 0.0;
+                    if (nextHasBias === 1.0) {
+                        offsetZ += 25.0;
+                        _this.graph.addNeuron("bias0", [offsetX, -10.0, offsetZ, 1.0], nextHasBias); // bias neuron
+                        _this.graph.layer_defs[_this.graph.layerCount].hasBias = 1.0;
+                    }
                     _this.graph.layerCount++;
                     offsetX += 30.0;
                 },
                 "fc": function fc(l) {
-                    var neuronLayer = _this.graph.createNeuronLayer(1, l.num_neurons, [offsetX, 0.0, 0.0, 1.0], 5.0); // numX, numY, visible position
+                    var hasBias = _this.graph.layer_defs[_this.graph.layerCount].activation === "relu" ? 1.0 : 0.0;
+                    _this.graph.layer_defs[_this.graph.layerCount - 1].hasBias = hasBias;
+
+                    var nextHasBias = _this.graph.layer_defs[_this.graph.layerCount + 1].activation === "relu" ? 1.0 : 0.0;
+                    //this.graph.layer_defs[this.graph.layerCount+1].hasBias = nextHasBias;
+
+                    var neuronLayer = _this.graph.createNeuronLayer(1, l.num_neurons, [offsetX, 0.0, 0.0, 1.0], 5.0, nextHasBias); // numX, numY, visible position
                     _this.neuronLayers.push(neuronLayer);
 
                     if (_this.graph.layerCount === 1) {
@@ -3746,14 +4017,24 @@ var GBrain = exports.GBrain = function () {
                                 "weight": l.weights !== undefined && l.weights !== null ? we.slice(0, l.num_neurons) : null,
                                 "layer_neurons_count": _this.inputCount,
                                 "multiplier": 1,
-                                "layerNum": _this.graph.layerCount - 1 });
+                                "layerNum": _this.graph.layerCount - 1,
+                                "hasBias": nextHasBias });
                             if (l.weights !== undefined && l.weights !== null) we = we.slice(l.num_neurons);
                         }
+                        _this.graph.connectNeuronWithNeuronLayer({ "neuron": "bias0",
+                            "neuronLayer": _this.neuronLayers[_this.neuronLayers.length - 1],
+                            "activationFunc": 0,
+                            "weight": l.weights !== undefined && l.weights !== null ? we : null,
+                            "layer_neurons_count": _this.inputCount,
+                            "multiplier": 1,
+                            "layerNum": _this.graph.layerCount - 1,
+                            "hasBias": nextHasBias });
                     } else _this.graph.connectNeuronLayerWithNeuronLayer({ "neuronLayerOrigin": _this.neuronLayers[_this.neuronLayers.length - 2],
                         "neuronLayerTarget": _this.neuronLayers[_this.neuronLayers.length - 1],
                         "weights": l.weights !== undefined && l.weights !== null ? l.weights : null,
                         "layer_neurons_count": _this.neuronLayers[_this.neuronLayers.length - 2].length,
-                        "layerNum": _this.graph.layerCount - 1 }); // TODO l.activation
+                        "layerNum": _this.graph.layerCount - 1,
+                        "hasBias": nextHasBias }); // TODO l.activation
 
                     _this.graph.layerCount++;
                     offsetX += 30.0;
@@ -3790,6 +4071,8 @@ var GBrain = exports.GBrain = function () {
 
             this.graph.createWebGLBuffers();
             this.graph.enableForceLayout();
+
+            this.graph.setLearningRate(this.currentLearningRate);
         }
     }, {
         key: "fromJson",
@@ -3803,9 +4086,9 @@ var GBrain = exports.GBrain = function () {
                             jsonIn.layers[n].weights.push(jsonIn.layers[n].filters[nb].w[key]);
                         }
                     }
-                    if (n > 1) {
-                        for (var _key in jsonIn.layers[n - 1].biases.w) {
-                            jsonIn.layers[n].weights.push(jsonIn.layers[n - 1].biases.w[_key]);
+                    if (n > 0) {
+                        for (var _key in jsonIn.layers[n].biases.w) {
+                            jsonIn.layers[n].weights.push(jsonIn.layers[n].biases.w[_key]);
                         }
                     }
                 } else if (jsonIn.layers[n].layer_type === "regression") {
@@ -3813,11 +4096,6 @@ var GBrain = exports.GBrain = function () {
                     for (var _key2 in jsonIn.layers[n].filters[0].w) {
                         for (var _nb = 0; _nb < jsonIn.layers[n].filters.length; _nb++) {
                             jsonIn.layers[n].weights.push(jsonIn.layers[n].filters[_nb].w[_key2]);
-                        }
-                    }
-                    if (n > 1) {
-                        for (var _key3 in jsonIn.layers[n - 1].biases.w) {
-                            jsonIn.layers[n].weights.push(jsonIn.layers[n - 1].biases.w[_key3]);
                         }
                     }
                 }
@@ -3870,6 +4148,7 @@ var GBrain = exports.GBrain = function () {
     }, {
         key: "setLearningRate",
         value: function setLearningRate(v) {
+            this.currentLearningRate = v;
             this.graph.setLearningRate(v);
         }
     }, {
@@ -3905,7 +4184,7 @@ var GBrain = exports.GBrain = function () {
 global.GBrain = GBrain;
 module.exports.GBrain = GBrain;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Graph.class":2,"scejs":1}],10:[function(require,module,exports){
+},{"./Graph.class":3,"scejs":1}],12:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -3927,6 +4206,10 @@ require("./VFP_NODE.class");
 
 require("./VFP_NODEPICKDRAG.class");
 
+require("./Plot.class");
+
+require("./AvgWin.class");
+
 module.exports.GBrain = global.GBrain = GBrain;
 
 module.exports.GBrainRL = global.GBrainRL = GBrainRL;
@@ -3944,8 +4227,12 @@ module.exports.Resources = global.Resources = Resources;
 module.exports.VFP_NODE = global.VFP_NODE = VFP_NODE;
 
 module.exports.VFP_NODEPICKDRAG = global.VFP_NODEPICKDRAG = VFP_NODEPICKDRAG;
+
+module.exports.Plot = global.Plot = Plot;
+
+module.exports.AvgWin = global.AvgWin = AvgWin;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Graph.class":2,"./KERNEL_ADJMATRIX_UPDATE.class":3,"./KERNEL_DIR.class":4,"./ProccessImg.class":5,"./VFP_NODE.class":6,"./VFP_NODEPICKDRAG.class":7,"./gbrain":9,"./gbrain-rl":8,"./resources":11}],11:[function(require,module,exports){
+},{"./AvgWin.class":2,"./Graph.class":3,"./KERNEL_ADJMATRIX_UPDATE.class":4,"./KERNEL_DIR.class":5,"./Plot.class":6,"./ProccessImg.class":7,"./VFP_NODE.class":8,"./VFP_NODEPICKDRAG.class":9,"./gbrain":11,"./gbrain-rl":10,"./resources":13}],13:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -3990,4 +4277,4 @@ var Resources = exports.Resources = function () {
 global.Resources = Resources;
 module.exports.Resources = Resources;
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}]},{},[10]);
+},{}]},{},[12]);

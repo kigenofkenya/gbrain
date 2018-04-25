@@ -62,14 +62,6 @@ export class KERNEL_DIR {
             float foutputE = 0.0;
             float netParentErrorWeightE = 0.0;
             
-            float netChildInputSumF = 0.0;
-            float foutputF = 0.0;
-            float netParentErrorWeightF = 0.0;
-            
-            float netChildInputSumG = 0.0;
-            float foutputG = 0.0;
-            float netParentErrorWeightG = 0.0;
-            
 
             if(nodeId < nodesCount && enableTrain == 0.0) {
                 float currentActivationFn = 0.0;
@@ -112,32 +104,27 @@ export class KERNEL_DIR {
             
             
                         ${/* dataB Current */''}
-                        ${/* float currentBiasNode = dataB[xGeomCurrent].x; */''}
+                        float currentBiasNode = dataB[xGeomCurrent].x;
                         ${/* float currentNetOutput = dataB[xGeomCurrent].z; */''}
                         ${/* float currentNetError = dataB[xGeomCurrent].w; */''}
             
                         ${/* dataB Opposite */''}
                         float oppositeBiasNode = dataB[xGeomOpposite].x;
+                        
+                        float oppositeNetErrorA = dataB[xGeomOpposite].y;
                         float oppositeNetOutputA = dataB[xGeomOpposite].z;
-                        float oppositeNetErrorA = dataB[xGeomOpposite].w;
-            
-                        float oppositeNetOutputB = dataF[xGeomOpposite].x;
-                        float oppositeNetErrorB = dataF[xGeomOpposite].y;
+                        
+                        float oppositeNetErrorB = dataF[xGeomOpposite].x;
+                        float oppositeNetOutputB = dataF[xGeomOpposite].y;
                     
-                        float oppositeNetOutputC = dataF[xGeomOpposite].z;
                         float oppositeNetErrorC = dataF[xGeomOpposite].w;
+                        float oppositeNetOutputC = dataG[xGeomOpposite].x;
                     
-                        float oppositeNetOutputD = dataG[xGeomOpposite].x;
-                        float oppositeNetErrorD = dataG[xGeomOpposite].y;
+                        float oppositeNetErrorD = dataG[xGeomOpposite].z;
+                        float oppositeNetOutputD = dataG[xGeomOpposite].w;
                     
-                        float oppositeNetOutputE = dataG[xGeomOpposite].z;
-                        float oppositeNetErrorE = dataG[xGeomOpposite].w;
-                    
-                        float oppositeNetOutputF = dataH[xGeomOpposite].x;
-                        float oppositeNetErrorF = dataH[xGeomOpposite].y;
-                    
-                        float oppositeNetOutputG = dataH[xGeomOpposite].z;
-                        float oppositeNetErrorG = dataH[xGeomOpposite].w;
+                        float oppositeNetErrorE = dataH[xGeomOpposite].y;
+                        float oppositeNetOutputE = dataH[xGeomOpposite].z;
             
             
                         ${/* pos & dir Current */''}
@@ -164,29 +151,23 @@ export class KERNEL_DIR {
                             netChildInputSumC += oppositeNetOutputC*oppositeWeight;
                             netChildInputSumD += oppositeNetOutputD*oppositeWeight;
                             netChildInputSumE += oppositeNetOutputE*oppositeWeight;
-                            netChildInputSumF += oppositeNetOutputF*oppositeWeight;
-                            netChildInputSumG += oppositeNetOutputG*oppositeWeight;
                             
                             atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));
                             repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));
                             acumAtraction += 1.0;
                         } else if(currentIsParent == 0.5) {                            
-                            if(oppositeBiasNode == 0.0) {
+                            if(currentBiasNode == 0.0) {
                                 netParentErrorWeightA += oppositeNetErrorA*currentWeight;
                                 netParentErrorWeightB += oppositeNetErrorB*currentWeight;
                                 netParentErrorWeightC += oppositeNetErrorC*currentWeight;
                                 netParentErrorWeightD += oppositeNetErrorD*currentWeight;
                                 netParentErrorWeightE += oppositeNetErrorE*currentWeight;
-                                netParentErrorWeightF += oppositeNetErrorF*currentWeight;
-                                netParentErrorWeightG += oppositeNetErrorG*currentWeight;
                             } else {
                                 netParentErrorWeightA += oppositeNetErrorA;
                                 netParentErrorWeightB += oppositeNetErrorB;
                                 netParentErrorWeightC += oppositeNetErrorC;
                                 netParentErrorWeightD += oppositeNetErrorD;
                                 netParentErrorWeightE += oppositeNetErrorE;
-                                netParentErrorWeightF += oppositeNetErrorF;
-                                netParentErrorWeightG += oppositeNetErrorG;
                             }
                             atraction += dirToOppositeN*max(1.0, distN*abs(currentWeight)*m1);
                             repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*m2);
@@ -205,14 +186,13 @@ export class KERNEL_DIR {
                 
                 
                 float currentBiasNode = dataB[xGeomCurrent].x;
-                float netLoss = 0.0;
                 
                 ${KERNEL_DIR.efferentNodesStr(afferentNodesCount, efferentStart, efferentNodesCount)}
                 
-                currentDataB = vec4(currentDataB.x, netLoss, foutputA, netParentErrorWeightA);
-                currentDataF = vec4(foutputB, netParentErrorWeightB, foutputC, netParentErrorWeightC);
-                currentDataG = vec4(foutputD, netParentErrorWeightD, foutputE, netParentErrorWeightE);
-                currentDataH = vec4(foutputF, netParentErrorWeightF, foutputG, netParentErrorWeightG);
+                currentDataB = vec4(currentDataB.x, netParentErrorWeightA, foutputA, netChildInputSumA);
+                currentDataF = vec4(netParentErrorWeightB, foutputB, netChildInputSumB, netParentErrorWeightC);
+                currentDataG = vec4(foutputC, netChildInputSumC, netParentErrorWeightD, foutputD);
+                currentDataH = vec4(netChildInputSumD, netParentErrorWeightE, foutputE, netChildInputSumE);
             }
 
             ${((customCode !== undefined) ? customCode : '')}
@@ -247,28 +227,22 @@ export class KERNEL_DIR {
                         foutputC = afferentNodesC[int(n)];
                         foutputD = afferentNodesD[int(n)];
                         foutputE = afferentNodesE[int(n)];
-                        foutputF = afferentNodesF[int(n)];
-                        foutputG = afferentNodesG[int(n)];
                         break;
                     }
                 }
             } else {
                 if(currentBiasNode == 0.0) {                                     
-                    foutputA = (foutputA < 0.0) ? 0.01*netChildInputSumA : netChildInputSumA; ${/* SIGM= sigm(netChildInputSumA)-0.5 ; TANH=tanh(netChildInputSumA) ; RELU=max(0.0, netChildInputSumA) */''}
-                    foutputB = (foutputB < 0.0) ? 0.01*netChildInputSumB : netChildInputSumB;
-                    foutputC = (foutputC < 0.0) ? 0.01*netChildInputSumC : netChildInputSumC;
-                    foutputD = (foutputD < 0.0) ? 0.01*netChildInputSumD : netChildInputSumD;
-                    foutputE = (foutputE < 0.0) ? 0.01*netChildInputSumE : netChildInputSumE;
-                    foutputF = (foutputF < 0.0) ? 0.01*netChildInputSumF : netChildInputSumF;
-                    foutputG = (foutputG < 0.0) ? 0.01*netChildInputSumG : netChildInputSumG;
+                    foutputA = (netChildInputSumA <= 0.0) ? 0.01*netChildInputSumA : netChildInputSumA; ${/* SIGM= sigm(netChildInputSumA)-0.5 ; TANH=tanh(netChildInputSumA) ; RELU=max(0.0, netChildInputSumA) */''}
+                    foutputB = (netChildInputSumB <= 0.0) ? 0.01*netChildInputSumB : netChildInputSumB;
+                    foutputC = (netChildInputSumC <= 0.0) ? 0.01*netChildInputSumC : netChildInputSumC;
+                    foutputD = (netChildInputSumD <= 0.0) ? 0.01*netChildInputSumD : netChildInputSumD;
+                    foutputE = (netChildInputSumE <= 0.0) ? 0.01*netChildInputSumE : netChildInputSumE;
                 } else {
                     foutputA = 1.0;
                     foutputB = 1.0;
                     foutputC = 1.0;
                     foutputD = 1.0;
                     foutputE = 1.0;
-                    foutputF = 1.0;
-                    foutputG = 1.0;
                 }
             }`;
 
@@ -279,29 +253,19 @@ export class KERNEL_DIR {
             let cond = (n===efferentStart) ? "if" : "else if" ;
             str += `
             ${cond}(nodeId == `+n.toFixed(1)+`) {
-                netParentErrorWeightA = (efferentNodesA[`+Math.round(n-efferentStart)+`]-netChildInputSumA);
-                netLoss += 0.5*netParentErrorWeightA*netParentErrorWeightA;
-                
-                netParentErrorWeightB = (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesB[`+Math.round(n-efferentStart)+`]-netChildInputSumB) : 0.0;
-                netLoss += (efferentNodesB[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightB*netParentErrorWeightB : 0.0;
-            
-                netParentErrorWeightC = (efferentNodesC[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesC[`+Math.round(n-efferentStart)+`]-netChildInputSumC) : 0.0;
-                netLoss += (efferentNodesC[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightC*netParentErrorWeightC : 0.0;
-            
-                netParentErrorWeightD = (efferentNodesD[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesD[`+Math.round(n-efferentStart)+`]-netChildInputSumD) : 0.0;
-                netLoss += (efferentNodesD[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightD*netParentErrorWeightD : 0.0;
-            
-                netParentErrorWeightE = (efferentNodesE[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesE[`+Math.round(n-efferentStart)+`]-netChildInputSumE) : 0.0;
-                netLoss += (efferentNodesE[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightE*netParentErrorWeightE : 0.0;
-            
-                netParentErrorWeightF = (efferentNodesF[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesF[`+Math.round(n-efferentStart)+`]-netChildInputSumF) : 0.0;
-                netLoss += (efferentNodesF[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightF*netParentErrorWeightF : 0.0;
-            
-                netParentErrorWeightG = (efferentNodesG[`+Math.round(n-efferentStart)+`] != 0.0) ? (efferentNodesG[`+Math.round(n-efferentStart)+`]-netChildInputSumG) : 0.0;
-                netLoss += (efferentNodesG[`+Math.round(n-efferentStart)+`] != 0.0) ? 0.5*netParentErrorWeightG*netParentErrorWeightG : 0.0;
+                foutputA = netChildInputSumA; ${/* SIGM= sigm(netChildInputSumA)-0.5 ; TANH=tanh(netChildInputSumA) ; RELU=max(0.0, netChildInputSumA) */''} 
+                foutputB = netChildInputSumB;
+                foutputC = netChildInputSumC;
+                foutputD = netChildInputSumD;
+                foutputE = netChildInputSumE;
+                    
+                netParentErrorWeightA = efferentNodesA[`+Math.round(n-efferentStart)+`];
+                netParentErrorWeightB = efferentNodesB[`+Math.round(n-efferentStart)+`];
+                netParentErrorWeightC = efferentNodesC[`+Math.round(n-efferentStart)+`];
+                netParentErrorWeightD = efferentNodesD[`+Math.round(n-efferentStart)+`];
+                netParentErrorWeightE = efferentNodesE[`+Math.round(n-efferentStart)+`];
             }`;
         }
-
         return str;
     };
 }

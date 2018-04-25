@@ -119,7 +119,7 @@ export class VFP_NODE {
 
             if(isNode == 1.0) {
                 float foutput = dataB[xGeometryNode].z;
-                float error = dataB[xGeometryNode].w;
+                float error = dataB[xGeometryNode].y;
             
                 currentPosition += vec4(0.0, 0.1, 0.0, 1.0);
 

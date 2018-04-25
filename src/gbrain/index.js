@@ -16,3 +16,7 @@ import "./VFP_NODE.class";
 module.exports.VFP_NODE = global.VFP_NODE = VFP_NODE;
 import "./VFP_NODEPICKDRAG.class";
 module.exports.VFP_NODEPICKDRAG = global.VFP_NODEPICKDRAG = VFP_NODEPICKDRAG;
+import "./Plot.class";
+module.exports.Plot = global.Plot = Plot;
+import "./AvgWin.class";
+module.exports.AvgWin = global.AvgWin = AvgWin;

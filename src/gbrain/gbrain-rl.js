@@ -1,4 +1,6 @@
 import {GBrain} from "./gbrain";
+import {Plot} from "./Plot.class";
+import {AvgWin} from "./AvgWin.class";
 
 /**
  * ConvNetJS Reinforcement Learning Module (https://github.com/karpathy/convnetjs)
@@ -73,11 +75,58 @@ export class GBrainRL {
         this.currentBatchRepeat = 0;
         this.maxBatchRepeat = jsonIn.gpu_batch_repeats;
 
+
+        this.showOutputWeighted = false;
+        this.showWD = false;
+
+        jsonIn.target.style.backgroundColor = "#333";
+        jsonIn.target.style.color = "#EEE";
+        jsonIn.target.innerHTML = `
+        <canvas id="elPlotCanvas"></canvas>
+        <div id="el_info"></div>
+        <div>
+            View weight*neuron output<input title="weight*output" type="checkbox" id="elem_enableOutputWeighted"/><br />
+            View weight dynamics<input title="weight dynamics" type="checkbox" id="elem_enableWeightDynamics"/>
+        </div>
+        <button id="BTNID_STOP" style="display:inline-block;">stop train</button>
+        <button id="BTNID_RESUME" style="display:inline-block;">resume train</button>
+        <button id="BTNID_TOJSON" style="display:inline-block;">toJson</button>
+        `;
+
+        document.getElementById("elem_enableOutputWeighted").addEventListener("click", () => {
+            (this.showOutputWeighted === false) ? this.gbrain.enableShowOutputWeighted() : this.gbrain.disableShowOutputWeighted();
+            this.showOutputWeighted = !this.showOutputWeighted;
+        });
+        document.getElementById("elem_enableWeightDynamics").addEventListener("click", () => {
+            (this.showWD === false) ? this.gbrain.enableShowWeightDynamics() : this.gbrain.disableShowWeightDynamics();
+            this.showWD = !this.showWD;
+        });
+
+        document.getElementById("BTNID_STOP").addEventListener("click", () => {
+            this.stopLearning();
+        });
+
+        document.getElementById("BTNID_RESUME").addEventListener("click", () => {
+            this.resumeLearning();
+        });
+
+        document.getElementById("BTNID_TOJSON").addEventListener("click", () => {
+            this.toJson();
+        });
+
+
+
+        this.avgLossWin = new AvgWin();
+        this.costPlot = new Plot();
+        this.plotCanvas = document.querySelector("#elPlotCanvas");
+
+        this.clock = 0;
+
         if(jsonIn.layer_defs !== undefined && jsonIn.layer_defs !== null) {
             this.gbrain = new GBrain({  "target": jsonIn.target,
-                                        "dimensions": jsonIn.dimensions,
-                                        "gpu_batch_repeats": jsonIn.gpu_batch_repeats,
-                                        "learning_rate": jsonIn.learning_rate});
+                "dimensions": jsonIn.dimensions,
+                "gpu_batch_repeats": jsonIn.gpu_batch_repeats,
+                "learning_rate": jsonIn.learning_rate});
             this.gbrain.makeLayers(jsonIn.layer_defs);
         }
     }
@@ -105,7 +154,7 @@ export class GBrainRL {
             let action1ofk = new Array(this.num_actions);
             for(let q=0; q < this.num_actions; q++)
                 action1ofk[q] = 0.0;
-            action1ofk[this.action_window[n-1-k]] = 1.0*this.num_inputs;
+            action1ofk[this.action_window[n-1-k]] = 1.0/* *this.num_inputs*/;
             w = w.concat(action1ofk);
         }
         return w;
@@ -226,7 +275,11 @@ export class GBrainRL {
 
                     if(this.currentBatchRepeat === this.maxBatchRepeat) {
                         this.loss = this.avcost/(this.maxBatchRepeat*this.gbrain.batch_size);
-                        //this.average_loss_window.add(this.loss); TODO
+                        this.avgLossWin.add(Math.min(10.0, this.loss));
+
+                        this.costPlot.add(this.clock, this.avgLossWin.get_average());
+                        this.costPlot.drawSelf(this.plotCanvas);
+
                         this.onLearned(this.loss);
                     } else {
                         this.avcost += loss;
@@ -242,6 +295,8 @@ export class GBrainRL {
         this.onLearned = _onLearned;
         this.latest_reward = reward;
 
+        this.clock++;
+
         if(this.learning === false || this.forward_passes === 0) {
             this.onLearned();
         } else {
@@ -253,7 +308,7 @@ export class GBrainRL {
                 this.epoch++;
                 this.ageEpoch = 0;
                 let dec_rate = 1.0;
-                this.gbrain.setLearningRate((1.0/(1.0+dec_rate*this.epoch))*this.gbrain.initialLearningRate);
+                //this.gbrain.setLearningRate((1.0/(1.0+dec_rate*this.epoch))*this.gbrain.initialLearningRate);
             }
             this.age++;
             this.ageEpoch++;

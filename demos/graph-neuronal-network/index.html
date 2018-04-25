@@ -58,8 +58,8 @@
 
             var gbrain = new GBrain({   "target": document.getElementById("el_gbrain"),
                                         "dimensions": {"width": window.innerWidth*0.7, "height": window.innerHeight-100},
-                                        "gpu_batch_repeats": 7,
-                                        "learning_rate": 0.3});
+                                        "gpu_batch_repeats": 1,
+                                        "learning_rate": 1});
             gbrain.makeLayers(layer_defs);
             var render = function() {
                 gbrain.tick();
@@ -103,19 +103,23 @@
             newColor();
 
             document.getElementById("BTNID_WHITE").addEventListener("click", function() { // train white
-                let r = (elem_fgColor.style.color === "rgb(255, 255, 255)") ? [{dim: 0, val: 1.0}] : [{dim: 1, val: -1.0}];
+                let rew = (elem_fgColor.style.color === "rgb(255, 255, 255)") ? [{dim: 0, val: 1.0}] : [{dim: 1, val: -1.0}];
 
-                gbrain.train(r, function(loss) {
-                    console.log("loss: "+loss);
+                gbrain.forward([r,g,b], function(data) {
+                    gbrain.train(rew, function(loss) {
+                        console.log("loss: "+loss);
+                    });
                 });
                 //elem_fgColor.style.color = "rgb(255, 255, 255)";
             });
 
             document.getElementById("BTNID_BLACK").addEventListener("click", function() { // train black
-                let r = (elem_fgColor.style.color === "rgb(0, 0, 0)") ? [{dim: 1, val: 1.0}] : [{dim: 0, val: -1.0}];
+                let rew = (elem_fgColor.style.color === "rgb(0, 0, 0)") ? [{dim: 1, val: 1.0}] : [{dim: 0, val: -1.0}];
 
-                gbrain.train(r, function(loss) {
-                    console.log("loss: "+loss);
+                gbrain.forward([r,g,b], function(data) {
+                    gbrain.train(rew, function(loss) {
+                        console.log("loss: "+loss);
+                    });
                 });
                 //elem_fgColor.style.color = "rgb(0, 0, 0)";
             });

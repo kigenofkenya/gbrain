@@ -12,7 +12,7 @@ export class GBrain {
         this.project = null;
         this.graph = null;
 
-        this.batch_size = 7;
+        this.batch_size = 5;
 
         this.ini(jsonIn);
     }
