@@ -1037,10 +1037,10 @@ export class Graph {
             return u*c;
         };
         let randn = (mu, std) => { return mu+gaussRandom()*std; };
-        let scale = (jsonIn.layer_neurons_count !== undefined && jsonIn.layer_neurons_count !== null) ? Math.sqrt(2.0/(jsonIn.layer_neurons_count+1)) : Math.sqrt(1.0/(50));
+        let scale = (jsonIn.layer_neurons_count !== undefined && jsonIn.layer_neurons_count !== null) ? (0.14-Math.sqrt(2.0/(jsonIn.layer_neurons_count-1))) : Math.sqrt(1.0/(50));
 
         let _activationFunc = (jsonIn.activationFunc !== undefined && jsonIn.activationFunc !== null) ? jsonIn.activationFunc : 1.0;
-        let _weight = (jsonIn.weight !== undefined && jsonIn.weight !== null) ? jsonIn.weight : randn(0.0, scale);
+        let _weight = (jsonIn.weight !== undefined && jsonIn.weight !== null) ? jsonIn.weight : Math.abs(randn(0.0, scale));
         let _linkMultiplier = (jsonIn.multiplier !== undefined && jsonIn.multiplier !== null) ? jsonIn.multiplier : 1.0;
 
         this.addLink({
@@ -1359,6 +1359,22 @@ export class Graph {
                 cost += this.maxacts[n].o[nb]*this.maxacts[n].o[nb];
             }
         }
+
+        /*let dc = [];
+        for(let n=0; n < this.maxacts.length; n++) {
+            for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                dc[nb] += this.maxacts[n].o[nb]*this.maxacts[n].values[nb];
+            }
+        }
+
+        let dd = [];
+        for(let n=0; n < this.maxacts.length; n++) {
+            for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                //let cc = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? cost*0.5 : 0.0;
+                let cc = dc[nb]/this.maxacts.length;
+                dd.push(cc);
+            }
+        }*/
 
         let dd = [];
         for(let n=0; n < this.maxacts.length; n++) {

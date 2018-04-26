@@ -91,26 +91,28 @@ export class GBrainRL {
         <button id="BTNID_STOP" style="display:inline-block;">stop train</button>
         <button id="BTNID_RESUME" style="display:inline-block;">resume train</button>
         <button id="BTNID_TOJSON" style="display:inline-block;">toJson</button>
+        <div id="el_gbrainDisplay"></div>
         `;
+        this.el_info = jsonIn.target.querySelector("#el_info");
 
-        document.getElementById("elem_enableOutputWeighted").addEventListener("click", () => {
+        jsonIn.target.querySelector("#elem_enableOutputWeighted").addEventListener("click", () => {
             (this.showOutputWeighted === false) ? this.gbrain.enableShowOutputWeighted() : this.gbrain.disableShowOutputWeighted();
             this.showOutputWeighted = !this.showOutputWeighted;
         });
-        document.getElementById("elem_enableWeightDynamics").addEventListener("click", () => {
+        jsonIn.target.querySelector("#elem_enableWeightDynamics").addEventListener("click", () => {
             (this.showWD === false) ? this.gbrain.enableShowWeightDynamics() : this.gbrain.disableShowWeightDynamics();
             this.showWD = !this.showWD;
         });
 
-        document.getElementById("BTNID_STOP").addEventListener("click", () => {
+        jsonIn.target.querySelector("#BTNID_STOP").addEventListener("click", () => {
             this.stopLearning();
         });
 
-        document.getElementById("BTNID_RESUME").addEventListener("click", () => {
+        jsonIn.target.querySelector("#BTNID_RESUME").addEventListener("click", () => {
             this.resumeLearning();
         });
 
-        document.getElementById("BTNID_TOJSON").addEventListener("click", () => {
+        jsonIn.target.querySelector("#BTNID_TOJSON").addEventListener("click", () => {
             this.toJson();
         });
 
@@ -118,12 +120,12 @@ export class GBrainRL {
 
         this.avgLossWin = new AvgWin();
         this.costPlot = new Plot();
-        this.plotCanvas = document.querySelector("#elPlotCanvas");
+        this.plotCanvas = jsonIn.target.querySelector("#elPlotCanvas");
 
         this.clock = 0;
 
         if(jsonIn.layer_defs !== undefined && jsonIn.layer_defs !== null) {
-            this.gbrain = new GBrain({  "target": jsonIn.target,
+            this.gbrain = new GBrain({  "target": jsonIn.target.querySelector("#el_gbrainDisplay"),
                 "dimensions": jsonIn.dimensions,
                 "gpu_batch_repeats": jsonIn.gpu_batch_repeats,
                 "learning_rate": jsonIn.learning_rate});
@@ -296,6 +298,11 @@ export class GBrainRL {
         this.latest_reward = reward;
 
         this.clock++;
+        this.el_info.innerHTML =  "epsilon: "+this.epsilon+"<br />"+
+            "reward: "+this.latest_reward+"<br />"+
+            "age: "+this.age+"<br />"+
+            "average Q-learning loss: "+this.loss+"<br />"+
+            "current learning rate: "+this.gbrain.currentLearningRate;
 
         if(this.learning === false || this.forward_passes === 0) {
             this.onLearned();

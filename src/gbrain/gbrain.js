@@ -202,7 +202,8 @@ export class GBrain {
         this.sce.target.innerHTML = "";
         this.ini({  "target": this.sce.target,
                     "dimensions": this.sce.dimensions,
-                    "gpu_batch_repeats": this.graph.gpu_batch_repeats});
+                    "gpu_batch_repeats": this.graph.gpu_batch_repeats,
+                    "learning_rate": this.currentLearningRate});
         this.makeLayers(layer_defs);
     };
 
