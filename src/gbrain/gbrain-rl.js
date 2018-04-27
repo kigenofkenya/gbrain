@@ -18,7 +18,7 @@ import {AvgWin} from "./AvgWin.class";
  * @param {number} jsonIn.epsilon_min
  * @param {number} jsonIn.epsilon_test_time
  * @param {int} jsonIn.start_learn_threshold
- * @param {int} jsonIn.gpu_batch_repeats
+ * @param {int} jsonIn.batch_repeats
  * @param {int} jsonIn.learning_steps_total
  * @param {int} jsonIn.learning_steps_burnin
  * @param {Array<Object>} jsonIn.layer_defs
@@ -56,7 +56,6 @@ export class GBrainRL {
         this.ageEpoch = 0;
         this.epoch = 0;
         this.epsilon = 1.0;
-        this.avcost = 0.0;
         this.loss = 0.0;
 
         this.latest_reward = 0;
@@ -72,8 +71,6 @@ export class GBrainRL {
         this.arrTargets = [];
 
         this.lastTotalError = 0;
-        this.currentBatchRepeat = 0;
-        this.maxBatchRepeat = jsonIn.gpu_batch_repeats;
 
 
         this.showOutputWeighted = false;
@@ -127,7 +124,7 @@ export class GBrainRL {
         if(jsonIn.layer_defs !== undefined && jsonIn.layer_defs !== null) {
             this.gbrain = new GBrain({  "target": jsonIn.target.querySelector("#el_gbrainDisplay"),
                 "dimensions": jsonIn.dimensions,
-                "gpu_batch_repeats": jsonIn.gpu_batch_repeats,
+                "batch_repeats": jsonIn.batch_repeats,
                 "learning_rate": jsonIn.learning_rate});
             this.gbrain.makeLayers(jsonIn.layer_defs);
         }
@@ -250,49 +247,6 @@ export class GBrainRL {
         }
     };
 
-    bb() {
-        let bEntries = [];
-        let state1_entries = [];
-        for(let n=0; n < this.gbrain.batch_size; n++) {
-            let e = this.experience[Math.floor(Math.random()*this.experience.length)];
-            bEntries.push(e);
-            for(let nb=0; nb < e.state1.length; nb++)
-                state1_entries.push(e.state1[nb]);
-        }
-        this.policy(state1_entries, (maxact) => {
-            for(let n=0; n < this.gbrain.batch_size; n++) {
-                let r = bEntries[n].reward0 + this.gamma * maxact[n].value;
-                let ystruct = {dim: bEntries[n].action0, val: r};
-
-                this.arrTargets.push(ystruct);
-
-                for(let nb=0; nb < bEntries[n].state0.length; nb++)
-                    this.arrInputs.push(bEntries[n].state0[nb]);
-            }
-
-            this.gbrain.forward(this.arrInputs, (data) => {
-                this.gbrain.train(this.arrTargets, (loss) => {
-                    this.arrInputs = [];
-                    this.arrTargets = [];
-
-                    if(this.currentBatchRepeat === this.maxBatchRepeat) {
-                        this.loss = this.avcost/(this.maxBatchRepeat*this.gbrain.batch_size);
-                        this.avgLossWin.add(Math.min(10.0, this.loss));
-
-                        this.costPlot.add(this.clock, this.avgLossWin.get_average());
-                        this.costPlot.drawSelf(this.plotCanvas);
-
-                        this.onLearned(this.loss);
-                    } else {
-                        this.avcost += loss;
-                        this.currentBatchRepeat++;
-                        this.bb();
-                    }
-                });
-            }, false);
-        });
-    }
-
     backward(reward, _onLearned) {
         this.onLearned = _onLearned;
         this.latest_reward = reward;
@@ -337,9 +291,41 @@ export class GBrainRL {
                 }
 
                 if(this.experience.length > this.start_learn_threshold) {
-                    this.avcost = 0.0;
-                    this.currentBatchRepeat = 0;
-                    this.bb();
+                    let bEntries = [];
+                    let state1_entries = [];
+                    for(let n=0; n < this.gbrain.graph.batch_repeats*this.gbrain.graph.gpu_batch_size; n++) {
+                        let e = this.experience[Math.floor(Math.random()*this.experience.length)];
+                        bEntries.push(e);
+                        for(let nb=0; nb < e.state1.length; nb++)
+                            state1_entries.push(e.state1[nb]);
+                    }
+                    this.policy(state1_entries, (maxact) => {
+                        this.arrInputs = [];
+                        this.arrTargets = [];
+
+                        for(let n=0; n < this.gbrain.graph.batch_repeats*this.gbrain.graph.gpu_batch_size; n++) {
+                            let r = bEntries[n].reward0 + this.gamma * maxact[n].value;
+                            let ystruct = {dim: bEntries[n].action0, val: r};
+
+                            this.arrTargets.push(ystruct);
+
+                            for(let nb=0; nb < bEntries[n].state0.length; nb++)
+                                this.arrInputs.push(bEntries[n].state0[nb]);
+                        }
+
+                        this.gbrain.forward(this.arrInputs, (data) => {
+                            this.gbrain.train(this.arrTargets, (loss) => {
+
+                                this.loss = loss/(this.gbrain.graph.batch_repeats*this.gbrain.graph.gpu_batch_size*2);
+                                this.avgLossWin.add(Math.min(10.0, this.loss));
+
+                                this.costPlot.add(this.clock, this.avgLossWin.get_average());
+                                this.costPlot.drawSelf(this.plotCanvas);
+
+                                this.onLearned(this.loss);
+                            });
+                        }, false);
+                    });
                 } else
                     this.onLearned();
             } else

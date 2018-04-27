@@ -39,9 +39,10 @@ export class Graph {
         this.lineVertexCount = 1;
 
         this.layer_defs = null;
-        this.batch_size = null;
         this.layerCount = 0;
-        this.gpu_batch_repeats = null;
+        this.batch_repeats = 1;
+        this.gpu_batch_size = 5;
+        this.maxacts = [];
         this.afferentNodesCount = 0;
         this.efferentNodesCount = 0;
         this.trainTickCount = 0;
@@ -66,6 +67,7 @@ export class Graph {
         this.arrAdjMatrixB = null;
 
         this.enableTrain = 0;
+        this.updateTheta = 0;
         this._ADJ_MATRIX_WIDTH = null;
 
         this.readPixel = false;
@@ -439,11 +441,12 @@ export class Graph {
             "float enableForceLayout": () => {return null;},
             'float layerCount': () => {return null;},
             "float learningRate": () => {return null;},
-            "float gpu_batch_repeats": () => {return null;},
+            "float batch_repeats": () => {return null;},
             'float afferentNodesCount': () => {return null;},
             'float efferentNodesCount': () => {return null;},
             'float efferentStart': () => {return null;},
             'float enableTrain': () => {return null;},
+            'float updateTheta': () => {return null;},
             'float multiplyOutput': () => {return null;},
             'float viewNeuronDynamics': () => {return null;},
             'float only2d': () => {return null;},
@@ -1190,97 +1193,99 @@ export class Graph {
     forward(jsonIn) {
         this.onAction = jsonIn.onAction;
         let lett = ["A","B","C","D","E"];
+        let loc = [["dataB",2],["dataF",1],["dataG",0],["dataG",3],["dataH",2]];
 
-
-        let state = jsonIn.state.slice(0);
-        for(let n=jsonIn.state.length; n < this.afferentNodesCount*this.batch_size; n++)
-            state[n] = 0.0;
-
-        for(let n=0; n < this.batch_size; n++) {
-            this.comp_renderer_nodes.setArg("afferentNodes"+lett[n], () => {return state.slice(0, this.afferentNodesCount);});
-            state = state.slice(this.afferentNodesCount);
-        }
-
-
+        // reset reward
         let reward = [];
-        for(let n=0; n < this.afferentNodesCount*this.batch_size; n++)
+        for(let n=0; n < this.afferentNodesCount*this.gpu_batch_size; n++)
             reward[n] = 0.0;
 
-        for(let n=0; n < this.batch_size; n++) {
+        for(let n=0; n < this.gpu_batch_size; n++) {
             this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return reward.slice(0, this.efferentNodesCount);});
             reward = reward.slice(this.efferentNodesCount);
         }
 
 
-        for(let n=0; n < (this.layerCount); n++)
-            this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
+        this.maxacts = [];
+        let state = jsonIn.state.slice(0);
+        for(let r=0; r < this.batch_repeats; r++) {
+            let stateSet = state.slice(0, this.afferentNodesCount*this.gpu_batch_size);
 
-        this._sce.getLoadedProject().getActiveStage().tick();
+            for(let n=stateSet.length; n < this.afferentNodesCount*this.gpu_batch_size; n++)
+                stateSet[n] = 0.0;
 
-        if(this.onAction !== null) {
-            this.maxacts = [];
+            for(let n=0; n < this.gpu_batch_size; n++) {
+                this.comp_renderer_nodes.setArg("afferentNodes"+lett[n], () => {return stateSet.slice(0, this.afferentNodesCount);});
+                stateSet = stateSet.slice(this.afferentNodesCount);
+            }
+
+
+            for(let n=0; n < (this.layerCount); n++)
+                this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
+
+            this._sce.getLoadedProject().getActiveStage().tick();
+
+
+
             //if(jsonIn.readOutput === undefined || jsonIn.readOutput === null || (jsonIn.readOutput !== null && jsonIn.readOutput === true)) {
-                let loc = [["dataB",2],
-                            ["dataF",1],["dataG",0],
-                            ["dataG",3],["dataH",2]];
-                let o = [[]];
-                let currO = 0;
-                for(let n=0; n < this.efferentNodesCount*this.batch_size; n++) {
-                    if(o[currO].length ===  this.efferentNodesCount) {
-                        o.push([]);
-                        currO++;
-                    }
-
-                    let u = this.getNeuronOutput(this.efferentNeuron[o[currO].length], loc[currO]);
-                    if(isNaN(u[2]) === true)
-                        debugger;
-                    o[currO].push({"output": u[ loc[currO][1] ]});
+            let o = [[]];
+            let currO = 0;
+            for(let n=0; n < this.efferentNodesCount*this.gpu_batch_size; n++) {
+                if(o[currO].length ===  this.efferentNodesCount) {
+                    o.push([]);
+                    currO++;
                 }
 
-                for(let n=0; n < o.length; n++) {
-                    let maxk = 0;
-                    let maxval = o[n][0].output;
+                let u = this.getNeuronOutput(this.efferentNeuron[o[currO].length], loc[currO]);
+                if(isNaN(u[2]) === true)
+                    debugger;
+                o[currO].push({"output": u[ loc[currO][1] ]});
+            }
 
-                    let vals = [maxval];
-                    let y = [0];
-                    let outs = [0];
-                    let sm = [0];
-                    let ced = [0];
-                    let smd = [0];
+            for(let n=0; n < o.length; n++) {
+                let maxk = 0;
+                let maxval = o[n][0].output;
 
-                    for(let nb=1; nb < o[n].length; nb++) {
-                        vals.push(o[n][nb].output);
-                        y.push(0);
-                        outs.push(0);
-                        sm.push(0);
-                        ced.push(0);
-                        smd.push(0);
+                let vals = [maxval];
+                let y = [0];
+                let outs = [0];
+                let sm = [0];
+                let ced = [0];
+                let smd = [0];
 
-                        if(o[n][nb].output > maxval) {
-                            maxk = nb;
-                            maxval = o[n][nb].output;
-                        }
+                for(let nb=1; nb < o[n].length; nb++) {
+                    vals.push(o[n][nb].output);
+                    y.push(0);
+                    outs.push(0);
+                    sm.push(0);
+                    ced.push(0);
+                    smd.push(0);
+
+                    if(o[n][nb].output > maxval) {
+                        maxk = nb;
+                        maxval = o[n][nb].output;
                     }
-                    this.maxacts.push({"action": maxk, "value": maxval, "values": vals, "y": y, "o": outs, "sm": sm, "ced": ced, "smd": smd});
                 }
+                this.maxacts.push({"action": maxk, "value": maxval, "values": vals, "y": y, "o": outs, "sm": sm, "ced": ced, "smd": smd});
+            }
 
-                // softmax
-                /*for(let n=0; n < this.maxacts.length; n++) {
-                    let sm = 0.0;
-                    for(let nb=0; nb < this.efferentNodesCount; nb++)
-                        sm += Math.exp(this.maxacts[n].values[nb]);
+            // softmax
+            /*for(let n=0; n < this.maxacts.length; n++) {
+                let sm = 0.0;
+                for(let nb=0; nb < this.efferentNodesCount; nb++)
+                    sm += Math.exp(this.maxacts[n].values[nb]);
 
-                    for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                        this.maxacts[n].sm[nb] = Math.exp(this.maxacts[n].values[nb])/sm;
+                for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                    this.maxacts[n].sm[nb] = Math.exp(this.maxacts[n].values[nb])/sm;
 
-                        if(nb === this.maxacts[n].action)
-                            this.maxacts[n].value = this.maxacts[n].sm[nb];
-                    }
-                }*/
-
-                this.onAction(this.maxacts);
+                    if(nb === this.maxacts[n].action)
+                        this.maxacts[n].value = this.maxacts[n].sm[nb];
+                }
+            }*/
             //}
         }
+        if(this.onAction !== null)
+            this.onAction(this.maxacts);
     };
 
     /**
@@ -1353,65 +1358,156 @@ export class Graph {
         for(let n=0; n < this.maxacts.length; n++) {
             for(let nb=0; nb < this.efferentNodesCount; nb++) {
                 // output
-                this.maxacts[n].o[nb] = (this.maxacts[n].values[nb]-this.maxacts[n].y[nb]);
+                this.maxacts[n].o[nb] = /*(this.maxacts[n].y[nb] !== 0.0) ? */(this.maxacts[n].values[nb]-this.maxacts[n].y[nb])/* : 0.0*/;
 
-                // l2 cost
+                // MSE
                 cost += this.maxacts[n].o[nb]*this.maxacts[n].o[nb];
             }
         }
 
+
+
+
+        // 1
+        let cr = 0;
+        for(let r=0; r < this.batch_repeats; r++) {
+            let dd = [];
+            for(let n=0; n < this.gpu_batch_size; n++) {
+                for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                    let cc = this.maxacts[cr].o[nb]; // 0.5*this.maxacts[cr].o[nb]*this.maxacts[cr].o[nb]
+                    dd.push(cc);
+                }
+                cr++;
+            }
+
+            // send
+            for(let n=0; n < this.gpu_batch_size; n++) {
+                this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return dd.slice(0, this.efferentNodesCount);});
+                dd = dd.slice(this.efferentNodesCount);
+            }
+
+            // backpropagation (gradient descent)
+            for(let n=0; n < (this.layerCount); n++)
+                this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
+
+
+            // weights update
+            //this.comp_renderer_nodes.gpufG.disableKernel(0);
+            this.comp_renderer_nodes.gpufG.enableKernel(1);
+            this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
+            this._sce.getLoadedProject().getActiveStage().tick(); // sum l2 quadratic weights & l1 abs weights
+            this._sce.getLoadedProject().getActiveStage().tick(); // weights update
+            //this.comp_renderer_nodes.tick();
+            //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
+            this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
+            this.comp_renderer_nodes.gpufG.disableKernel(1);
+            //this.comp_renderer_nodes.gpufG.enableKernel(0);
+        }
+
+
+        // 2
         /*let dc = [];
-        for(let n=0; n < this.maxacts.length; n++) {
-            for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                dc[nb] += this.maxacts[n].o[nb]*this.maxacts[n].values[nb];
+        for(let nb=0; nb < this.efferentNodesCount; nb++)
+            dc[nb] = 0.0;
+
+        let cr = 0;
+        for(let r=0; r < this.batch_repeats; r++) {
+            for(let n=0; n < this.gpu_batch_size; n++) {
+                for(let nb=0; nb < this.efferentNodesCount; nb++)
+                    dc[nb] += this.maxacts[cr].o[nb]; // 0.5*this.maxacts[cr].o[nb]*this.maxacts[cr].o[nb]
+
+                cr++;
             }
         }
 
-        let dd = [];
-        for(let n=0; n < this.maxacts.length; n++) {
-            for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                //let cc = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? cost*0.5 : 0.0;
-                let cc = dc[nb]/this.maxacts.length;
-                dd.push(cc);
+        cr = 0;
+        for(let r=0; r < this.batch_repeats; r++) {
+            let dd = [];
+            for(let n=0; n < this.gpu_batch_size; n++) {
+                for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                    let cc = dc[nb]/(this.gpu_batch_size*this.batch_repeats);
+                    dd.push(cc);
+                }
+                cr++;
             }
+
+            // send
+            for(let n=0; n < this.gpu_batch_size; n++) {
+                this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return dd.slice(0, this.efferentNodesCount);});
+                dd = dd.slice(this.efferentNodesCount);
+            }
+
+            // backpropagation (gradient descent)
+            for(let n=0; n < (this.layerCount); n++)
+                this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
+
+
+            // weights update
+            //this.comp_renderer_nodes.gpufG.disableKernel(0);
+            this.comp_renderer_nodes.gpufG.enableKernel(1);
+            this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
+            this._sce.getLoadedProject().getActiveStage().tick(); // sum l2 quadratic weights & l1 abs weights
+            this._sce.getLoadedProject().getActiveStage().tick(); // weights update
+            //this.comp_renderer_nodes.tick();
+            //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
+            this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
+            this.comp_renderer_nodes.gpufG.disableKernel(1);
+            //this.comp_renderer_nodes.gpufG.enableKernel(0);
         }*/
 
-        let dd = [];
-        for(let n=0; n < this.maxacts.length; n++) {
-            for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                //let cc = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? cost*0.5 : 0.0;
-                let cc = this.maxacts[n].o[nb];
-                dd.push(cc);
+
+        // 3
+        /*let cr = 0;
+        for(let r=0; r < this.batch_repeats; r++) {
+            let dd = [];
+            for(let n=0; n < this.gpu_batch_size; n++) {
+                for(let nb=0; nb < this.efferentNodesCount; nb++) {
+                    let cc = this.maxacts[cr].o[nb]; // 0.5*this.maxacts[cr].o[nb]*this.maxacts[cr].o[nb]
+                    dd.push(cc);
+                }
+                cr++;
             }
+
+            // send
+            for(let n=0; n < this.gpu_batch_size; n++) {
+                this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return dd.slice(0, this.efferentNodesCount);});
+                dd = dd.slice(this.efferentNodesCount);
+            }
+
+            // backpropagation (gradient descent)
+            for(let n=0; n < (this.layerCount); n++)
+                this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
+
+
+            this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
+
+            // backpropagation (gradient descent)
+            for(let n=0; n < (this.layerCount); n++)
+                this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
+
+            this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
+            this.comp_renderer_nodes.gpufG.enableKernel(1);
+
+            this.comp_renderer_nodes.setArg("updateTheta", () => {return 0.0;}); // costSum first
+            this._sce.getLoadedProject().getActiveStage().tick();
+            //this.comp_renderer_nodes.tick();
+            //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
+
+            this.comp_renderer_nodes.gpufG.disableKernel(1);
         }
-
-
-
-        // send
-        for(let n=0; n < this.batch_size; n++) {
-            this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return dd.slice(0, this.efferentNodesCount);});
-            dd = dd.slice(this.efferentNodesCount);
-        }
-
-
-        for(let n=0; n < (this.layerCount); n++)
-            this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
-
-
-        //this.comp_renderer_nodes.gpufG.disableKernel(0);
-        this.comp_renderer_nodes.gpufG.enableKernel(1);
+        // weights update
         this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
-        this._sce.getLoadedProject().getActiveStage().tick();
-        this._sce.getLoadedProject().getActiveStage().tick();
-        //this.comp_renderer_nodes.tick();
-        //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
-        this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
-        this.comp_renderer_nodes.gpufG.disableKernel(1);
-        //this.comp_renderer_nodes.gpufG.enableKernel(0);
+        this.comp_renderer_nodes.gpufG.enableKernel(1);
 
+        this.comp_renderer_nodes.setArg("updateTheta", () => {return 1.0;});
+        this._sce.getLoadedProject().getActiveStage().tick(); // sum l2 quadratic weights & l1 abs weights
+        this._sce.getLoadedProject().getActiveStage().tick(); // now weights update
+
+        this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
+        this.comp_renderer_nodes.gpufG.disableKernel(1);*/
 
         if(this.onTrained !== null)
-            this.onTrained(0.5*cost);
+            this.onTrained(cost);
     };
 
     getNeuronOutput(neuronName, loc) {
@@ -2231,8 +2327,9 @@ export class Graph {
         this.comp_renderer_nodes.setArg("layerCount", () => {return this.layerCount;});
         this.comp_renderer_nodes.setArg("learningRate", () => {return 0.01;});
         this.comp_renderer_nodes.setArg("viewNeuronDynamics", () => {return 0.0;});
-        this.comp_renderer_nodes.setArg("gpu_batch_repeats", () => {return this.gpu_batch_repeats;});
+        this.comp_renderer_nodes.setArg("batch_repeats", () => {return this.batch_repeats;});
         this.comp_renderer_nodes.setArg("enableTrain", () => {return this.enableTrain;});
+        this.comp_renderer_nodes.setArg("updateTheta", () => {return this.updateTheta;});
         this.comp_renderer_nodes.setArg("afferentNodesCount", () => {return this.afferentNodesCount;});
         this.comp_renderer_nodes.setArg("efferentNodesCount", () => {return this.efferentNodesCount;});
         this.comp_renderer_nodes.setArg("efferentStart", () => {return this.currentNodeId-this.efferentNodesCount;});

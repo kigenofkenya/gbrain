@@ -5,14 +5,12 @@ import {Graph} from "./Graph.class";
  * @param {Object} jsonIn
  * @param {HTMLElement} jsonIn.target
  * @param {Object} [jsonIn.dimensions={width: Int, height: Int}]
- * @param {int} jsonIn.gpu_batch_repeats
+ * @param {int} jsonIn.batch_repeats
  */
 export class GBrain {
     constructor(jsonIn) {
         this.project = null;
         this.graph = null;
-
-        this.batch_size = 5;
 
         this.ini(jsonIn);
     }
@@ -21,7 +19,7 @@ export class GBrain {
      * @param {Object} jsonIn
      * @param {HTMLElement} jsonIn.target
      * @param {Object} [jsonIn.dimensions={width: Int, height: Int}]
-     * @param {int} jsonIn.gpu_batch_repeats
+     * @param {int} jsonIn.batch_repeats
      * @param {number} jsonIn.learning_rate
      * @param {WebGLRenderingContext} [jsonIn.gl=undefined]
      */
@@ -52,8 +50,7 @@ export class GBrain {
         this.inputCount = 0;
         this.outputCount = 0;
         this.neuronLayers = [];
-        this.graph.batch_size = this.batch_size;
-        this.graph.gpu_batch_repeats = jsonIn.gpu_batch_repeats;
+        this.graph.batch_repeats = jsonIn.batch_repeats;
         this.initialLearningRate = jsonIn.learning_rate;
         this.currentLearningRate = jsonIn.learning_rate;
 
@@ -202,7 +199,7 @@ export class GBrain {
         this.sce.target.innerHTML = "";
         this.ini({  "target": this.sce.target,
                     "dimensions": this.sce.dimensions,
-                    "gpu_batch_repeats": this.graph.gpu_batch_repeats,
+                    "batch_repeats": this.graph.batch_repeats,
                     "learning_rate": this.currentLearningRate});
         this.makeLayers(layer_defs);
     };
