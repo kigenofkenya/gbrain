@@ -60,34 +60,9 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float lr = learningRate;
                 float l1_decay = 0.0;
                 float l2_decay = 0.01;
-                float gpu_batch_size =5.0;
+                float gpu_batch_size =5.0;                
                 
-                
-                if(linkLayerNum < layerCount-2.0) { 
-                    parentGOutputDerivA = (parentGInputsumA <= 0.0) ? 0.01 : 1.0;                    
-                    parentGOutputDerivB = (parentGInputsumB <= 0.0) ? 0.01 : 1.0;
-                    parentGOutputDerivC = (parentGInputsumC <= 0.0) ? 0.01 : 1.0;
-                    parentGOutputDerivD = (parentGInputsumD <= 0.0) ? 0.01 : 1.0;
-                    parentGOutputDerivE = (parentGInputsumE <= 0.0) ? 0.01 : 1.0;
-                }
-                if(weightQuadSum != 0.0) {
-                    linkWeight += -lr* ( (l2_decay*weightQuadSum) + (l1_decay*weightAbsSum) + ((childGDeltaA*parentGOutputDerivA*childGOutputA)/(gpu_batch_size*batch_repeats)) );
-                    linkWeight += -lr* ( (l2_decay*weightQuadSum) + (l1_decay*weightAbsSum) + ((childGDeltaB*parentGOutputDerivB*childGOutputB)/(gpu_batch_size*batch_repeats)) );
-                    linkWeight += -lr* ( (l2_decay*weightQuadSum) + (l1_decay*weightAbsSum) + ((childGDeltaC*parentGOutputDerivC*childGOutputC)/(gpu_batch_size*batch_repeats)) );
-                    linkWeight += -lr* ( (l2_decay*weightQuadSum) + (l1_decay*weightAbsSum) + ((childGDeltaD*parentGOutputDerivD*childGOutputD)/(gpu_batch_size*batch_repeats)) );
-                    linkWeight += -lr* ( (l2_decay*weightQuadSum) + (l1_decay*weightAbsSum) + ((childGDeltaE*parentGOutputDerivE*childGOutputE)/(gpu_batch_size*batch_repeats)) ); 
-                    
-                    ${/*linkWeight = linkWeight-lr* ( ((childGDeltaA*parentGOutputDerivA) + (l2_decay*weightQuadSum) + (l1_decay*weightAbsSum)) );*/''}
-                    
-                    weightQuadSum = 0.0;
-                    weightAbsSum = 0.0;
-                } else {
-                    weightQuadSum += linkWeight*linkWeight;
-                    weightAbsSum += abs(linkWeight);
-                }
-                
-                
-                ${/*if(updateTheta == 1.0) {
+                if(updateTheta == 1.0) {
                     if(weightQuadSum != 0.0) {
                         linkWeight += -lr* ( (l2_decay*weightQuadSum) + (l1_decay*weightAbsSum) + (costSum/(gpu_batch_size*batch_repeats)) );
                         weightQuadSum = 0.0;
@@ -110,7 +85,7 @@ export class KERNEL_ADJMATRIX_UPDATE {
                     costSum += childGDeltaC*parentGOutputDerivC*childGOutputC;
                     costSum += childGDeltaD*parentGOutputDerivD*childGOutputD;
                     costSum += childGDeltaE*parentGOutputDerivE*childGOutputE;
-                }*/''}
+                }
             }
             
             return [vec4(linkLayerNum, weightQuadSum, linkWeight, linkTypeParent), vec4(weightAbsSum, costSum, adjMatB.z, adjMatB.w)];

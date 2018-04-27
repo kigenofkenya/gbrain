@@ -1367,97 +1367,7 @@ export class Graph {
 
 
 
-
-        // 1
         let cr = 0;
-        for(let r=0; r < this.batch_repeats; r++) {
-            let dd = [];
-            for(let n=0; n < this.gpu_batch_size; n++) {
-                for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                    let cc = this.maxacts[cr].o[nb]; // 0.5*this.maxacts[cr].o[nb]*this.maxacts[cr].o[nb]
-                    dd.push(cc);
-                }
-                cr++;
-            }
-
-            // send
-            for(let n=0; n < this.gpu_batch_size; n++) {
-                this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return dd.slice(0, this.efferentNodesCount);});
-                dd = dd.slice(this.efferentNodesCount);
-            }
-
-            // backpropagation (gradient descent)
-            for(let n=0; n < (this.layerCount); n++)
-                this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
-
-
-            // weights update
-            //this.comp_renderer_nodes.gpufG.disableKernel(0);
-            this.comp_renderer_nodes.gpufG.enableKernel(1);
-            this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
-            this._sce.getLoadedProject().getActiveStage().tick(); // sum l2 quadratic weights & l1 abs weights
-            this._sce.getLoadedProject().getActiveStage().tick(); // weights update
-            //this.comp_renderer_nodes.tick();
-            //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
-            this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
-            this.comp_renderer_nodes.gpufG.disableKernel(1);
-            //this.comp_renderer_nodes.gpufG.enableKernel(0);
-        }
-
-
-        // 2
-        /*let dc = [];
-        for(let nb=0; nb < this.efferentNodesCount; nb++)
-            dc[nb] = 0.0;
-
-        let cr = 0;
-        for(let r=0; r < this.batch_repeats; r++) {
-            for(let n=0; n < this.gpu_batch_size; n++) {
-                for(let nb=0; nb < this.efferentNodesCount; nb++)
-                    dc[nb] += this.maxacts[cr].o[nb]; // 0.5*this.maxacts[cr].o[nb]*this.maxacts[cr].o[nb]
-
-                cr++;
-            }
-        }
-
-        cr = 0;
-        for(let r=0; r < this.batch_repeats; r++) {
-            let dd = [];
-            for(let n=0; n < this.gpu_batch_size; n++) {
-                for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                    let cc = dc[nb]/(this.gpu_batch_size*this.batch_repeats);
-                    dd.push(cc);
-                }
-                cr++;
-            }
-
-            // send
-            for(let n=0; n < this.gpu_batch_size; n++) {
-                this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return dd.slice(0, this.efferentNodesCount);});
-                dd = dd.slice(this.efferentNodesCount);
-            }
-
-            // backpropagation (gradient descent)
-            for(let n=0; n < (this.layerCount); n++)
-                this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
-
-
-            // weights update
-            //this.comp_renderer_nodes.gpufG.disableKernel(0);
-            this.comp_renderer_nodes.gpufG.enableKernel(1);
-            this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
-            this._sce.getLoadedProject().getActiveStage().tick(); // sum l2 quadratic weights & l1 abs weights
-            this._sce.getLoadedProject().getActiveStage().tick(); // weights update
-            //this.comp_renderer_nodes.tick();
-            //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
-            this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
-            this.comp_renderer_nodes.gpufG.disableKernel(1);
-            //this.comp_renderer_nodes.gpufG.enableKernel(0);
-        }*/
-
-
-        // 3
-        /*let cr = 0;
         for(let r=0; r < this.batch_repeats; r++) {
             let dd = [];
             for(let n=0; n < this.gpu_batch_size; n++) {
@@ -1504,7 +1414,7 @@ export class Graph {
         this._sce.getLoadedProject().getActiveStage().tick(); // now weights update
 
         this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
-        this.comp_renderer_nodes.gpufG.disableKernel(1);*/
+        this.comp_renderer_nodes.gpufG.disableKernel(1);
 
         if(this.onTrained !== null)
             this.onTrained(cost);
