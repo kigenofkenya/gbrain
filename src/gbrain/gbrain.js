@@ -204,8 +204,11 @@ export class GBrain {
         this.makeLayers(layer_defs);
     };
 
+    /**
+     * @returns {String}
+     */
     toJson() {
-        this.graph.toJson();
+        return this.graph.toJson();
     };
 
     /**

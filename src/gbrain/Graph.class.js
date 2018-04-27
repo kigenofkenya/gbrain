@@ -1123,6 +1123,9 @@ export class Graph {
         }
     };
 
+    /**
+     * @returns {String}
+     */
     toJson() {
         let adjMA = this.comp_renderer_nodes.gpufG.readArg("adjacencyMatrix");
 
@@ -1181,7 +1184,11 @@ export class Graph {
 
             currStartN += currLayerDepth;
         }
-        console.log(JSON.stringify(outJson));
+
+        let str = JSON.stringify(outJson);
+        console.log(str);
+
+        return str;
     };
 
     /**

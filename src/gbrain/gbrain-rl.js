@@ -85,9 +85,12 @@ export class GBrainRL {
             View weight*neuron output<input title="weight*output" type="checkbox" id="elem_enableOutputWeighted"/><br />
             View weight dynamics<input title="weight dynamics" type="checkbox" id="elem_enableWeightDynamics"/>
         </div>
-        <button id="BTNID_STOP" style="display:inline-block;">stop train</button>
-        <button id="BTNID_RESUME" style="display:inline-block;">resume train</button>
-        <button id="BTNID_TOJSON" style="display:inline-block;">toJson</button>
+        <button id="BTNID_STOP" style="display:inline-block;">Stop train</button>
+        <button id="BTNID_RESUME" style="display:inline-block;">Resume train</button>
+        <button id="BTNID_TOJSON" style="display:inline-block;">Output model in console</button>
+        <button id="BTNID_TOLSJSON" style="display:inline-block;">Save model in LocalStorage</button>
+        <button id="BTNID_FROMLSJSON" style="display:inline-block;">Load model from LocalStorage</button>
+        <br />
         <div id="el_gbrainDisplay"></div>
         `;
         this.el_info = jsonIn.target.querySelector("#el_info");
@@ -113,6 +116,13 @@ export class GBrainRL {
             this.toJson();
         });
 
+        jsonIn.target.querySelector("#BTNID_TOLSJSON").addEventListener("click", () => {
+            localStorage.trainedModel = this.toJson();
+        });
+        jsonIn.target.querySelector("#BTNID_FROMLSJSON").addEventListener("click", () => {
+            this.fromJson(JSON.parse(localStorage.trainedModel));
+        });
+
 
 
         this.avgLossWin = new AvgWin();
@@ -134,8 +144,11 @@ export class GBrainRL {
         this.gbrain.fromJson(jsonIn);
     };
 
+    /**
+     * @returns {String}
+     */
     toJson() {
-        this.gbrain.toJson();
+        return this.gbrain.toJson();
     };
 
     getNetInput(xt) {
