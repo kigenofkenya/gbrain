@@ -1040,7 +1040,7 @@ export class Graph {
             return u*c;
         };
         let randn = (mu, std) => { return mu+gaussRandom()*std; };
-        let scale = (jsonIn.layer_neurons_count !== undefined && jsonIn.layer_neurons_count !== null) ? (0.14-Math.sqrt(2.0/(jsonIn.layer_neurons_count-1))) : Math.sqrt(1.0/(50));
+        let scale = (jsonIn.layer_neurons_count !== undefined && jsonIn.layer_neurons_count !== null) ? (0.14-Math.sqrt(2.0/(jsonIn.layer_neurons_count-1))) : Math.sqrt(2.0/(50));
 
         let _activationFunc = (jsonIn.activationFunc !== undefined && jsonIn.activationFunc !== null) ? jsonIn.activationFunc : 1.0;
         let _weight = (jsonIn.weight !== undefined && jsonIn.weight !== null) ? jsonIn.weight : Math.abs(randn(0.0, scale));
@@ -1052,7 +1052,7 @@ export class Graph {
             "directed": true,
             "showArrow": false,
             "activationFunc": _activationFunc,
-            "weight": ((_weight === null && this._nodesByName[jsonIn.neuronNameA].biasNeuron === 1.0) ? 0.1 : _weight),
+            "weight": ((_weight === null && this._nodesByName[jsonIn.neuronNameA].biasNeuron === 1.0) ? 0.01 : _weight),
             "linkMultiplier": _linkMultiplier,
             "layerNum": jsonIn.layerNum});
     };
@@ -1379,7 +1379,7 @@ export class Graph {
             let dd = [];
             for(let n=0; n < this.gpu_batch_size; n++) {
                 for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                    let cc = this.maxacts[cr].o[nb]; // 0.5*this.maxacts[cr].o[nb]*this.maxacts[cr].o[nb]
+                    let cc = 0.5*this.maxacts[cr].o[nb]*this.maxacts[cr].o[nb]; // this.maxacts[cr].o[nb]*this.maxacts[cr].o[nb]
                     dd.push(cc);
                 }
                 cr++;

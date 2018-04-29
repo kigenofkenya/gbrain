@@ -103,28 +103,37 @@ export class KERNEL_DIR {
                         float oppositeActivationFn = pixAdjMatBOpposite.y;
             
             
+            
                         ${/* dataB Current */''}
                         float currentBiasNode = dataB[xGeomCurrent].x;
-                        ${/* float currentNetOutput = dataB[xGeomCurrent].z; */''}
-                        ${/* float currentNetError = dataB[xGeomCurrent].w; */''}
+                        ${/* float currentNetOutputA = dataB[xGeomCurrent].z;
+                        float currentNetOutputB = dataF[xGeomCurrent].y;
+                        float currentNetOutputC = dataG[xGeomCurrent].x;
+                        float currentNetOutputD = dataG[xGeomCurrent].w;
+                        float currentNetOutputE = dataH[xGeomCurrent].z; */''}
             
                         ${/* dataB Opposite */''}
                         float oppositeBiasNode = dataB[xGeomOpposite].x;
                         
                         float oppositeNetErrorA = dataB[xGeomOpposite].y;
                         float oppositeNetOutputA = dataB[xGeomOpposite].z;
+                        float oppositeInputsumA = dataB[xGeomOpposite].w;
                         
                         float oppositeNetErrorB = dataF[xGeomOpposite].x;
                         float oppositeNetOutputB = dataF[xGeomOpposite].y;
+                        float oppositeInputsumB = dataF[xGeomOpposite].z;
                     
                         float oppositeNetErrorC = dataF[xGeomOpposite].w;
                         float oppositeNetOutputC = dataG[xGeomOpposite].x;
+                        float oppositeInputsumC = dataG[xGeomOpposite].y;
                     
                         float oppositeNetErrorD = dataG[xGeomOpposite].z;
                         float oppositeNetOutputD = dataG[xGeomOpposite].w;
+                        float oppositeInputsumD = dataH[xGeomOpposite].x;
                     
                         float oppositeNetErrorE = dataH[xGeomOpposite].y;
                         float oppositeNetOutputE = dataH[xGeomOpposite].z;
+                        float oppositeInputsumE = dataH[xGeomOpposite].w;
             
             
                         ${/* pos & dir Current */''}
@@ -155,19 +164,32 @@ export class KERNEL_DIR {
                             atraction += dirToOppositeN*max(1.0, distN*abs(oppositeWeight)*(m1/2.0));
                             repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(oppositeWeight)*(m2/2.0));
                             acumAtraction += 1.0;
-                        } else if(currentIsParent == 0.5) {                            
+                        } else if(currentIsParent == 0.5) {
+                            float parentGOutputDerivA = 1.0;                    
+                            float parentGOutputDerivB = 1.0;
+                            float parentGOutputDerivC = 1.0;
+                            float parentGOutputDerivD = 1.0;
+                            float parentGOutputDerivE = 1.0;
+                            if(currentLayerNum < layerCount-1.0) { 
+                                parentGOutputDerivA = (oppositeInputsumA <= 0.0) ? 0.01 : 1.0;                    
+                                parentGOutputDerivB = (oppositeInputsumB <= 0.0) ? 0.01 : 1.0;
+                                parentGOutputDerivC = (oppositeInputsumC <= 0.0) ? 0.01 : 1.0;
+                                parentGOutputDerivD = (oppositeInputsumD <= 0.0) ? 0.01 : 1.0;
+                                parentGOutputDerivE = (oppositeInputsumE <= 0.0) ? 0.01 : 1.0;
+                            }
+                            
                             if(currentBiasNode == 0.0) {
-                                netParentErrorWeightA += oppositeNetErrorA*currentWeight;
-                                netParentErrorWeightB += oppositeNetErrorB*currentWeight;
-                                netParentErrorWeightC += oppositeNetErrorC*currentWeight;
-                                netParentErrorWeightD += oppositeNetErrorD*currentWeight;
-                                netParentErrorWeightE += oppositeNetErrorE*currentWeight;
+                                netParentErrorWeightA += oppositeNetErrorA*parentGOutputDerivA*currentWeight;
+                                netParentErrorWeightB += oppositeNetErrorB*parentGOutputDerivB*currentWeight;
+                                netParentErrorWeightC += oppositeNetErrorC*parentGOutputDerivC*currentWeight;
+                                netParentErrorWeightD += oppositeNetErrorD*parentGOutputDerivD*currentWeight;
+                                netParentErrorWeightE += oppositeNetErrorE*parentGOutputDerivE*currentWeight;
                             } else {
-                                netParentErrorWeightA += oppositeNetErrorA;
-                                netParentErrorWeightB += oppositeNetErrorB;
-                                netParentErrorWeightC += oppositeNetErrorC;
-                                netParentErrorWeightD += oppositeNetErrorD;
-                                netParentErrorWeightE += oppositeNetErrorE;
+                                netParentErrorWeightA += oppositeNetErrorA*parentGOutputDerivA;
+                                netParentErrorWeightB += oppositeNetErrorB*parentGOutputDerivB;
+                                netParentErrorWeightC += oppositeNetErrorC*parentGOutputDerivC;
+                                netParentErrorWeightD += oppositeNetErrorD*parentGOutputDerivD;
+                                netParentErrorWeightE += oppositeNetErrorE*parentGOutputDerivE;
                             }
                             atraction += dirToOppositeN*max(1.0, distN*abs(currentWeight)*m1);
                             repulsion += -dirToOppositeN*max(1.0, (1.0-distN)*abs(currentWeight)*m2);
