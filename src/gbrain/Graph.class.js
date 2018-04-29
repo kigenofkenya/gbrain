@@ -1052,7 +1052,7 @@ export class Graph {
             "directed": true,
             "showArrow": false,
             "activationFunc": _activationFunc,
-            "weight": ((_weight === null && this._nodesByName[jsonIn.neuronNameA].biasNeuron === 1.0) ? 0.01 : _weight),
+            "weight": ((this._nodesByName[jsonIn.neuronNameA].biasNeuron === 1.0) ? 1.0 : _weight),
             "linkMultiplier": _linkMultiplier,
             "layerNum": jsonIn.layerNum});
     };
@@ -1368,7 +1368,7 @@ export class Graph {
                 this.maxacts[n].o[nb] = /*(this.maxacts[n].y[nb] !== 0.0) ? */(this.maxacts[n].values[nb]-this.maxacts[n].y[nb])/* : 0.0*/;
 
                 // MSE
-                cost += this.maxacts[n].o[nb]*this.maxacts[n].o[nb];
+                cost += 0.5*this.maxacts[n].o[nb]*this.maxacts[n].o[nb];
             }
         }
 
@@ -1379,7 +1379,7 @@ export class Graph {
             let dd = [];
             for(let n=0; n < this.gpu_batch_size; n++) {
                 for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                    let cc = 0.5*this.maxacts[cr].o[nb]*this.maxacts[cr].o[nb]; // this.maxacts[cr].o[nb]*this.maxacts[cr].o[nb]
+                    let cc = this.maxacts[cr].o[nb];
                     dd.push(cc);
                 }
                 cr++;

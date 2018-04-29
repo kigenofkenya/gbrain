@@ -329,7 +329,7 @@ export class GBrainRL {
                         this.gbrain.forward(this.arrInputs, (data) => {
                             this.gbrain.train(this.arrTargets, (loss) => {
 
-                                this.loss = loss/(this.gbrain.graph.batch_repeats*this.gbrain.graph.gpu_batch_size*2);
+                                this.loss = loss/(this.gbrain.graph.batch_repeats*this.gbrain.graph.gpu_batch_size);
                                 this.avgLossWin.add(Math.min(10.0, this.loss));
 
                                 this.costPlot.add(this.clock, this.avgLossWin.get_average());

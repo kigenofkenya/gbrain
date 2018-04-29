@@ -64,7 +64,7 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 
                 if(updateTheta == 1.0) {
                     if(weightQuadSum != 0.0) {
-                        linkWeight += -lr* (( (l2_decay*linkWeight) + (l1_decay*linkWeight) + (costSum) )/(gpu_batch_size*batch_repeats)) ;
+                        linkWeight += -lr* ((  (costSum/(gpu_batch_size*batch_repeats)) )) ;
                         weightQuadSum = 0.0;
                         weightAbsSum = 0.0;
                         costSum = 0.0;

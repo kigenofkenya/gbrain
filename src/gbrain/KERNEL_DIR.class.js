@@ -281,11 +281,11 @@ export class KERNEL_DIR {
                 foutputD = netChildInputSumD;
                 foutputE = netChildInputSumE;
                     
-                netParentErrorWeightA = efferentNodesA[`+Math.round(n-efferentStart)+`];
-                netParentErrorWeightB = efferentNodesB[`+Math.round(n-efferentStart)+`];
-                netParentErrorWeightC = efferentNodesC[`+Math.round(n-efferentStart)+`];
-                netParentErrorWeightD = efferentNodesD[`+Math.round(n-efferentStart)+`];
-                netParentErrorWeightE = efferentNodesE[`+Math.round(n-efferentStart)+`];
+                netParentErrorWeightA = 0.5*efferentNodesA[`+Math.round(n-efferentStart)+`]*efferentNodesA[`+Math.round(n-efferentStart)+`];
+                netParentErrorWeightB = 0.5*efferentNodesB[`+Math.round(n-efferentStart)+`]*efferentNodesB[`+Math.round(n-efferentStart)+`];
+                netParentErrorWeightC = 0.5*efferentNodesC[`+Math.round(n-efferentStart)+`]*efferentNodesC[`+Math.round(n-efferentStart)+`];
+                netParentErrorWeightD = 0.5*efferentNodesD[`+Math.round(n-efferentStart)+`]*efferentNodesD[`+Math.round(n-efferentStart)+`];
+                netParentErrorWeightE = 0.5*efferentNodesE[`+Math.round(n-efferentStart)+`]*efferentNodesE[`+Math.round(n-efferentStart)+`];
             }`;
         }
         return str;
