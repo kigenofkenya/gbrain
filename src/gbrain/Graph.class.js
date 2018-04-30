@@ -1357,9 +1357,8 @@ export class Graph {
         // linear regression
         let cost = 0.0;
         for(let n=0; n < this.maxacts.length; n++) {
-            for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                this.maxacts[n].y[nb] = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) ? jsonIn.reward[n].val : 0.0;
-            }
+            for(let nb=0; nb < this.efferentNodesCount; nb++)
+                this.maxacts[n].y[nb] = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb && jsonIn.reward[n].val < 0) ? jsonIn.reward[n].val : 0.0;
         }
 
         for(let n=0; n < this.maxacts.length; n++) {
