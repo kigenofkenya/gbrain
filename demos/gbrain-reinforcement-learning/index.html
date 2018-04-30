@@ -296,7 +296,7 @@
                 "epsilon_test_time": 0.05,
                 "start_learn_threshold": 500,
                 "batch_repeats": 1, // 1*5 (1cpu=5gpu training sets)
-                "learning_rate": 0.000001,
+                "learning_rate": 0.001,
                 "layer_defs": layer_defs});
         } else {
             layer_defs.push({type:'input', out_sx:1, out_sy:1, out_depth:network_size});

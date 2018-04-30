@@ -151,7 +151,7 @@ export class KERNEL_DIR {
                         float dist = distance(oppositePos, currentPos); ${/* near=0.0 ; far=1.0 */''}
                         float distN = max(0.0,dist)/100000.0;
             
-                        float mm = 200.0;
+                        float mm = 10000000.0;
                         float m1 = 400000.0/mm;
                         float m2 = 48.0/mm;
                         if(currentIsParent == 1.0) {
@@ -288,6 +288,14 @@ export class KERNEL_DIR {
                 netParentErrorWeightE = 0.5*efferentNodesE[`+Math.round(n-efferentStart)+`]*efferentNodesE[`+Math.round(n-efferentStart)+`];
             }`;
         }
+        /*str += `
+        else {
+            netParentErrorWeightA *= dataB[xGeometry].z;
+            netParentErrorWeightB *= dataF[xGeometry].y;
+            netParentErrorWeightC *= dataG[xGeometry].x;
+            netParentErrorWeightD *= dataG[xGeometry].w;
+            netParentErrorWeightE *= dataH[xGeometry].z;
+        }`;*/
         return str;
     };
 }
