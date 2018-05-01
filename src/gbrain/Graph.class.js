@@ -1357,17 +1357,17 @@ export class Graph {
         // linear regression
         let cost = 0.0;
         for(let n=0; n < this.maxacts.length; n++) {
-            for(let nb=0; nb < this.efferentNodesCount; nb++)
-                this.maxacts[n].y[nb] = (jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb && jsonIn.reward[n].val < 0) ? jsonIn.reward[n].val : 0.0;
-        }
-
-        for(let n=0; n < this.maxacts.length; n++) {
             for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                // output
-                this.maxacts[n].o[nb] = /*(this.maxacts[n].y[nb] !== 0.0) ? */(this.maxacts[n].values[nb]-this.maxacts[n].y[nb])/* : 0.0*/;
+                if(jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb/* jsonIn.reward[n].val < 0*/) {
+                    this.maxacts[n].y[nb] = jsonIn.reward[n].val;
+                    this.maxacts[n].o[nb] = this.maxacts[n].values[nb]-this.maxacts[n].y[nb];
 
-                // MSE
-                cost += 0.5*this.maxacts[n].o[nb]*this.maxacts[n].o[nb];
+                    // MSE
+                    cost += 0.5*this.maxacts[n].o[nb]*this.maxacts[n].o[nb];
+                } else {
+                    this.maxacts[n].y[nb] = 0.0;
+                    this.maxacts[n].o[nb] = 0.0;
+                }
             }
         }
 
@@ -1389,11 +1389,6 @@ export class Graph {
                 this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return dd.slice(0, this.efferentNodesCount);});
                 dd = dd.slice(this.efferentNodesCount);
             }
-
-            // backpropagation (gradient descent)
-            for(let n=0; n < (this.layerCount); n++)
-                this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
-
 
             this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
 
