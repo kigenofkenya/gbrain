@@ -4,13 +4,15 @@ export class KERNEL_ADJMATRIX_UPDATE {
     }
 
     static getSrc(geometryLength) {
-        return ["x", ["adjacencyMatrix", "adjacencyMatrixB"],
+        return ["x", ["adjacencyMatrix", "adjacencyMatrixB", "adjacencyMatrixC", "adjacencyMatrixD"],
             // head
             "",
 
             // source
             `vec4 adjMat = adjacencyMatrix[x]; 
             vec4 adjMatB = adjacencyMatrixB[x];
+            vec4 adjMatC = adjacencyMatrixC[x];
+            vec4 adjMatD = adjacencyMatrixD[x];
 
             float linkLayerNum = adjMat.x;
             float weightQuadSum = adjMat.y;
@@ -18,77 +20,114 @@ export class KERNEL_ADJMATRIX_UPDATE {
             float linkTypeParent = adjMat.w;
             
             float weightAbsSum = adjMatB.x;
-            float costSum = adjMatB.y;
+            float costA = adjMatB.y;
+            float costB = adjMatC.x;
+            float costC = adjMatC.y;
+            float costD = adjMatC.z;
+            float costE = adjMatC.w;
+            float costF = adjMatD.x;
+            float costG = adjMatD.y;
             
-            if(linkTypeParent == 0.5 && linkLayerNum >= 0.0) {
+            if(currentTrainLayer == -10.0) { 
+                costA = 0.0;
+                costB = 0.0;
+                costC = 0.0;
+                costD = 0.0;
+                costE = 0.0;
+                costF = 0.0;
+                costG = 0.0;
+            } else if(linkTypeParent == 0.5 && linkLayerNum >= 0.0) {
                 float id = adjMatB.z;
                 float idInv = adjMatB.w;
             
                 vec2 xGeometryCurrentChild = get_global_id(id, bufferNodesWidth, `+geometryLength.toFixed(1)+`);
                 vec2 xGeometryParent = get_global_id(idInv, bufferNodesWidth, `+geometryLength.toFixed(1)+`);
 
-                float childGDeltaA = dataB[xGeometryCurrentChild].y;
+
+                float childBiasNode = dataB[xGeometryCurrentChild].x;
+                
                 float childGOutputA = dataB[xGeometryCurrentChild].z;
+                float childGOutputB = dataF[xGeometryCurrentChild].x;
+                float childGOutputC = dataF[xGeometryCurrentChild].z;
+                float childGOutputD = dataG[xGeometryCurrentChild].x;
+                float childGOutputE = dataG[xGeometryCurrentChild].z;
+                float childGOutputF = dataH[xGeometryCurrentChild].x;
+                float childGOutputG = dataH[xGeometryCurrentChild].z;
+                
+                
                 float parentGOutputA = dataB[xGeometryParent].z;
-                float parentGInputsumA = dataB[xGeometryParent].w;
-                float parentGOutputDerivA = 1.0;
+                float parentGOutputB = dataF[xGeometryParent].x;
+                float parentGOutputC = dataF[xGeometryParent].z;
+                float parentGOutputD = dataG[xGeometryParent].x;
+                float parentGOutputE = dataG[xGeometryParent].z;
+                float parentGOutputF = dataH[xGeometryParent].x;
+                float parentGOutputG = dataH[xGeometryParent].z;
                 
-                float childGDeltaB = dataF[xGeometryCurrentChild].x;
-                float childGOutputB = dataF[xGeometryCurrentChild].y;
-                float parentGOutputB = dataF[xGeometryParent].y;
-                float parentGInputsumB = dataF[xGeometryParent].z;
-                float parentGOutputDerivB = 1.0;
+                float parentGDeltaA = dataB[xGeometryParent].y;
+                float parentGDeltaB = dataB[xGeometryParent].w;
+                float parentGDeltaC = dataF[xGeometryParent].y;
+                float parentGDeltaD = dataF[xGeometryParent].w;
+                float parentGDeltaE = dataG[xGeometryParent].y;
+                float parentGDeltaF = dataG[xGeometryParent].w;
+                float parentGDeltaG = dataH[xGeometryParent].y;
                 
-                float childGDeltaC = dataF[xGeometryCurrentChild].w;
-                float childGOutputC = dataG[xGeometryCurrentChild].x;
-                float parentGOutputC = dataG[xGeometryParent].x;
-                float parentGInputsumC = dataG[xGeometryParent].y;
-                float parentGOutputDerivC = 1.0;
                 
-                float childGDeltaD = dataG[xGeometryCurrentChild].z;
-                float childGOutputD = dataG[xGeometryCurrentChild].w;
-                float parentGOutputD = dataG[xGeometryParent].w;
-                float parentGInputsumD = dataH[xGeometryParent].x;
-                float parentGOutputDerivD = 1.0;
                 
-                float childGDeltaE = dataH[xGeometryCurrentChild].y;
-                float childGOutputE = dataH[xGeometryCurrentChild].z;
-                float parentGOutputE = dataH[xGeometryParent].z;
-                float parentGInputsumE = dataH[xGeometryParent].w;
-                float parentGOutputDerivE = 1.0;
-            
                 float lr = learningRate;
                 float l1_decay = 0.0;
                 float l2_decay = 0.01;
-                float gpu_batch_size =5.0;                
+                float gpu_batch_size = 7.0;     
                 
-                if(updateTheta == 1.0) {
-                    if(weightQuadSum != 0.0) {
-                        linkWeight += -lr* ((  (costSum/(gpu_batch_size*batch_repeats)) )) ;
-                        weightQuadSum = 0.0;
-                        weightAbsSum = 0.0;
-                        costSum = 0.0;
+                if(currentTrainLayer == linkLayerNum) {
+                    float parentGOutputDerivA = (parentGOutputA <= 0.0) ? 0.01 : 1.0;                    
+                    float parentGOutputDerivB = (parentGOutputB <= 0.0) ? 0.01 : 1.0;
+                    float parentGOutputDerivC = (parentGOutputC <= 0.0) ? 0.01 : 1.0;
+                    float parentGOutputDerivD = (parentGOutputD <= 0.0) ? 0.01 : 1.0;
+                    float parentGOutputDerivE = (parentGOutputE <= 0.0) ? 0.01 : 1.0;
+                    float parentGOutputDerivF = (parentGOutputF <= 0.0) ? 0.01 : 1.0;
+                    float parentGOutputDerivG = (parentGOutputG <= 0.0) ? 0.01 : 1.0;
+                    
+                    float dA = parentGDeltaA*parentGOutputDerivA;
+                    float dB = parentGDeltaB*parentGOutputDerivB;
+                    float dC = parentGDeltaC*parentGOutputDerivC;
+                    float dD = parentGDeltaD*parentGOutputDerivD;
+                    float dE = parentGDeltaE*parentGOutputDerivE;
+                    float dF = parentGDeltaF*parentGOutputDerivF;
+                    float dG = parentGDeltaG*parentGOutputDerivG;
+                    
+                    float wT = 0.0;
+                    wT += dA*childGOutputA;
+                    wT += dB*childGOutputB;
+                    wT += dC*childGOutputC;
+                    wT += dD*childGOutputD;
+                    wT += dE*childGOutputE;
+                    wT += dF*childGOutputF;
+                    wT += dG*childGOutputG;
+                    wT /= (gpu_batch_size*batch_repeats);
+                    
+                    if(childBiasNode == 0.0) {
+                        costA = dA*linkWeight;
+                        costB = dB*linkWeight;
+                        costC = dC*linkWeight;
+                        costD = dD*linkWeight;
+                        costE = dE*linkWeight;
+                        costF = dF*linkWeight;
+                        costG = dG*linkWeight;
                     } else {
-                        weightQuadSum += linkWeight*linkWeight;
-                        weightAbsSum += abs(linkWeight);
+                        costA = dA;
+                        costB = dB;
+                        costC = dC;
+                        costD = dD;
+                        costE = dE;
+                        costF = dF;
+                        costG = dG;
                     }
-                } else {
-                    if(linkLayerNum < layerCount-1.0) { 
-                        parentGOutputDerivA = (parentGInputsumA <= 0.0) ? 0.01 : 1.0;                    
-                        parentGOutputDerivB = (parentGInputsumB <= 0.0) ? 0.01 : 1.0;
-                        parentGOutputDerivC = (parentGInputsumC <= 0.0) ? 0.01 : 1.0;
-                        parentGOutputDerivD = (parentGInputsumD <= 0.0) ? 0.01 : 1.0;
-                        parentGOutputDerivE = (parentGInputsumE <= 0.0) ? 0.01 : 1.0;
-                    }
-                    costSum += childGDeltaA*parentGOutputDerivA;
-                    costSum += childGDeltaB*parentGOutputDerivB;
-                    costSum += childGDeltaC*parentGOutputDerivC;
-                    costSum += childGDeltaD*parentGOutputDerivD;
-                    costSum += childGDeltaE*parentGOutputDerivE;
+                    
+                    linkWeight += -lr*wT;
                 }
             }
             
-            return [vec4(linkLayerNum, weightQuadSum, linkWeight, linkTypeParent), vec4(weightAbsSum, costSum, adjMatB.z, adjMatB.w)];
+            return [vec4(linkLayerNum, weightQuadSum, linkWeight, linkTypeParent), vec4(weightAbsSum, costA, adjMatB.z, adjMatB.w), vec4(costB, costC, costD, costE), vec4(costF, costG, 0.0, 0.0)];
             `];
     };
 }

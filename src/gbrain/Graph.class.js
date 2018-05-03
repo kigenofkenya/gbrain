@@ -41,7 +41,7 @@ export class Graph {
         this.layer_defs = null;
         this.layerCount = 0;
         this.batch_repeats = 1;
-        this.gpu_batch_size = 5;
+        this.gpu_batch_size = 7;
         this.maxacts = [];
         this.afferentNodesCount = 0;
         this.efferentNodesCount = 0;
@@ -65,6 +65,8 @@ export class Graph {
 
         this.arrAdjMatrix = null; // null, null, linkWeight, columnAsParent
         this.arrAdjMatrixB = null;
+        this.arrAdjMatrixC = null;
+        this.arrAdjMatrixD = null;
 
         this.enableTrain = 0;
         this.updateTheta = 0;
@@ -423,6 +425,8 @@ export class Graph {
             'indices': () => {return null;},
             "float4* adjacencyMatrix": () => {return null;},
             "float4* adjacencyMatrixB": () => {return null;},
+            "float4* adjacencyMatrixC": () => {return null;},
+            "float4* adjacencyMatrixD": () => {return null;},
             "float widthAdjMatrix": () => {return null;},
             'float nodesCount': () => {return null;},
             'mat4 PMatrix': () => {return null;},
@@ -439,12 +443,14 @@ export class Graph {
             'float idToDrag': () => {return null;},
             'float idToHover': () => {return null;},
             "float enableForceLayout": () => {return null;},
+            'float currentTrainLayer': () => {return null;},
             'float layerCount': () => {return null;},
             "float learningRate": () => {return null;},
             "float batch_repeats": () => {return null;},
             'float afferentNodesCount': () => {return null;},
             'float efferentNodesCount': () => {return null;},
             'float efferentStart': () => {return null;},
+            'float freezeOutput': () => {return null;},
             'float enableTrain': () => {return null;},
             'float updateTheta': () => {return null;},
             'float multiplyOutput': () => {return null;},
@@ -1199,8 +1205,10 @@ export class Graph {
      */
     forward(jsonIn) {
         this.onAction = jsonIn.onAction;
-        let lett = ["A","B","C","D","E"];
-        let loc = [["dataB",2],["dataF",1],["dataG",0],["dataG",3],["dataH",2]];
+        let lett = ["A","B","C","D","E","F","G"];
+        let loc = [["dataB",2],["dataF",0],["dataF",2],["dataG",0],["dataG",2],["dataH",0],["dataH",2]];
+
+        this.comp_renderer_nodes.setArg("freezeOutput", () => {return 0.0;});
 
         // reset reward
         let reward = [];
@@ -1302,7 +1310,7 @@ export class Graph {
      */
     train(jsonIn) {
         this.onTrained = jsonIn.onTrained;
-        let lett = ["A","B","C","D","E"];
+        let lett = ["A","B","C","D","E","F","G"];
 
         // softmax regression
         /*let cost = 0.0;
@@ -1358,9 +1366,9 @@ export class Graph {
         let cost = 0.0;
         for(let n=0; n < this.maxacts.length; n++) {
             for(let nb=0; nb < this.efferentNodesCount; nb++) {
-                if(jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb/* jsonIn.reward[n].val < 0*/) {
+                if(jsonIn.reward[n] !== undefined && jsonIn.reward[n].dim === nb) {
                     this.maxacts[n].y[nb] = jsonIn.reward[n].val;
-                    this.maxacts[n].o[nb] = this.maxacts[n].values[nb]-this.maxacts[n].y[nb];
+                    this.maxacts[n].o[nb] = -(this.maxacts[n].y[nb]-this.maxacts[n].values[nb]);
 
                     // MSE
                     cost += 0.5*this.maxacts[n].o[nb]*this.maxacts[n].o[nb];
@@ -1371,6 +1379,16 @@ export class Graph {
             }
         }
 
+
+        this.comp_renderer_nodes.setArg("freezeOutput", () => {return 1.0;});
+        this.comp_renderer_nodes.setArg("currentTrainLayer", () => {return -10.0;});
+
+        this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
+        this.comp_renderer_nodes.gpufG.enableKernel(1);
+        this.comp_renderer_nodes.setArg("updateTheta", () => {return 0.0;});
+        this._sce.getLoadedProject().getActiveStage().tick();
+        this.comp_renderer_nodes.gpufG.disableKernel(1);
+        this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
 
 
         let cr = 0;
@@ -1383,39 +1401,28 @@ export class Graph {
                 }
                 cr++;
             }
-
             // send
             for(let n=0; n < this.gpu_batch_size; n++) {
                 this.comp_renderer_nodes.setArg("efferentNodes"+lett[n], () => {return dd.slice(0, this.efferentNodesCount);});
                 dd = dd.slice(this.efferentNodesCount);
             }
 
-            this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
+            this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
 
-            // backpropagation (gradient descent)
-            for(let n=0; n < (this.layerCount); n++)
+            for(let n=this.layerCount-2; n >= 0; n--) {
+                this.comp_renderer_nodes.setArg("currentTrainLayer", () => {return n;});
+
                 this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[0], true, true);
 
-            this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
-            this.comp_renderer_nodes.gpufG.enableKernel(1);
-
-            this.comp_renderer_nodes.setArg("updateTheta", () => {return 0.0;}); // costSum first
-            this._sce.getLoadedProject().getActiveStage().tick();
-            //this.comp_renderer_nodes.tick();
-            //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
-
-            this.comp_renderer_nodes.gpufG.disableKernel(1);
+                this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
+                this.comp_renderer_nodes.gpufG.enableKernel(1);
+                this._sce.getLoadedProject().getActiveStage().tick();
+                //this.comp_renderer_nodes.tick();
+                //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
+                this.comp_renderer_nodes.gpufG.disableKernel(1);
+                this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
+            }
         }
-        // weights update
-        this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
-        this.comp_renderer_nodes.gpufG.enableKernel(1);
-
-        this.comp_renderer_nodes.setArg("updateTheta", () => {return 1.0;});
-        this._sce.getLoadedProject().getActiveStage().tick(); // sum l2 quadratic weights & l1 abs weights
-        this._sce.getLoadedProject().getActiveStage().tick(); // now weights update
-
-        this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
-        this.comp_renderer_nodes.gpufG.disableKernel(1);
 
         if(this.onTrained !== null)
             this.onTrained(cost);
@@ -2235,10 +2242,12 @@ export class Graph {
         this.comp_renderer_nodes.setArg("nodeWMatrix", () => {return this.nodes.getComponent(Constants.COMPONENT_TYPES.TRANSFORM).getMatrixPosition().transpose().e;});
         this.comp_renderer_nodes.setArgUpdatable("nodeWMatrix", true);
 
+        this.comp_renderer_nodes.setArg("currentTrainLayer", () => {return -10;});
         this.comp_renderer_nodes.setArg("layerCount", () => {return this.layerCount;});
         this.comp_renderer_nodes.setArg("learningRate", () => {return 0.01;});
         this.comp_renderer_nodes.setArg("viewNeuronDynamics", () => {return 0.0;});
         this.comp_renderer_nodes.setArg("batch_repeats", () => {return this.batch_repeats;});
+        this.comp_renderer_nodes.setArg("freezeOutput", () => {return 0.0;});
         this.comp_renderer_nodes.setArg("enableTrain", () => {return this.enableTrain;});
         this.comp_renderer_nodes.setArg("updateTheta", () => {return this.updateTheta;});
         this.comp_renderer_nodes.setArg("afferentNodesCount", () => {return this.afferentNodesCount;});
@@ -2391,10 +2400,22 @@ export class Graph {
             this.arrAdjMatrixB[idx+1] = activationFunc; // not used here
             this.arrAdjMatrixB[idx+2] = nodeId;
             this.arrAdjMatrixB[idx+3] = nodeIdInv;
+
+            this.arrAdjMatrixC[idx] = 0.0;
+            this.arrAdjMatrixC[idx+1] = 0.0;
+            this.arrAdjMatrixC[idx+2] = 0.0;
+            this.arrAdjMatrixC[idx+3] = 0.0;
+
+            this.arrAdjMatrixD[idx] = 0.0;
+            this.arrAdjMatrixD[idx+1] = 0.0;
+            this.arrAdjMatrixD[idx+2] = 0.0;
+            this.arrAdjMatrixD[idx+3] = 0.0;
         };
 
         this.arrAdjMatrix = new Float32Array(this._ADJ_MATRIX_WIDTH*this._ADJ_MATRIX_WIDTH*4);
         this.arrAdjMatrixB = new Float32Array(this._ADJ_MATRIX_WIDTH*this._ADJ_MATRIX_WIDTH*4);
+        this.arrAdjMatrixC = new Float32Array(this._ADJ_MATRIX_WIDTH*this._ADJ_MATRIX_WIDTH*4);
+        this.arrAdjMatrixD = new Float32Array(this._ADJ_MATRIX_WIDTH*this._ADJ_MATRIX_WIDTH*4);
         for(let key in this._links) {
             let childNodeId = this._links[key].origin_nodeId;
             let parentNodeId = this._links[key].target_nodeId;
@@ -2407,6 +2428,8 @@ export class Graph {
 
         this.comp_renderer_nodes.setArg("adjacencyMatrix", () => {return this.arrAdjMatrix;});
         this.comp_renderer_nodes.setArg("adjacencyMatrixB", () => {return this.arrAdjMatrixB;});
+        this.comp_renderer_nodes.setArg("adjacencyMatrixC", () => {return this.arrAdjMatrixC;});
+        this.comp_renderer_nodes.setArg("adjacencyMatrixD", () => {return this.arrAdjMatrixD;});
 
         /*
         this.adjacencyMatrixToImage(this.arrAdjMatrix, this._ADJ_MATRIX_WIDTH, (img) => {
