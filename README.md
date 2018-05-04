@@ -19,6 +19,6 @@ April 2 2018
     <li>3. neuronA == Out neuron ? 1 : 0</li>
     <li>4. weight</li>
     </ul>
-<p>Of this manner is able to know and communicate the output function of one neuron with another neuron and propagate the error back too without we have send information to CPU on every layer result.</p>
+<p>Of this manner is able to know and communicate the output function of one neuron with another neuron (we not need element-wise matrixs) and propagate the error back too without we have send information to CPU on every layer result.</p>
 <p>On backpropagation the weight data is updated over the Adjacency Matrix</p>
 <p>Activation function is included inside own neuron, avoiding to have propagate it to any reluctance layer and so we gain better performance.</p>
