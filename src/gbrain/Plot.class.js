@@ -4,7 +4,9 @@ export class Plot {
         options = options || {};
         this.step_horizon = options.step_horizon || 1000;
 
+        this.currentMode = 0; // 0 total; 1 last 1000
         this.pts = [];
+        this.ptsT = [];
 
         this.maxy = -9999;
         this.miny = 9999;
@@ -17,6 +19,9 @@ export class Plot {
       if(y<this.miny*1.01) this.miny = y*0.95;
 
       this.pts.push({step: step, time: time, y: y});
+      if(this.pts.length > 1000)
+          this.pts.shift();
+      this.ptsT.push({step: step, time: time, y: y});
       if(step > this.step_horizon) this.step_horizon *= 2;
     }
     // elt is a canvas we wish to draw into
@@ -34,6 +39,7 @@ export class Plot {
         return '' + Math.floor(x*dd)/dd;
         }
 
+        let horizon = (this.currentMode === 0) ? this.step_horizon : 1000;
         // draw guidelines and values
         ctx.strokeStyle = "#999";
         ctx.beginPath();
@@ -42,7 +48,7 @@ export class Plot {
             let xpos = i/ng*(W-2*pad)+pad;
         ctx.moveTo(xpos, pad);
         ctx.lineTo(xpos, H-pad);
-        ctx.fillText(f2t(i/ng*this.step_horizon/1000)+'k',xpos,H-pad+14);
+        ctx.fillText(f2t(i/ng*horizon/1000)+'k',xpos,H-pad+14);
         }
         for(let i=0;i<=ng;i++) {
             let ypos = i/ng*(H-2*pad)+pad;
@@ -52,12 +58,15 @@ export class Plot {
         }
         ctx.stroke();
 
-        let N = this.pts.length;
+        let selectedPts = (this.currentMode === 0) ? this.ptsT : this.pts;
+        let N = selectedPts.length;
         if(N<2) return;
 
         // draw the actual curve
         let t = function(x, y, s) {
-            let tx = x / s.step_horizon * (W-pad*2) + pad;
+            let horizon = (s.currentMode === 0) ? s.step_horizon : 1000;
+
+            let tx = x / horizon * (W-pad*2) + pad;
             let ty = H - ((y-s.miny) / (s.maxy-s.miny) * (H-pad*2) + pad);
             return {tx:tx, ty:ty}
         }
@@ -66,12 +75,16 @@ export class Plot {
         ctx.beginPath()
         for(let i=0;i<N;i++) {
             // draw line from i-1 to i
-            let p = this.pts[i];
-            let pt = t(p.step, p.y, this);
+            let p = selectedPts[i];
+            let pt = t(((this.currentMode === 0)?p.step:i), p.y, this);
             if(i===0) ctx.moveTo(pt.tx, pt.ty);
             else ctx.lineTo(pt.tx, pt.ty);
         }
         ctx.stroke();
+    }
+
+    clear() {
+
     }
 }
 global.Plot = Plot;

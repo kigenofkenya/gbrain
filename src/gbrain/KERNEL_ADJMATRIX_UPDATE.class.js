@@ -79,51 +79,59 @@ export class KERNEL_ADJMATRIX_UPDATE {
                 float gpu_batch_size = 7.0;     
                 
                 if(currentTrainLayer == linkLayerNum) {
-                    float parentGOutputDerivA = (parentGOutputA <= 0.0) ? 0.01 : 1.0;                    
-                    float parentGOutputDerivB = (parentGOutputB <= 0.0) ? 0.01 : 1.0;
-                    float parentGOutputDerivC = (parentGOutputC <= 0.0) ? 0.01 : 1.0;
-                    float parentGOutputDerivD = (parentGOutputD <= 0.0) ? 0.01 : 1.0;
-                    float parentGOutputDerivE = (parentGOutputE <= 0.0) ? 0.01 : 1.0;
-                    float parentGOutputDerivF = (parentGOutputF <= 0.0) ? 0.01 : 1.0;
-                    float parentGOutputDerivG = (parentGOutputG <= 0.0) ? 0.01 : 1.0;
-                    
-                    float dA = parentGDeltaA*parentGOutputDerivA;
-                    float dB = parentGDeltaB*parentGOutputDerivB;
-                    float dC = parentGDeltaC*parentGOutputDerivC;
-                    float dD = parentGDeltaD*parentGOutputDerivD;
-                    float dE = parentGDeltaE*parentGOutputDerivE;
-                    float dF = parentGDeltaF*parentGOutputDerivF;
-                    float dG = parentGDeltaG*parentGOutputDerivG;
-                    
-                    float wT = 0.0;
-                    wT += dA*childGOutputA;
-                    wT += dB*childGOutputB;
-                    wT += dC*childGOutputC;
-                    wT += dD*childGOutputD;
-                    wT += dE*childGOutputE;
-                    wT += dF*childGOutputF;
-                    wT += dG*childGOutputG;
-                    wT /= (gpu_batch_size*batch_repeats);
-                    
-                    if(childBiasNode == 0.0) {
-                        costA = dA*linkWeight;
-                        costB = dB*linkWeight;
-                        costC = dC*linkWeight;
-                        costD = dD*linkWeight;
-                        costE = dE*linkWeight;
-                        costF = dF*linkWeight;
-                        costG = dG*linkWeight;
+                    if(weightQuadSum != 0.0) {
+                        weightQuadSum = 0.0;
+                        weightAbsSum = 0.0;
+                        
+                        float parentGOutputDerivA = (parentGOutputA <= 0.0) ? 0.01 : 1.0;                    
+                        float parentGOutputDerivB = (parentGOutputB <= 0.0) ? 0.01 : 1.0;
+                        float parentGOutputDerivC = (parentGOutputC <= 0.0) ? 0.01 : 1.0;
+                        float parentGOutputDerivD = (parentGOutputD <= 0.0) ? 0.01 : 1.0;
+                        float parentGOutputDerivE = (parentGOutputE <= 0.0) ? 0.01 : 1.0;
+                        float parentGOutputDerivF = (parentGOutputF <= 0.0) ? 0.01 : 1.0;
+                        float parentGOutputDerivG = (parentGOutputG <= 0.0) ? 0.01 : 1.0;
+                        
+                        float dA = parentGDeltaA*parentGOutputDerivA;
+                        float dB = parentGDeltaB*parentGOutputDerivB;
+                        float dC = parentGDeltaC*parentGOutputDerivC;
+                        float dD = parentGDeltaD*parentGOutputDerivD;
+                        float dE = parentGDeltaE*parentGOutputDerivE;
+                        float dF = parentGDeltaF*parentGOutputDerivF;
+                        float dG = parentGDeltaG*parentGOutputDerivG;
+                        
+                        float wT = 0.0;
+                        wT += dA*childGOutputA;
+                        wT += dB*childGOutputB;
+                        wT += dC*childGOutputC;
+                        wT += dD*childGOutputD;
+                        wT += dE*childGOutputE;
+                        wT += dF*childGOutputF;
+                        wT += dG*childGOutputG;
+                        wT /= (gpu_batch_size*batch_repeats);
+                        
+                        if(childBiasNode == 0.0) {
+                            costA = dA*linkWeight;
+                            costB = dB*linkWeight;
+                            costC = dC*linkWeight;
+                            costD = dD*linkWeight;
+                            costE = dE*linkWeight;
+                            costF = dF*linkWeight;
+                            costG = dG*linkWeight;
+                        } else {
+                            costA = dA;
+                            costB = dB;
+                            costC = dC;
+                            costD = dD;
+                            costE = dE;
+                            costF = dF;
+                            costG = dG;
+                        }
+                        
+                        linkWeight += -lr*((weightQuadSum*l2_decay) + (weightAbsSum*l1_decay) + wT);
                     } else {
-                        costA = dA;
-                        costB = dB;
-                        costC = dC;
-                        costD = dD;
-                        costE = dE;
-                        costF = dF;
-                        costG = dG;
+                        weightQuadSum += linkWeight*linkWeight;
+                        weightAbsSum += abs(linkWeight);
                     }
-                    
-                    linkWeight += -lr*wT;
                 }
             }
             

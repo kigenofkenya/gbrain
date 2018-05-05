@@ -80,6 +80,7 @@ export class GBrainRL {
         jsonIn.target.style.color = "#EEE";
         jsonIn.target.innerHTML = `
         <canvas id="elPlotCanvas"></canvas>
+        <button id="BTNID_PLOTMODE" style="display:inline-block;">Plot mode</button>
         <div id="el_info"></div>
         <div>
             View weight*neuron output<input title="weight*output" type="checkbox" id="elem_enableOutputWeighted"/><br />
@@ -95,6 +96,9 @@ export class GBrainRL {
         `;
         this.el_info = jsonIn.target.querySelector("#el_info");
 
+        jsonIn.target.querySelector("#BTNID_PLOTMODE").addEventListener("click", () => {
+            this.costPlot.currentMode = (this.costPlot.currentMode === 0) ? 1 : 0;
+        });
         jsonIn.target.querySelector("#elem_enableOutputWeighted").addEventListener("click", () => {
             (this.showOutputWeighted === false) ? this.gbrain.enableShowOutputWeighted() : this.gbrain.disableShowOutputWeighted();
             this.showOutputWeighted = !this.showOutputWeighted;

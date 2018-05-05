@@ -1387,6 +1387,7 @@ export class Graph {
         this.comp_renderer_nodes.gpufG.enableKernel(1);
         this.comp_renderer_nodes.setArg("updateTheta", () => {return 0.0;});
         this._sce.getLoadedProject().getActiveStage().tick();
+        this._sce.getLoadedProject().getActiveStage().tick();
         this.comp_renderer_nodes.gpufG.disableKernel(1);
         this.comp_renderer_nodes.setArg("enableTrain", () => {return 0.0;});
 
@@ -1416,6 +1417,7 @@ export class Graph {
 
                 this.comp_renderer_nodes.setArg("enableTrain", () => {return 1.0;});
                 this.comp_renderer_nodes.gpufG.enableKernel(1);
+                this._sce.getLoadedProject().getActiveStage().tick();
                 this._sce.getLoadedProject().getActiveStage().tick();
                 //this.comp_renderer_nodes.tick();
                 //this.comp_renderer_nodes.gpufG.processKernel(this.comp_renderer_nodes.gpufG.kernels[1], true, true);
