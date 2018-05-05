@@ -1,13 +1,14 @@
 {
   "name": "gbrain",
-  "version": "0.1.471",
+  "version": "0.1.472",
   "description": "GPU Javascript Library for Machine Learning",
   "repository": {
     "type": "git",
     "url": "https://github.com/stormcolor/gbrain.git"
   },
   "dependencies": {
-    "scejs": "~0.0.298"
+    "scejs": "~0.0.298",
+    "draggabilly": "2.2.0"
   },
   "devDependencies": {
     "babel-plugin-syntax-async-functions": "~6.13.0",

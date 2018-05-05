@@ -1,6 +1,7 @@
 import {GBrain} from "./gbrain";
 import {Plot} from "./Plot.class";
 import {AvgWin} from "./AvgWin.class";
+import Draggabilly from 'draggabilly';
 
 /**
  * ConvNetJS Reinforcement Learning Module (https://github.com/karpathy/convnetjs)
@@ -76,68 +77,84 @@ export class GBrainRL {
         this.showOutputWeighted = false;
         this.showWD = false;
 
-        jsonIn.target.style.backgroundColor = "#333";
-        jsonIn.target.style.color = "#EEE";
-        jsonIn.target.innerHTML = `
-        <canvas id="elPlotCanvas"></canvas>
-        <button id="BTNID_PLOTMODE" style="display:inline-block;">Plot mode</button>
-        <div id="el_info"></div>
-        <div>
-            View weight*neuron output<input title="weight*output" type="checkbox" id="elem_enableOutputWeighted"/><br />
-            View weight dynamics<input title="weight dynamics" type="checkbox" id="elem_enableWeightDynamics"/>
-        </div>
-        <button id="BTNID_STOP" style="display:inline-block;">Stop train</button>
-        <button id="BTNID_RESUME" style="display:inline-block;">Resume train</button>
-        <button id="BTNID_TOJSON" style="display:inline-block;">Output model in console</button>
-        <button id="BTNID_TOLSJSON" style="display:inline-block;">Save model in LocalStorage</button>
-        <button id="BTNID_FROMLSJSON" style="display:inline-block;">Load model from LocalStorage</button>
-        <br />
-        <div id="el_gbrainDisplay"></div>
-        `;
-        this.el_info = jsonIn.target.querySelector("#el_info");
+        let target = document.createElement("div");
+        document.getElementsByTagName("body")[0].appendChild(target);
+        target.style.width = "510px";
+        target.innerHTML = `
+        <div style="min-width:300px; font-size:12px; box-shadow:rgba(0, 0, 0, 0.683594) 3px 3px 8px 1px,rgb(255, 255, 255) 0px 0px 5px 0px inset; border-radius:5px;">
+            <div id="elGbrainWindowHandle" style="border-top-left-radius:5px; border-top-right-radius:5px; width:100%; background:rgba(200,200,200,0.7); cursor:move;	display:table;">
+                <div style="padding-left:5px; font-size:14px; color:#000; font-weight:bold;	display:table-cell;	vertical-align:middle;">GBrain</div>
+                <div style="width:22px;	padding:2px; display:table-cell; vertical-align:middle;">
+                    <div class="SECmenuTitleCloseImg"></div>
+                </div>
+            </div>
+            <div style="border-bottom-left-radius:5px; border-bottom-right-radius:5px; min-width:220px;	cursor:default;	padding:5px; color:#FFF; background:rgba(50,50,50,0.95); overflow-y:auto;">
 
-        jsonIn.target.querySelector("#BTNID_PLOTMODE").addEventListener("click", () => {
+                <canvas id="elPlotCanvas"></canvas>
+                <button id="BTNID_PLOTMODE" style="display:inline-block;">Plot mode</button>
+                <div id="el_info"></div>
+                <div>
+                    View weight*neuron output<input title="weight*output" type="checkbox" id="elem_enableOutputWeighted"/><br />
+                    View weight dynamics<input title="weight dynamics" type="checkbox" id="elem_enableWeightDynamics"/>
+                </div>
+                <button id="BTNID_STOP" style="display:inline-block;">Stop train</button>
+                <button id="BTNID_RESUME" style="display:inline-block;">Resume train</button>
+                <button id="BTNID_TOJSON" style="display:inline-block;">Output model in console</button>
+                <button id="BTNID_TOLSJSON" style="display:inline-block;">Save model in LocalStorage</button>
+                <button id="BTNID_FROMLSJSON" style="display:inline-block;">Load model from LocalStorage</button>
+                <br />
+                <div id="el_gbrainDisplay"></div>
+        
+            </div>
+        </div>
+        `;
+        this.el_info = target.querySelector("#el_info");
+
+        target.querySelector("#BTNID_PLOTMODE").addEventListener("click", () => {
             this.costPlot.currentMode = (this.costPlot.currentMode === 0) ? 1 : 0;
         });
-        jsonIn.target.querySelector("#elem_enableOutputWeighted").addEventListener("click", () => {
+        target.querySelector("#elem_enableOutputWeighted").addEventListener("click", () => {
             (this.showOutputWeighted === false) ? this.gbrain.enableShowOutputWeighted() : this.gbrain.disableShowOutputWeighted();
             this.showOutputWeighted = !this.showOutputWeighted;
         });
-        jsonIn.target.querySelector("#elem_enableWeightDynamics").addEventListener("click", () => {
+        target.querySelector("#elem_enableWeightDynamics").addEventListener("click", () => {
             (this.showWD === false) ? this.gbrain.enableShowWeightDynamics() : this.gbrain.disableShowWeightDynamics();
             this.showWD = !this.showWD;
         });
 
-        jsonIn.target.querySelector("#BTNID_STOP").addEventListener("click", () => {
+        target.querySelector("#BTNID_STOP").addEventListener("click", () => {
             this.stopLearning();
         });
 
-        jsonIn.target.querySelector("#BTNID_RESUME").addEventListener("click", () => {
+        target.querySelector("#BTNID_RESUME").addEventListener("click", () => {
             this.resumeLearning();
         });
 
-        jsonIn.target.querySelector("#BTNID_TOJSON").addEventListener("click", () => {
+        target.querySelector("#BTNID_TOJSON").addEventListener("click", () => {
             this.toJson();
         });
 
-        jsonIn.target.querySelector("#BTNID_TOLSJSON").addEventListener("click", () => {
+        target.querySelector("#BTNID_TOLSJSON").addEventListener("click", () => {
             localStorage.trainedModel = this.toJson();
         });
-        jsonIn.target.querySelector("#BTNID_FROMLSJSON").addEventListener("click", () => {
+        target.querySelector("#BTNID_FROMLSJSON").addEventListener("click", () => {
             this.fromJson(JSON.parse(localStorage.trainedModel));
         });
 
-
+        let dragg = new Draggabilly( target, {
+            handle: '#elGbrainWindowHandle'
+        });
+        dragg.setPosition((window.innerWidth/2)-500, -600);
 
         this.avgLossWin = new AvgWin();
         this.costPlot = new Plot();
-        this.plotCanvas = jsonIn.target.querySelector("#elPlotCanvas");
+        this.plotCanvas = target.querySelector("#elPlotCanvas");
 
         this.clock = 0;
 
         if(jsonIn.layer_defs !== undefined && jsonIn.layer_defs !== null) {
-            this.gbrain = new GBrain({  "target": jsonIn.target.querySelector("#el_gbrainDisplay"),
-                "dimensions": jsonIn.dimensions,
+            this.gbrain = new GBrain({  "target": target.querySelector("#el_gbrainDisplay"),
+                "dimensions": {"width": 500, "height": 500},
                 "batch_repeats": jsonIn.batch_repeats,
                 "learning_rate": jsonIn.learning_rate});
             this.gbrain.makeLayers(jsonIn.layer_defs);
